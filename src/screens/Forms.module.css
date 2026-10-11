@@ -1,8 +1,9 @@
 /* Shared layout for the non-game screens (sign in, lobby, room, setup). These pages may scroll. */
 .page {
   min-height: 100%;
-  display: grid;
-  place-items: start center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: clamp(var(--space-4), 6vh, 4rem) var(--gutter) var(--space-6);
 }
 

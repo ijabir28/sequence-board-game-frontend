@@ -1,12 +1,40 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider, RequireAuth, useAuth } from './auth/AuthContext';
 import { LocalGamePage } from './screens/LocalGamePage';
+import { Lobby } from './screens/Lobby';
+import { RoomPage } from './screens/RoomPage';
+import { SignIn } from './screens/SignIn';
 
 // SPA routes must not start with a proxied backend prefix (/user, /room, /game, /board, /images).
 export function App() {
   return (
-    <Routes>
-      <Route path="/local" element={<LocalGamePage />} />
-      <Route path="*" element={<Navigate to="/local" replace />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route path="/signin" element={<SignIn />} />
+        <Route
+          path="/lobby"
+          element={
+            <RequireAuth>
+              <Lobby />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/table/:id"
+          element={
+            <RequireAuth>
+              <RoomPage />
+            </RequireAuth>
+          }
+        />
+        <Route path="/local" element={<LocalGamePage />} />
+        <Route path="*" element={<Home />} />
+      </Routes>
+    </AuthProvider>
   );
+}
+
+function Home() {
+  const { profile } = useAuth();
+  return <Navigate to={profile ? '/lobby' : '/signin'} replace />;
 }
