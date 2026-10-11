@@ -1,0 +1,362 @@
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { Pos } from '../../engine/board';
+import { cardKind, cardShort, type CardName } from '../../engine/cards';
+import { describeLog } from '../../game/describeLog';
+import { TEAM_STYLES, teamName } from '../../game/teams';
+import type { GameAdapter } from '../../game/types';
+import { useGame } from '../../game/useGame';
+import { Board } from '../board/Board';
+import { Chip } from '../Chip';
+import { Button } from '../ui/Button';
+import { Dialog } from '../ui/Dialog';
+import { Icon } from '../ui/Icon';
+import { HandPanel } from './HandPanel';
+import { MoveLog } from './MoveLog';
+import { Scoreboard } from './Scoreboard';
+import styles from './GameScreen.module.css';
+
+interface GameScreenProps {
+  adapter: GameAdapter;
+  /** Short label for the kind of game, e.g. "Hot-seat". */
+  modeLabel: string;
+  onExit: () => void;
+  onNewGame?: () => void;
+  /** Extra controls for the top bar (for example the dev adapter toggle). */
+  headerExtra?: ReactNode;
+}
+
+type Feedback = { tone: 'error' | 'info'; text: string } | null;
+
+export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra }: GameScreenProps) {
+  const view = useGame(adapter);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState<Feedback>(null);
+  const [revealedFor, setRevealedFor] = useState<string | null>(null);
+  const [handOpen, setHandOpen] = useState(true);
+  const [logOpen, setLogOpen] = useState(false);
+  const [exitOpen, setExitOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const viewer = view.viewer;
+  const handVisible = !adapter.hotSeat || (viewer !== null && revealedFor === viewer.id);
+  const gameOver = view.winner !== null;
+  const currentPlayer = view.players.find((p) => p.id === view.currentPlayerId) ?? null;
+  const activeTeam = currentPlayer?.team ?? viewer?.team ?? null;
+  const selectedCard = selected !== null ? view.hand[selected]?.card : undefined;
+
+  // A new hand (after a move, or the next hot-seat player) starts with nothing selected.
+  useEffect(() => {
+    setSelected(null);
+  }, [view.hand, viewer?.id]);
+
+  // In hot-seat play the next person may not know the hand was collapsed, so reopen it.
+  useEffect(() => {
+    if (adapter.hotSeat) setHandOpen(true);
+  }, [adapter.hotSeat, viewer?.id]);
+
+  const targets = useMemo(
+    () => (selected !== null && handVisible && !gameOver ? adapter.legalTargets(selected) : null),
+    // `view` changes whenever the board does, which changes the legal targets.
+    [adapter, selected, handVisible, gameOver, view],
+  );
+
+  const lastEntry = view.log.at(-1);
+  const lastMove = useMemo(() => {
+    for (let i = view.log.length - 1; i >= 0; i--) {
+      const entry = view.log[i];
+      if (entry.kind === 'place' || entry.kind === 'remove') return entry.pos;
+    }
+    return null;
+  }, [view.log]);
+
+  const selectCard = (index: number) => {
+    if (!handVisible || gameOver || index >= view.hand.length) return;
+    setFeedback(null);
+    setSelected((current) => (current === index ? null : index));
+  };
+
+  // Number keys pick a hand card, Escape clears the selection.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const el = event.target as HTMLElement;
+      if (el.closest('input, textarea, select, dialog[open]') || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (/^[1-9]$/.test(event.key)) selectCard(Number(event.key) - 1);
+      if (event.key === 'Escape') setSelected(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  const run = async (action: () => Promise<{ ok: true } | { ok: false; message: string }>) => {
+    setBusy(true);
+    try {
+      const result = await action();
+      if (!result.ok) {
+        setFeedback({ tone: 'error', text: result.message });
+        return false;
+      }
+      setFeedback(null);
+      return true;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onCell = async (pos: Pos) => {
+    if (gameOver || busy) return;
+    if (!handVisible) {
+      setFeedback({ tone: 'info', text: `Show ${viewer?.name ?? 'the next player'}'s hand to make a move.` });
+      return;
+    }
+    if (selected === null || !selectedCard) {
+      setFeedback({ tone: 'info', text: 'Pick a card from your hand first, then a highlighted cell.' });
+      return;
+    }
+    if (!targets?.some((t) => t.row === pos.row && t.column === pos.column)) {
+      const what = cardKind(selectedCard) === 'one-eyed-jack' ? "a chip you can remove" : 'a legal move';
+      setFeedback({ tone: 'error', text: `That cell isn't ${what} for ${cardShort(selectedCard)}. Pick a highlighted cell.` });
+      return;
+    }
+    const played = await run(() => adapter.playCard(selected, pos));
+    if (played && adapter.hotSeat) setRevealedFor(null);
+  };
+
+  const onExchange = () => selected !== null && run(() => adapter.exchangeDeadCard(selected));
+  const onPass = async () => {
+    const passed = await run(() => adapter.pass());
+    if (passed && adapter.hotSeat) setRevealedFor(null);
+  };
+
+  const hint = handHint({ selectedCard, dead: selected !== null && !!view.hand[selected]?.dead, targets, canExchange: view.canExchange });
+
+  const footer = (
+    <div className={styles.actions}>
+      <p className={styles.hint}>{hint}</p>
+      <div className={styles.actionButtons}>
+        {selected !== null && view.hand[selected]?.dead && view.canExchange && (
+          <Button size="sm" variant="primary" onClick={onExchange} busy={busy}>
+            <Icon name="swap" size={16} />
+            Exchange dead card
+          </Button>
+        )}
+        {view.canPass && (
+          <Button size="sm" onClick={onPass} busy={busy}>
+            Pass turn
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const winnerPanel = gameOver ? (
+    <div className={styles.gameOver} role="status">
+      <span className={styles.gameOverChip}>
+        <Chip team={view.winner!} />
+      </span>
+      <h2>{teamName(view.winner!)} wins</h2>
+      <p>
+        {view.teams.find((t) => t.index === view.winner)?.sequences} sequence
+        {view.teams.find((t) => t.index === view.winner)?.sequences === 1 ? '' : 's'} completed
+        {view.turn !== null && ` in ${view.turn} turns`}.
+      </p>
+      <div className={styles.actionButtons}>
+        {onNewGame && (
+          <Button variant="primary" onClick={onNewGame}>
+            Play again
+          </Button>
+        )}
+        <Button onClick={onExit}>Leave game</Button>
+      </div>
+    </div>
+  ) : null;
+
+  const handTitle = gameOver ? 'Game over' : adapter.hotSeat && viewer ? `${viewer.name}'s hand` : 'Your hand';
+
+  return (
+    <div
+      className={styles.screen}
+      style={activeTeam !== null ? ({ '--active-team': TEAM_STYLES[activeTeam].color, '--active-glow': TEAM_STYLES[activeTeam].glow } as React.CSSProperties) : undefined}
+    >
+      <header className={styles.top}>
+        <div className={styles.brand}>
+          <span className={styles.logo} aria-hidden="true">
+            <Chip team={0} />
+          </span>
+          <span className={styles.brandText}>Sequence</span>
+          <span className={styles.mode}>{modeLabel}</span>
+        </div>
+        <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
+        <div className={styles.topActions}>
+          {headerExtra}
+          <button type="button" className={[styles.iconButton, styles.logButton].join(' ')} onClick={() => setLogOpen(true)} aria-label="Move log">
+            <Icon name="log" />
+          </button>
+          <button type="button" className={styles.iconButton} onClick={() => (gameOver ? onExit() : setExitOpen(true))} aria-label="Leave game">
+            <Icon name="exit" />
+          </button>
+        </div>
+      </header>
+
+      <div className={styles.status}>
+        <TurnIndicator name={gameOver ? null : currentPlayer?.name ?? null} team={gameOver ? view.winner : activeTeam} winner={gameOver} />
+        {/* Feedback takes the ticker's line, so messages never push the board around. */}
+        {feedback ? (
+          <p
+            className={[styles.line, styles.feedback, feedback.tone === 'error' && styles.feedbackError].filter(Boolean).join(' ')}
+            role={feedback.tone === 'error' ? 'alert' : 'status'}
+          >
+            {feedback.text}
+          </p>
+        ) : (
+          <p className={[styles.line, styles.ticker].join(' ')} aria-hidden="true">
+            {lastEntry ? describeLog(lastEntry) : 'No moves yet.'}
+          </p>
+        )}
+        {view.notice && (
+          <p className={styles.notice}>
+            <Icon name="alert" size={16} />
+            <span>{view.notice}</span>
+          </p>
+        )}
+      </div>
+
+      <main className={styles.boardArea}>
+        {view.status === 'ready' ? (
+          <Board
+            board={view.board}
+            sequences={view.sequences}
+            targets={targets}
+            targetMode={selectedCard && cardKind(selectedCard) === 'one-eyed-jack' ? 'remove' : 'place'}
+            activeTeam={activeTeam}
+            lastMove={lastMove}
+            disabled={busy || gameOver}
+            onActivate={onCell}
+          />
+        ) : view.status === 'loading' ? (
+          <div className={styles.boardMessage} role="status">
+            <span className={styles.spinner} aria-hidden="true" />
+            Loading the board…
+          </div>
+        ) : (
+          <div className={styles.boardMessage} role="alert">
+            <Icon name="wifiOff" size={28} />
+            <p>{view.error}</p>
+            <div className={styles.actionButtons}>
+              <Button variant="primary" onClick={() => adapter.refresh()}>
+                <Icon name="refresh" size={16} />
+                Try again
+              </Button>
+              <Button onClick={onExit}>Leave game</Button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <aside className={styles.rail}>
+        <HandPanel
+          title={handTitle}
+          hand={view.hand}
+          selected={selected}
+          onSelect={selectCard}
+          cover={adapter.hotSeat && !handVisible && !gameOver && viewer ? { playerName: viewer.name, onReveal: () => setRevealedFor(viewer.id) } : null}
+          open={handOpen || gameOver}
+          onToggle={() => setHandOpen((o) => !o)}
+          disabled={busy || gameOver || view.status !== 'ready'}
+          footer={footer}
+          replaceWith={winnerPanel}
+        />
+        <section className={styles.logPanel} aria-label="Move log">
+          <h2 className={styles.railHeading}>Move log</h2>
+          <div className={styles.logScroll}>
+            <MoveLog entries={view.log} emptyText="Moves will appear here." />
+          </div>
+          {view.deckCount !== null && <p className={styles.deck}>{view.deckCount} cards left in the deck</p>}
+        </section>
+      </aside>
+
+      <div className="visually-hidden" aria-live="polite">
+        {lastEntry ? describeLog(lastEntry) : ''}
+        {!gameOver && currentPlayer ? `. ${currentPlayer.name}'s turn.` : ''}
+      </div>
+
+      <Dialog open={logOpen} title="Move log" onClose={() => setLogOpen(false)}>
+        <MoveLog entries={view.log} emptyText="No moves yet. Moves will appear here as they are played." />
+      </Dialog>
+
+      <Dialog
+        open={exitOpen}
+        title="Leave this game?"
+        onClose={() => setExitOpen(false)}
+        actions={
+          <>
+            <Button onClick={() => setExitOpen(false)}>Keep playing</Button>
+            <Button variant="danger" onClick={onExit}>
+              Leave game
+            </Button>
+          </>
+        }
+      >
+        <p>{adapter.mode === 'local' ? 'This game is only stored on this device, so leaving ends it.' : 'You can come back to the server game later.'}</p>
+      </Dialog>
+    </div>
+  );
+}
+
+function TurnIndicator({ name, team, winner }: { name: string | null; team: number | null; winner: boolean }) {
+  if (team === null) return <p className={styles.turn}>Waiting for the game to start</p>;
+  const t = team as 0 | 1 | 2;
+  return (
+    <p className={styles.turn}>
+      <span className={styles.turnChip}>
+        <Chip team={t} />
+      </span>
+      {winner ? (
+        <span>
+          <strong>{teamName(t)}</strong> wins
+        </span>
+      ) : (
+        <span>
+          {name ? (
+            <>
+              <strong>{name}</strong>'s turn
+            </>
+          ) : (
+            <strong>Your move</strong>
+          )}
+          <span className={styles.turnTeam}> {teamName(t)}</span>
+        </span>
+      )}
+    </p>
+  );
+}
+
+function handHint({
+  selectedCard,
+  dead,
+  targets,
+  canExchange,
+}: {
+  selectedCard: CardName | undefined;
+  dead: boolean;
+  targets: Pos[] | null;
+  canExchange: boolean;
+}): string {
+  if (!selectedCard) return 'Pick a card, then a highlighted cell. Keys 1–7 pick cards.';
+  const card = selectedCard;
+  if (dead) {
+    return canExchange
+      ? `${cardShort(card)} is dead: both of its cells are taken. Exchange it for a new card.`
+      : `${cardShort(card)} is dead. You already exchanged a card this turn, so play another card.`;
+  }
+  if (targets && targets.length === 0) {
+    return cardKind(card) === 'one-eyed-jack' ? 'No opponent chip can be removed right now.' : `${cardShort(card)} has no open cell.`;
+  }
+  switch (cardKind(card)) {
+    case 'two-eyed-jack':
+      return 'Wild jack: place a chip on any empty cell.';
+    case 'one-eyed-jack':
+      return "One-eyed jack: remove an opponent's chip that isn't in a sequence.";
+    default:
+      return `Place ${cardShort(card)} on one of its highlighted cells.`;
+  }
+}
