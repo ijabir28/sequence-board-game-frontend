@@ -5,3 +5,4 @@ dist
 coverage
 # Contains a personal Stitch API key; never commit it.
 .mcp.json
+*.tsbuildinfo
