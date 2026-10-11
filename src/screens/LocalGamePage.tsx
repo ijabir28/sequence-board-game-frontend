@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { GameScreen } from '../components/game/GameScreen';
 import { LocalGameAdapter } from '../game/local/LocalGameAdapter';
 import { LocalSetup, type LocalConfig } from './LocalSetup';
@@ -15,7 +15,7 @@ export function LocalGamePage() {
   const adapter = useMemo(() => (config ? new LocalGameAdapter(config) : null), [config, round]);
   useEffect(() => () => adapter?.dispose(), [adapter]);
 
-  if (!config || !adapter) return <LocalSetup initial={preset ?? undefined} onStart={setConfig} />;
+  if (!config || !adapter) return <LocalSetup initial={preset ?? undefined} onStart={setConfig} backAction={<Link to="/">Back</Link>} />;
 
   return (
     <GameScreen
