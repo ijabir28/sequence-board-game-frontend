@@ -1,0 +1,27 @@
+.mark {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.mark span {
+  width: 28px;
+  height: 28px;
+}
+
+.altLink {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  border-radius: var(--radius);
+  border: 1px solid var(--outline-strong);
+  color: var(--on-surface);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.altLink:hover {
+  background: var(--surface-high);
+}
