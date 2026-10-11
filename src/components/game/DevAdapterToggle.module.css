@@ -1,0 +1,30 @@
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  min-width: 44px;
+  justify-content: center;
+  padding: 0 var(--space-2);
+  border: 1px dashed rgba(251, 191, 36, 0.5);
+  border-radius: var(--radius);
+  background: transparent;
+  color: #fde68a;
+  font-size: var(--text-xs);
+}
+
+.toggle:hover {
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.dev {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .label,
+  .dev {
+    display: none;
+  }
+}

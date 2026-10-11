@@ -42,3 +42,8 @@
     align-items: start;
   }
 }
+
+.dev {
+  border-style: dashed;
+  border-color: rgba(251, 191, 36, 0.4);
+}
