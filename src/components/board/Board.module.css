@@ -108,7 +108,7 @@
 
 /* While a hand card is selected, everything that isn't a legal target recedes. */
 .dimmed {
-  opacity: 0.38;
+  opacity: 0.5;
 }
 
 .target {
