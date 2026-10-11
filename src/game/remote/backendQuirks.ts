@@ -1,0 +1,60 @@
+import type { TeamIndex } from '../../engine/setup';
+
+/*
+ * Every workaround for the current backend lives here (see backend docs/known-issues.md).
+ * When the backend is fixed, update or delete the matching entry and the adapter follows.
+ */
+
+/** The legacy game has four hard-coded players; any other handle makes /game/hand_cards return 500. */
+export const LEGACY_PLAYERS: Record<string, TeamIndex> = {
+  jabir: 0,
+  sakib: 0,
+  habiba: 1,
+  humaira: 1,
+};
+
+/** `occupied_by` uses legacy team handles, not the TEAM_n handles rooms use. */
+export function teamFromOccupiedBy(value: string | undefined): TeamIndex | null {
+  if (!value) return null;
+  const match = /^team_?(\d+)$/i.exec(value);
+  if (!match) return null;
+  const index = Number(match[1]) - 1;
+  return index >= 0 && index <= 2 ? (index as TeamIndex) : null;
+}
+
+/** No socket events exist for games, so the board and hand are polled. */
+export const POLL_INTERVAL_MS = 3000;
+
+export type PlayOutcome =
+  | { kind: 'applied' }
+  | { kind: 'invalid' }
+  /** Valid move, but the server throws while applying it (current_team is never defined). */
+  | { kind: 'known-500' }
+  | { kind: 'server-error'; status: number };
+
+/**
+ * Interprets GET /game/play. Intended: 200 {verdict: "Valid"}; invalid is 404 "Invalid Move";
+ * today every valid move is a 500 HTML page because of the current_team ReferenceError.
+ */
+export function interpretPlay(status: number, body: string): PlayOutcome {
+  if (status === 200) return { kind: 'applied' };
+  if (status === 404 && /invalid move/i.test(body)) return { kind: 'invalid' };
+  if (status === 500 && /current_team|alternate_team/i.test(body)) return { kind: 'known-500' };
+  return { kind: 'server-error', status };
+}
+
+export const PLAY_MESSAGES = {
+  invalid: 'The server rejected that move. Pick a highlighted cell and try again.',
+  'known-500':
+    "The server accepted the move but failed while saving it (a known backend bug: every valid move fails). The board hasn't changed. Use a hot-seat game to play for now.",
+  serverError: (status: number) => `The server failed with status ${status}, so the move wasn't made. Try again.`,
+} as const;
+
+/** What the server game can't do yet, shown above the board. */
+export const SERVER_LIMITATIONS =
+  "Server game preview: the server checks moves but can't apply them yet, has no turn order, and doesn't track sequences or dead cards.";
+
+export const UNSUPPORTED = {
+  exchange: "The server can't exchange dead cards yet.",
+  pass: "The server can't pass a turn yet.",
+} as const;
