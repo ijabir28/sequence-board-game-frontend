@@ -1,0 +1,129 @@
+.card {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: var(--hand-card-max, 92px);
+  aspect-ratio: 5 / 7;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--card-face);
+  box-shadow: var(--shadow-raised);
+  transition:
+    transform var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
+    opacity var(--dur) var(--ease-out);
+}
+
+.card:disabled {
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .card:hover:not(:disabled):not(.selected) {
+    transform: translateY(-4px);
+  }
+}
+
+.selected {
+  transform: translateY(-10%);
+  box-shadow:
+    0 0 0 3px var(--active-team, var(--primary)),
+    0 0 18px var(--active-glow, transparent),
+    var(--shadow-raised);
+}
+
+.card:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 5px #ffffff,
+    var(--shadow-raised);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/* Drawn fallback when /images is not reachable (for example hot-seat play without the backend). */
+.face {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  color: var(--card-ink-black);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.red {
+  color: var(--card-ink-red);
+}
+
+.index {
+  position: absolute;
+  top: 6%;
+  left: 9%;
+  font-size: clamp(0.7rem, 2.2vmin, 1rem);
+  line-height: 1;
+  text-align: center;
+}
+
+.pip {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(1.4rem, 5vmin, 2.4rem);
+}
+
+.dead {
+  opacity: 0.85;
+}
+
+.dead::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(135deg, transparent 0 7px, rgba(15, 23, 42, 0.28) 7px 9px);
+  pointer-events: none;
+}
+
+.badge {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  transform: translateX(-50%);
+  z-index: 1;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.badgeWild {
+  background: #047857;
+  color: #ecfdf5;
+}
+
+.badgeRemove {
+  background: #b91c1c;
+  color: #fef2f2;
+}
+
+.badgeDead {
+  top: 6%;
+  bottom: auto;
+  left: auto;
+  right: 6%;
+  transform: none;
+  background: #334155;
+  color: #f1f5f9;
+}
