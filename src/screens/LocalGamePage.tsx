@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { DevAdapterToggle } from '../components/game/DevAdapterToggle';
 import { GameScreen } from '../components/game/GameScreen';
 import { LocalGameAdapter } from '../game/local/LocalGameAdapter';
 import { LocalSetup, type LocalConfig } from './LocalSetup';
@@ -23,6 +24,7 @@ export function LocalGamePage() {
       adapter={adapter}
       modeLabel="Hot-seat"
       onNewGame={() => setRound((r) => r + 1)}
+      headerExtra={<DevAdapterToggle current="local" />}
       onExit={() => {
         setConfig(null);
         navigate('/local', { replace: true, state: { preset: config } });

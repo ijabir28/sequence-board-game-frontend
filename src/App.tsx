@@ -3,6 +3,7 @@ import { AuthProvider, RequireAuth, useAuth } from './auth/AuthContext';
 import { LocalGamePage } from './screens/LocalGamePage';
 import { Lobby } from './screens/Lobby';
 import { RoomPage } from './screens/RoomPage';
+import { ServerGamePage } from './screens/ServerGamePage';
 import { SignIn } from './screens/SignIn';
 
 // SPA routes must not start with a proxied backend prefix (/user, /room, /game, /board, /images).
@@ -24,6 +25,14 @@ export function App() {
           element={
             <RequireAuth>
               <RoomPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/server-game"
+          element={
+            <RequireAuth>
+              <ServerGamePage />
             </RequireAuth>
           }
         />

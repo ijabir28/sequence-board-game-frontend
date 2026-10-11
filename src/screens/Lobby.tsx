@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import { createRoom, getRoom } from '../api/rooms';
 import { AppHeader } from '../components/AppHeader';
+import { devToolsEnabled } from '../components/game/DevAdapterToggle';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { HAND_SIZE_BY_PLAYER_COUNT, playersPerTeamOptions, type TeamCount } from '../engine/setup';
@@ -151,6 +152,18 @@ export function Lobby() {
                 Set up a hot-seat game
               </Link>
             </section>
+
+            {devToolsEnabled() && (
+              <section className={[styles.card, own.dev].join(' ')}>
+                <header className={styles.header}>
+                  <h2>Server game preview</h2>
+                  <p>Developer tool. Opens the server's built-in test game, which can't apply moves yet.</p>
+                </header>
+                <Link to="/server-game" className={own.linkButton}>
+                  Open server game
+                </Link>
+              </section>
+            )}
           </div>
         </div>
       </div>
