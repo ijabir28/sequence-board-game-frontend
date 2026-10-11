@@ -92,6 +92,10 @@
   padding: var(--space-2) var(--gutter) 0;
 }
 
+.status[hidden] {
+  display: none;
+}
+
 .turn {
   display: flex;
   align-items: center;
@@ -268,10 +272,18 @@
 
 /* Narrow: keep the status rows to one line each so their height never changes. */
 @media not ((min-aspect-ratio: 1/1) and ((min-width: 1100px) or (max-height: 520px))) {
-  .line {
+  .ticker {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* Feedback must be readable in full, so it may wrap (up to three lines). */
+  .feedback {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .hint {
@@ -280,8 +292,7 @@
 }
 
 @media (max-width: 420px) {
-  .brandText,
-  .mode {
+  .brand {
     display: none;
   }
 }

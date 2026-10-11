@@ -20,16 +20,20 @@ interface HandPanelProps {
   footer?: ReactNode;
   /** Replaces the cards entirely (for example the game-over panel). */
   replaceWith?: ReactNode;
+  /** Overrides the collapsed-strip summary. */
+  summary?: string;
 }
 
 /**
  * The player's hand. On wide screens it sits in the side rail; on phones and tablets it is a
  * horizontal strip docked at the bottom that can be collapsed to give the board more room.
  */
-export function HandPanel({ title, hand, selected, onSelect, cover, open, onToggle, disabled, footer, replaceWith }: HandPanelProps) {
+export function HandPanel({ title, hand, selected, onSelect, cover, open, onToggle, disabled, footer, replaceWith, summary: summaryOverride }: HandPanelProps) {
   const bodyId = useId();
   const selectedCard = selected !== null ? hand[selected]?.card : undefined;
-  const summary = cover
+  const summary = summaryOverride
+    ? summaryOverride
+    : cover
     ? `${cover.playerName}'s turn`
     : selectedCard
       ? `${cardShort(selectedCard)} selected`

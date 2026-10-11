@@ -197,8 +197,13 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
         </div>
       </header>
 
-      <div className={styles.status}>
-        <TurnIndicator name={gameOver ? null : currentPlayer?.name ?? null} team={gameOver ? view.winner : activeTeam} winner={gameOver} />
+      <div className={styles.status} hidden={view.status !== 'ready'}>
+        <TurnIndicator
+          name={gameOver ? null : currentPlayer?.name ?? null}
+          viewerName={viewer?.name ?? null}
+          team={gameOver ? view.winner : activeTeam}
+          winner={gameOver}
+        />
         {/* Feedback takes the ticker's line, so messages never push the board around. */}
         {feedback ? (
           <p
@@ -253,18 +258,21 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
       </main>
 
       <aside className={styles.rail}>
-        <HandPanel
-          title={handTitle}
-          hand={view.hand}
-          selected={selected}
-          onSelect={selectCard}
-          cover={adapter.hotSeat && !handVisible && !gameOver && viewer ? { playerName: viewer.name, onReveal: () => setRevealedFor(viewer.id) } : null}
-          open={handOpen || gameOver}
-          onToggle={() => setHandOpen((o) => !o)}
-          disabled={busy || gameOver || view.status !== 'ready'}
-          footer={footer}
-          replaceWith={winnerPanel}
-        />
+        {view.status === 'ready' && (
+          <HandPanel
+            title={handTitle}
+            hand={view.hand}
+            selected={selected}
+            onSelect={selectCard}
+            cover={adapter.hotSeat && !handVisible && !gameOver && viewer ? { playerName: viewer.name, onReveal: () => setRevealedFor(viewer.id) } : null}
+            open={handOpen || gameOver}
+            onToggle={() => setHandOpen((o) => !o)}
+            disabled={busy || gameOver || view.status !== 'ready'}
+            footer={footer}
+            replaceWith={winnerPanel}
+            summary={gameOver ? `${teamName(view.winner!)} wins` : undefined}
+          />
+        )}
         <section className={styles.logPanel} aria-label="Move log">
           <h2 className={styles.railHeading}>Move log</h2>
           <div className={styles.logScroll}>
@@ -302,7 +310,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
   );
 }
 
-function TurnIndicator({ name, team, winner }: { name: string | null; team: number | null; winner: boolean }) {
+function TurnIndicator({ name, viewerName, team, winner }: { name: string | null; viewerName: string | null; team: number | null; winner: boolean }) {
   if (team === null) return <p className={styles.turn}>Waiting for the game to start</p>;
   const t = team as 0 | 1 | 2;
   return (
@@ -321,7 +329,10 @@ function TurnIndicator({ name, team, winner }: { name: string | null; team: numb
               <strong>{name}</strong>'s turn
             </>
           ) : (
-            <strong>Your move</strong>
+            // The source has no turn order (server game): say who is playing instead.
+            <>
+              Playing as <strong>{viewerName ?? 'you'}</strong>
+            </>
           )}
           <span className={styles.turnTeam}> {teamName(t)}</span>
         </span>
