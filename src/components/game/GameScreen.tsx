@@ -397,32 +397,35 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       )}
 
       <div className={styles.status} hidden={view.status !== 'ready'}>
-        <TurnPanel
-          players={view.players}
-          currentPlayerId={view.currentPlayerId}
-          viewer={viewer}
-          hotSeat={adapter.hotSeat}
-          winner={view.winner}
-          turn={view.turn}
-          turnStartedAt={view.turnStartedAt}
-          turnDeadline={view.turnDeadline}
-          turnPaused={view.turnPaused}
-          turnTimeLeft={view.turnTimeLeft}
-          away={view.away}
-          collapsible={
-            phone
-              ? {
-                  open: statusOpen,
-                  onToggle: () => setStatusOpen((open) => !open),
-                  children: (
-                    <div className={styles.foldedScores}>
-                      <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
-                    </div>
-                  ),
-                }
-              : undefined
-          }
-        />
+        {/* Large screens give the turn panel a fixed slot, so the hand under it never moves. */}
+        <div className={styles.turnSlot}>
+          <TurnPanel
+            players={view.players}
+            currentPlayerId={view.currentPlayerId}
+            viewer={viewer}
+            hotSeat={adapter.hotSeat}
+            winner={view.winner}
+            turn={view.turn}
+            turnStartedAt={view.turnStartedAt}
+            turnDeadline={view.turnDeadline}
+            turnPaused={view.turnPaused}
+            turnTimeLeft={view.turnTimeLeft}
+            away={view.away}
+            collapsible={
+              phone
+                ? {
+                    open: statusOpen,
+                    onToggle: () => setStatusOpen((open) => !open),
+                    children: (
+                      <div className={styles.foldedScores}>
+                        <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
+                      </div>
+                    ),
+                  }
+                : undefined
+            }
+          />
+        </div>
         {/* Messages float as toasts, so this line only ever shows the latest move. */}
         <p className={[styles.line, styles.ticker].join(' ')} aria-hidden="true">
           {lastEntry ? describeLog(lastEntry) : 'No moves yet.'}
