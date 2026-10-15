@@ -72,7 +72,7 @@ describe('RoomGameAdapter', () => {
     stubFetch(() => ({ status: 200, body: serverView() }));
     const old = adapter();
     await old.refresh();
-    expect(old.getState().settings).toEqual({ mode: 'standard', highlights: true, history: true });
+    expect(old.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false });
     old.dispose();
   });
 

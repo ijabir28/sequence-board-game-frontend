@@ -1,5 +1,5 @@
-import { useId } from 'react';
-import type { GameMode, RoomSettings } from '../api/rooms';
+import { useEffect, useId, useState } from 'react';
+import { isValidTurnSeconds, TURN_SECONDS_MAX, TURN_SECONDS_MIN, TURN_TIMER_PRESETS, type GameMode, type RoomSettings } from '../api/rooms';
 import styles from './RoomOptions.module.css';
 
 const MODES: { mode: GameMode; label: string; description: string }[] = [
@@ -7,7 +7,15 @@ const MODES: { mode: GameMode; label: string; description: string }[] = [
   { mode: 'training', label: 'Training', description: 'On your turn, get a suggested move and why.' },
 ];
 
-type Flag = Exclude<keyof RoomSettings, 'mode'>;
+type Flag = Exclude<keyof RoomSettings, 'mode' | 'turnSeconds'>;
+
+/** "30 s", "1 min", "1 min 30 s". */
+export function describeTurnSeconds(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  if (minutes === 0) return `${rest} s`;
+  return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
+}
 
 const OPTIONS: { key: Flag; label: string; on: string; off: string }[] = [
   {
@@ -69,6 +77,7 @@ export function RoomOptions({ value, onChange, disabled }: RoomOptionsProps) {
           );
         })}
       </div>
+      <TurnTimer id={id} value={value.turnSeconds} onChange={onChange && ((turnSeconds) => onChange({ ...value, turnSeconds }))} disabled={disabled} />
       <ul className={styles.options}>
       {OPTIONS.map(({ key, label, on, off }) => (
         <li key={key}>
@@ -100,5 +109,83 @@ export function RoomOptions({ value, onChange, disabled }: RoomOptionsProps) {
       ))}
       </ul>
     </div>
+  );
+}
+
+/** The turn timer: preset lengths, or Custom with a number of seconds. */
+function TurnTimer({ id, value, onChange, disabled }: { id: string; value: number; onChange?: (seconds: number) => void; disabled?: boolean }) {
+  const isPreset = (TURN_TIMER_PRESETS as readonly number[]).includes(value);
+  const [custom, setCustom] = useState(!isPreset);
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => {
+    // Follow changes made elsewhere (for example another device saving the host's settings).
+    setDraft(String(value));
+    if (!isPreset) setCustom(true);
+  }, [value, isPreset]);
+
+  if (!onChange) {
+    return (
+      <p className={styles.row}>
+        <span className={styles.text}>
+          <span className={styles.label}>Turn timer</span>
+          <span className={styles.description}>Each player has {describeTurnSeconds(value)} per turn.</span>
+        </span>
+        <span className={[styles.state, styles.stateOn].join(' ')}>{describeTurnSeconds(value)}</span>
+      </p>
+    );
+  }
+
+  const seconds = Number(draft);
+  const invalid = custom && !isValidTurnSeconds(seconds);
+  return (
+    <fieldset className={styles.timer} disabled={disabled}>
+      <legend className={styles.label}>Turn timer</legend>
+      <div className={styles.pills}>
+        {TURN_TIMER_PRESETS.map((preset) => (
+          <label key={preset} className={styles.pill}>
+            <input
+              type="radio"
+              name={`${id}-timer`}
+              checked={!custom && value === preset}
+              onChange={() => {
+                setCustom(false);
+                onChange(preset);
+              }}
+            />
+            <span>{describeTurnSeconds(preset)}</span>
+          </label>
+        ))}
+        <label className={styles.pill}>
+          <input type="radio" name={`${id}-timer`} checked={custom} onChange={() => setCustom(true)} />
+          <span>Custom</span>
+        </label>
+      </div>
+      {custom && (
+        <label className={styles.custom}>
+          <input
+            className={styles.seconds}
+            type="number"
+            inputMode="numeric"
+            min={TURN_SECONDS_MIN}
+            max={TURN_SECONDS_MAX}
+            step={1}
+            value={draft}
+            aria-invalid={invalid || undefined}
+            aria-describedby={`${id}-timer-help`}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              const next = Number(e.target.value);
+              if (isValidTurnSeconds(next)) onChange(next);
+            }}
+          />
+          <span>seconds per turn</span>
+        </label>
+      )}
+      <span id={`${id}-timer-help`} className={[styles.description, invalid && styles.invalid].filter(Boolean).join(' ')}>
+        {invalid
+          ? `Enter a whole number of seconds from ${TURN_SECONDS_MIN} to ${TURN_SECONDS_MAX}.`
+          : `Each player has ${describeTurnSeconds(value)} per turn.`}
+      </span>
+    </fieldset>
   );
 }

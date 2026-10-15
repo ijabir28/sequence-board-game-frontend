@@ -187,8 +187,9 @@ Whoever opens a table (the host) picks its options, shown by `src/components/Roo
 | Option | Default | Effect |
 |---|---|---|
 | Mode | Standard | Training: on your turn a Hint button suggests a move and says why, and card tips explain what the selected card does. Standard games never show hints or tips |
-| Highlight legal cells | on | Off: picking a card doesn't light up its cells, and wrong cells are explained by the rules |
-| Move history | on | Off: no move log; the server sends only the latest move |
+| Highlight legal cells | off | Off: picking a card doesn't light up its cells, and wrong cells are explained by the rules |
+| Move history | off | Off: no move log; the server sends only the latest move |
+| Turn timer | 90 s | 30 s, 1 min, 1 min 30 s, 2 min, 3 min, or a custom number of seconds (15–600) |
 | Auto-draw dead cards | off | On: a dead card is swapped automatically when its owner's turn starts |
 
 Hints come from the server for tables (only to the player whose turn it is, only in training games) and from
@@ -199,7 +200,7 @@ change options on the table page until the game starts. Hot-seat games offer the
 same options. When the game starts, every seated player on the table page is taken into it.
 
 The server stores tables, seats, options, games and every move in PostgreSQL. The lobby's **Your tables** card
-(`src/screens/YourTables.tsx`, from `GET /user/rooms`) lists the tables you opened or sat at with their status
+(`src/screens/YourTables.tsx`, from `GET /user/rooms`) lists the tables you opened or sat at, ten to a page, with their status
 (waiting, in progress with the move count, or who won) and links to resume or view them; games in progress where
 you have a seat are also offered at the top of the lobby. The full move history of a table is available from
 `GET /room/:id/turns` (unless the table plays without history); the game screen's move log comes from the game view
