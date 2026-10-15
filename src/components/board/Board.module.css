@@ -9,8 +9,7 @@
  */
 .board {
   position: relative;
-  /* Room for the turn edge (up to 12px) and its glow, inside the board area. */
-  width: calc(min(100cqw, 100cqh) - 2 * 14px);
+  width: min(100cqw, 100cqh);
   aspect-ratio: 1;
   container-type: inline-size;
   border-radius: calc(var(--radius-card) + 2px);
@@ -22,9 +21,9 @@
 }
 
 /*
- * Whose turn it is: a thick edge in the active team's colour, from EDGE_MAX when the turn starts down to EDGE_MIN as
- * its time runs out (--edge-strength, 1 to 0, set by Board.tsx). The board leaves EDGE_ROOM free around itself (see
- * .board's width) so its parent's overflow never clips the edge.
+ * Your turn: a thick edge in your team's colour, 12px when the turn starts down to 3px as its time runs out
+ * (--edge-strength, 1 to 0, set by Board.tsx). It is drawn outside the board, into the space around it (the board
+ * area lets it overflow), so the board keeps its full size.
  */
 .turnEdge {
   --edge-width: calc(3px + 9px * var(--edge-strength, 1));
@@ -35,8 +34,8 @@
   transition: box-shadow 1s linear;
 }
 
-/* Your own turn also breathes, so it can't be missed. */
-.yourTurn::after {
+/* It also breathes, so it can't be missed. */
+.turnEdge::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -66,7 +65,7 @@
     transition: none;
   }
 
-  .yourTurn::after {
+  .turnEdge::after {
     animation: none;
   }
 }

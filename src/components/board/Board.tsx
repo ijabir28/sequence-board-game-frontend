@@ -24,10 +24,10 @@ interface BoardProps {
   hint?: Pos | null;
   disabled?: boolean;
   /**
-   * Whose-turn edge, in the active team's colour: `strength` from 1 (turn just started, thick) to 0 (time up, thin);
-   * `yours` adds a pulse; `paused` holds it still. Null hides it (game over).
+   * The viewer's own turn: the edge glows in their team's colour, `strength` from 1 (turn just started, thick) to 0
+   * (time up, thin); `paused` holds it still. Null on everyone else's turn: the plain board.
    */
-  turnEdge?: { strength: number; yours: boolean; paused: boolean } | null;
+  turnEdge?: { strength: number; paused: boolean } | null;
   onActivate: (pos: Pos) => void;
 }
 
@@ -90,7 +90,6 @@ export function Board({
       className={[
         styles.board,
         turnEdge && styles.turnEdge,
-        turnEdge?.yours && styles.yourTurn,
         turnEdge?.paused && styles.edgePaused,
         hasSelection && styles.selecting,
         targetMode === 'remove' && styles.removing,
