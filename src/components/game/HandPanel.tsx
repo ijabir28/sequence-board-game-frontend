@@ -1,12 +1,12 @@
-import { useId, useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useId, type KeyboardEvent, type ReactNode } from 'react';
 import { cardShort } from '../../engine/cards';
-import { movedOrder, shuffledOrder, sortedOrder } from '../../game/handOrder';
+import { movedOrder } from '../../game/handOrder';
 import type { HandCardView } from '../../game/types';
 import { HandCard } from '../hand/HandCard';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
-import { Tooltip } from '../ui/Tooltip';
 import styles from './HandPanel.module.css';
+import { useCardDrag } from './useCardDrag';
 
 interface HandPanelProps {
   title: string;
@@ -52,11 +52,10 @@ export function HandPanel({
 }: HandPanelProps) {
   const bodyId = useId();
   const arrange = !cover && onReorder ? onReorder : null;
-  const selectedSlot = selected === null ? -1 : order.indexOf(selected);
-  const drag = useRef<{ slot: number; x: number; moved: boolean; pointerId: number } | null>(null);
-  const suppressClick = useRef(false);
-
   const move = (from: number, to: number) => arrange?.(movedOrder(order, from, to));
+  const keys = order.map((handIndex) => `${handIndex}-${hand[handIndex]?.card}`);
+  // Drag a card to a new place (mouse, pen or touch); the other cards glide out of the way.
+  const drag = useCardDrag({ keys, enabled: arrange !== null, onMove: move });
 
   // Alt+Left/Right moves the focused card. Its button keeps focus, since cards are keyed by identity.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -65,31 +64,6 @@ export function HandPanel({
     if (Number.isNaN(slot)) return;
     event.preventDefault();
     move(slot, slot + (event.key === 'ArrowLeft' ? -1 : 1));
-  };
-
-  // Mouse and pen drag a card along the hand. Touch keeps scrolling and uses the move buttons instead.
-  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (!arrange || event.pointerType === 'touch' || event.button !== 0) return;
-    const slot = Number((event.target as HTMLElement).closest<HTMLElement>('[data-slot]')?.dataset.slot);
-    if (!Number.isNaN(slot)) drag.current = { slot, x: event.clientX, moved: false, pointerId: event.pointerId };
-  };
-  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const current = drag.current;
-    if (!current || current.pointerId !== event.pointerId) return;
-    if (!current.moved && Math.abs(event.clientX - current.x) < 8) return;
-    if (!current.moved) event.currentTarget.setPointerCapture(event.pointerId);
-    current.moved = true;
-    const over = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-slot]');
-    const to = over ? Number(over.dataset.slot) : NaN;
-    if (!Number.isNaN(to) && to !== current.slot) {
-      move(current.slot, to);
-      current.slot = to;
-    }
-  };
-  const onPointerEnd = () => {
-    // A drag ends with a click on the card; don't let it select or deselect.
-    suppressClick.current = drag.current?.moved ?? false;
-    drag.current = null;
   };
 
   const selectedCard = selected !== null ? hand[selected]?.card : undefined;
@@ -113,72 +87,28 @@ export function HandPanel({
       <div id={bodyId} className={styles.body}>
         {replaceWith ?? (
           <>
-            {arrange && (
-              <div className={styles.arrange} role="toolbar" aria-label="Arrange your hand">
-                <span className={styles.arrangeLabel}>Arrange</span>
-                <Tooltip text="Sort by suit and rank, jacks last. Only you see your order." side="top" align="start">
-                  <Button size="sm" variant="ghost" onClick={() => arrange(sortedOrder(hand.map((h) => h.card)))}>
-                    <Icon name="sort" size={16} />
-                    Sort
-                  </Button>
-                </Tooltip>
-                <Tooltip text="Mix up the order of your cards. Drag a card to move it." side="top">
-                  <Button size="sm" variant="ghost" onClick={() => arrange(shuffledOrder(order))}>
-                    <Icon name="shuffle" size={16} />
-                    Shuffle
-                  </Button>
-                </Tooltip>
-                {selectedSlot !== -1 && (
-                  <span className={styles.moveButtons}>
-                    <Tooltip text="Move left (Alt+←)" side="top">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={selectedSlot === 0}
-                        onClick={() => move(selectedSlot, selectedSlot - 1)}
-                        aria-label="Move the selected card left"
-                      >
-                        <Icon name="chevronLeft" size={16} />
-                      </Button>
-                    </Tooltip>
-                    <Tooltip text="Move right (Alt+→)" side="top" align="end">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={selectedSlot === order.length - 1}
-                        onClick={() => move(selectedSlot, selectedSlot + 1)}
-                        aria-label="Move the selected card right"
-                      >
-                        <Icon name="chevronRight" size={16} />
-                      </Button>
-                    </Tooltip>
-                  </span>
-                )}
-              </div>
-            )}
             <div
               className={[styles.cards, arrange && styles.arrangeable].filter(Boolean).join(' ')}
               role="group"
               aria-label="Cards in hand"
               onKeyDown={onKeyDown}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerEnd}
-              onPointerCancel={onPointerEnd}
-              onClickCapture={(event) => {
-                if (!suppressClick.current) return;
-                suppressClick.current = false;
-                event.preventDefault();
-                event.stopPropagation();
-              }}
+              {...drag.containerProps}
             >
               {cover
                 ? hand.map((_, i) => <span key={i} className={styles.back} aria-hidden="true" />)
                 : order.map((handIndex, slot) => {
                     const h = hand[handIndex];
+                    const key = keys[slot];
                     return (
                       // Keyed by the hand index, so a card keeps its element (and focus) when it moves.
-                      <div key={`${handIndex}-${h.card}`} className={styles.slot} data-slot={slot}>
+                      <div
+                        key={key}
+                        ref={drag.slotRef(key)}
+                        className={styles.slot}
+                        data-slot={slot}
+                        data-key={key}
+                        data-dragging={drag.draggingKey === key || undefined}
+                      >
                         <HandCard
                           card={h.card}
                           index={slot}

@@ -47,36 +47,38 @@
   max-width: none;
 }
 
-/* Mouse and pen can drag cards to rearrange them. */
-@media (pointer: fine) {
+/*
+ * Cards can be dragged to rearrange them, with a finger as well as a mouse: touch-action: none stops the browser
+ * from treating the drag as a scroll (the hand strip never scrolls). A tap still selects.
+ */
+.arrangeable .slot {
+  touch-action: none;
+  cursor: grab;
+  /* Settles into place when let go. */
+  transition: transform 180ms var(--ease-out);
+}
+
+/* The card in hand: lifted above the others, following the pointer with no lag. */
+.arrangeable .slot[data-dragging] {
+  position: relative;
+  z-index: 5;
+  cursor: grabbing;
+  transition: none;
+}
+
+.arrangeable .slot[data-dragging] > * {
+  transform: scale(1.08) rotate(-2deg);
+  box-shadow: 0 14px 28px -6px rgba(0, 0, 0, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
   .arrangeable .slot {
-    cursor: grab;
+    transition: none;
   }
 
-  .arrangeable .slot:active {
-    cursor: grabbing;
+  .arrangeable .slot[data-dragging] > * {
+    transform: none;
   }
-}
-
-.arrange {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.arrangeLabel {
-  margin-right: var(--space-1);
-  color: var(--on-surface-muted);
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.moveButtons {
-  display: inline-flex;
-  gap: var(--space-1);
-  margin-left: auto;
 }
 
 .back {
