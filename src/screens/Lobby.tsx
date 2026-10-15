@@ -9,6 +9,7 @@ import { Icon } from '../components/ui/Icon';
 import { HAND_SIZE_BY_PLAYER_COUNT, playersPerTeamOptions, type TeamCount } from '../engine/setup';
 import styles from './Forms.module.css';
 import own from './Lobby.module.css';
+import { YourTables } from './YourTables';
 
 export function Lobby() {
   const navigate = useNavigate();
@@ -165,6 +166,8 @@ export function Lobby() {
               </section>
             )}
           </div>
+
+          <YourTables />
         </div>
       </div>
     </>

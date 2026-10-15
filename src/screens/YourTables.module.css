@@ -1,0 +1,90 @@
+/* Spans both lobby columns on wide screens. */
+.card {
+  grid-column: 1 / -1;
+}
+
+.card h2 {
+  font-size: var(--text-lg);
+}
+
+.problem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--outline-subtle);
+}
+
+.row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.chip {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.code {
+  font-family: var(--font-display);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+}
+
+.open {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 5.5rem;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius);
+  border: 1px solid var(--outline-strong);
+  color: var(--on-surface);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.open:hover {
+  background: var(--surface-high);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
