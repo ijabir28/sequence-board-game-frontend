@@ -54,6 +54,11 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* A long press on a control shows its tooltip, so iOS shouldn't open its own callout (link preview, save image). */
+[data-tip] {
+  -webkit-touch-callout: none;
+}
+
 :focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);

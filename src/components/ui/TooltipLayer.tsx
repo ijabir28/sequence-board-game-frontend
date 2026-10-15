@@ -22,6 +22,12 @@ export function tipProps(text: string | null | undefined, side?: TipSide, align?
 const HOVER_DELAY_MS = 350;
 /** Moving straight from one tipped control to the next shows the next tip at once. */
 const WARM_MS = 400;
+/** On touch screens a press held this long, without moving, shows the tip: the touch version of hovering. */
+const LONG_PRESS_MS = 500;
+/** Moving further than this is a scroll or a drag, not a long press. Matches the hand's drag threshold. */
+const LONG_PRESS_SLOP = 8;
+/** After the finger lifts, the tip stays this long (or until the next touch) so it can be read. */
+const TOUCH_LINGER_MS = 3000;
 const EDGE = 8;
 const GAP = 6;
 
@@ -29,6 +35,8 @@ interface Open {
   target: HTMLElement;
   /** Keyboard focus opened it, so only blur closes it, not the pointer leaving. */
   focus: boolean;
+  /** A long press opened it. The tip goes above the control, where the finger doesn't cover it. */
+  touch: boolean;
 }
 
 function tipTarget(node: EventTarget | null): HTMLElement | null {
@@ -46,11 +54,14 @@ export function TooltipLayer() {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let closedAt = 0;
+    // The current touch on a tipped control, and whether it became a long press (so its click is swallowed).
+    let press: { pointerId: number; x: number; y: number; fired: boolean } | null = null;
+    let longPressed = false;
 
-    const show = (target: HTMLElement, focus: boolean, delay: number) => {
+    const show = (target: HTMLElement, focus: boolean, delay: number, touch = false) => {
       clearTimeout(timer);
       const warm = openRef.current !== null || performance.now() - closedAt < WARM_MS;
-      const go = () => setOpen({ target, focus });
+      const go = () => setOpen({ target, focus, touch });
       if (delay === 0 || warm) go();
       else timer = setTimeout(go, delay);
     };
@@ -89,9 +100,69 @@ export function TooltipLayer() {
       if (event.key === 'Escape' && openRef.current) hide();
     };
 
+    // Any press hides the tip. A touch on a tipped control starts the long-press timer.
+    const onPointerDown = (event: PointerEvent) => {
+      hide();
+      press = null;
+      longPressed = false;
+      if (event.pointerType !== 'touch' || !event.isPrimary) return;
+      const target = tipTarget(event.target);
+      if (!target) return;
+      const current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, fired: false };
+      press = current;
+      timer = setTimeout(() => {
+        current.fired = true;
+        longPressed = true;
+        show(target, false, 0, true);
+        try {
+          navigator.vibrate?.(10);
+        } catch {
+          // Haptics are a nicety; some browsers refuse them.
+        }
+      }, LONG_PRESS_MS);
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (!press || press.pointerId !== event.pointerId) return;
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) <= LONG_PRESS_SLOP) return;
+      // Moving before the timer is a scroll or a drag, not a long press; moving after it (dragging a card) puts
+      // the tip away.
+      hide();
+      press = null;
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      if (!press || press.pointerId !== event.pointerId) return;
+      // Released early: an ordinary tap. Released after: leave the tip up a moment to read.
+      clearTimeout(timer);
+      if (press.fired) timer = setTimeout(hide, TOUCH_LINGER_MS);
+      press = null;
+    };
+    const onPointerCancel = (event: PointerEvent) => {
+      if (!press || press.pointerId !== event.pointerId) return;
+      // The browser took the touch over (a scroll, or its own long-press gesture).
+      clearTimeout(timer);
+      if (press.fired) timer = setTimeout(hide, TOUCH_LINGER_MS);
+      press = null;
+    };
+    // A long press shows the tip instead of pressing the control, so the click it ends with is swallowed.
+    const onClick = (event: MouseEvent) => {
+      if (!longPressed) return;
+      longPressed = false;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    // Mobile browsers open a context menu (or link preview) on long press; the tip takes its place on tipped controls.
+    const onContextMenu = (event: MouseEvent) => {
+      if ((press || longPressed) && tipTarget(event.target)) event.preventDefault();
+    };
+
     document.addEventListener('pointerover', onPointerOver);
     document.addEventListener('pointerout', onPointerOut);
-    document.addEventListener('pointerdown', hide, true);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('pointermove', onPointerMove, true);
+    document.addEventListener('pointerup', onPointerUp, true);
+    document.addEventListener('pointercancel', onPointerCancel, true);
+    document.addEventListener('click', onClick, true);
+    document.addEventListener('contextmenu', onContextMenu, true);
     document.addEventListener('focusin', onFocusIn);
     document.addEventListener('focusout', onFocusOut);
     document.addEventListener('keydown', onKeyDown, true);
@@ -101,7 +172,12 @@ export function TooltipLayer() {
       clearTimeout(timer);
       document.removeEventListener('pointerover', onPointerOver);
       document.removeEventListener('pointerout', onPointerOut);
-      document.removeEventListener('pointerdown', hide, true);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('pointermove', onPointerMove, true);
+      document.removeEventListener('pointerup', onPointerUp, true);
+      document.removeEventListener('pointercancel', onPointerCancel, true);
+      document.removeEventListener('click', onClick, true);
+      document.removeEventListener('contextmenu', onContextMenu, true);
       document.removeEventListener('focusin', onFocusIn);
       document.removeEventListener('focusout', onFocusOut);
       document.removeEventListener('keydown', onKeyDown, true);
@@ -124,7 +200,7 @@ export function TooltipLayer() {
     observer.observe(target, { attributes: true, attributeFilter: [TIP_ATTR] });
     let frame = requestAnimationFrame(function tick() {
       if (!target.isConnected) return setOpen(null);
-      place(ref.current, target);
+      place(ref.current, target, open.touch);
       frame = requestAnimationFrame(tick);
     });
     return () => {
@@ -142,7 +218,7 @@ export function TooltipLayer() {
       if (visible && !el.matches(':popover-open')) el.showPopover();
       if (!visible && el.matches(':popover-open')) el.hidePopover();
     }
-    if (visible && open) place(el, open.target);
+    if (visible && open) place(el, open.target, open.touch);
   }, [open, text]);
 
   useLayoutEffect(() => ref.current?.setAttribute('popover', 'manual'), []);
@@ -155,14 +231,14 @@ export function TooltipLayer() {
 }
 
 /** Puts the tip on the preferred side of its target, flipping if it doesn't fit, and keeps it on screen. */
-function place(tip: HTMLElement | null, target: HTMLElement) {
+function place(tip: HTMLElement | null, target: HTMLElement, touch: boolean) {
   if (!tip) return;
   const box = target.getBoundingClientRect();
   const { width, height } = tip.getBoundingClientRect();
   const vw = document.documentElement.clientWidth;
   const vh = window.innerHeight;
 
-  const preferred = (target.getAttribute(SIDE_ATTR) as TipSide | null) ?? 'bottom';
+  const preferred = touch ? 'top' : ((target.getAttribute(SIDE_ATTR) as TipSide | null) ?? 'bottom');
   const above = box.top - GAP - height;
   const below = box.bottom + GAP;
   const fitsAbove = above >= EDGE;
