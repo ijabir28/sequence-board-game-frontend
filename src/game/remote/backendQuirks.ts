@@ -44,7 +44,7 @@ export const PLAY_MESSAGES = {
 
 /** What the server game can't do yet, shown above the board. */
 export const SERVER_LIMITATIONS =
-  "Server game preview: the server checks moves but can't apply them yet, has no turn order, and doesn't track sequences or dead cards.";
+  "Server test game: one shared board for the whole server, with no turn order, sequences or dead cards. Open a table to play a full game.";
 
 export const UNSUPPORTED = {
   exchange: "The server can't exchange dead cards yet.",

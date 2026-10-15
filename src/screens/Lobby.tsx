@@ -156,8 +156,8 @@ export function Lobby() {
             {devToolsEnabled() && (
               <section className={[styles.card, own.dev].join(' ')}>
                 <header className={styles.header}>
-                  <h2>Server game preview</h2>
-                  <p>Developer tool. Opens the server's built-in test game, which can't apply moves yet.</p>
+                  <h2>Server test game</h2>
+                  <p>Developer tool. Opens the server's built-in test game: one shared board with four fixed players.</p>
                 </header>
                 <Link to="/server-game" className={own.linkButton}>
                   Open server game
