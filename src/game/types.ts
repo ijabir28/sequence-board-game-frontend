@@ -110,5 +110,10 @@ export interface GameAdapter {
   pass(): Promise<ActionResult>;
   /** Re-reads state from the source (no-op for local games). */
   refresh(): Promise<void>;
+  /**
+   * The viewer stepped away from the board (a menu or the leave dialog is open) or came back. Table games treat it
+   * like leaving the table: the viewer's turn pauses until they're back. Optional; others ignore it.
+   */
+  stepAway?(away: boolean): void;
   dispose(): void;
 }

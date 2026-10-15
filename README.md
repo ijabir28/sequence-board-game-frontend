@@ -170,7 +170,7 @@ invariants.
   the table (`announcePresence` in `src/api/socket.ts`, sent again after every reconnect). If the current player
   closes the game, their turn **pauses**: the timer stops, nothing is played for them, and everyone sees
   "*Name* is not at the table. The game is paused until they come back." with a "Paused" clock showing the time they
-  have left. Players who are away are tagged "away" in the turn order. The turn resumes when they come back.
+  have left. Players who are away are tagged "away" in the turn order. The turn resumes when they come back. Opening the phone menu drawer or the "Leave this game?" dialog counts as leaving too (`stepAway` on the adapter), so your turn pauses while it is open, even before you confirm.
 - **Your hand, your order.** Drag a card to a new place with a finger, mouse or pen (the other cards slide out of the
   way; a tap still selects), or move the focused card with Alt+←/→ (`src/components/game/useCardDrag.ts`). Only your view changes (`src/game/handOrder.ts`): moves still use the
   real hand index, and a new card arrives where the played one was. Table games remember the order per table on this

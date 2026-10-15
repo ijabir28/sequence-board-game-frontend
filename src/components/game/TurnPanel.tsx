@@ -99,11 +99,11 @@ export function TurnPanel({
       Paused{turnTimeLeft !== null && ` · ${formatElapsed(turnTimeLeft + 999)}`}
     </span>
   );
-  // Your own page announces you, so on your own turn a pause only lasts until it has reconnected.
+  // On your own turn a pause means your page isn't counted at the table: a menu is open, or it is reconnecting.
   const pausedText = !paused
     ? null
     : yours
-      ? 'Reconnecting you to the table…'
+      ? 'Your turn is paused until you are back at the board.'
       : `${current!.name} is not at the table. The game is paused until they come back.`;
   const pausedNotice = pausedText && (
     <p className={styles.awayNotice} role="status">
