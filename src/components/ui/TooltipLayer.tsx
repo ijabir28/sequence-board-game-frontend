@@ -61,7 +61,8 @@ export function TooltipLayer() {
     };
 
     const onPointerOver = (event: PointerEvent) => {
-      if (event.pointerType === 'touch') return;
+      // Touch is handled by long press; a held button means a drag, which shouldn't light up what it passes.
+      if (event.pointerType === 'touch' || event.buttons !== 0) return;
       // The pointer may rest on the tip itself without it closing (WCAG 1.4.13).
       if (ref.current?.contains(event.target as Node)) return clearTimeout(timer);
       const target = tipTarget(event.target);
