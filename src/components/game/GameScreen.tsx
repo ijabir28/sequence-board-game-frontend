@@ -220,10 +220,9 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       onClick={onExchange}
       busy={busy}
       disabled={!exchangeable}
-      aria-label={manualDead ? 'Exchange the selected card as dead' : 'Exchange the dead card'}
     >
       <Icon name="swap" size={16} />
-      Exchange
+      Exchange dead
     </Button>
   ) : null;
 
@@ -270,7 +269,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             >
               <Button size="sm" variant={manualDead ? 'secondary' : 'primary'} onClick={onExchange} busy={busy}>
                 <Icon name="swap" size={16} />
-                {manualDead ? 'Exchange as dead' : 'Exchange dead card'}
+                Exchange dead
               </Button>
             </Tooltip>
           </span>
