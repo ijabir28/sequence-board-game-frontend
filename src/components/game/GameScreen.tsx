@@ -12,6 +12,7 @@ import { Board } from '../board/Board';
 import { Chip } from '../Chip';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
+import { Drawer } from '../ui/Drawer';
 import { Icon } from '../ui/Icon';
 import { Tooltip } from '../ui/Tooltip';
 import { HandPanel } from './HandPanel';
@@ -53,6 +54,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const [handOpen, setHandOpen] = useState(true);
   const [logOpen, setLogOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   // Phones: the turn panel and the scoreboard fold into one line until the player opens them.
   const phone = useMediaQuery('(max-width: 600px)');
@@ -278,39 +280,101 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       className={styles.screen}
       style={activeTeam !== null ? ({ '--active-team': TEAM_STYLES[activeTeam].color, '--active-glow': TEAM_STYLES[activeTeam].glow } as React.CSSProperties) : undefined}
     >
-      <header className={styles.top}>
-        {/* Spans the board's column, so the scoreboard is centred over the board. */}
-        <div className={styles.topBoard}>
-          <div className={styles.brand}>
-            <span className={styles.logo} aria-hidden="true">
-              <Chip team={0} />
-            </span>
-            <span className={styles.brandText}>Sequence</span>
-            <span className={styles.mode}>{view.title ?? modeLabel}</span>
-          </div>
-          <div className={styles.scores}>
-            {!phone && <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />}
-          </div>
-        </div>
-        <div className={styles.topActions}>
-          {headerExtra}
-          {history && (
-            <Tooltip text="Every move so far" align="end">
-              <button type="button" className={[styles.iconButton, styles.logButton].join(' ')} onClick={() => setLogOpen(true)} aria-label="Move log">
+      {phone ? (
+        <>
+          {/* Phones: the header's options live in a drawer on the right, opened by this pull tab. */}
+          <button
+            type="button"
+            className={styles.drawerHandle}
+            onClick={() => setMenuOpen(true)}
+            aria-label="Game menu"
+            aria-expanded={menuOpen}
+            aria-haspopup="dialog"
+          >
+            <Icon name="chevronLeft" size={18} />
+          </button>
+          <Drawer
+            open={menuOpen}
+            onClose={() => setMenuOpen(false)}
+            title={
+              <span className={styles.drawerTitle}>
+                <span className={styles.logo} aria-hidden="true">
+                  <Chip team={0} />
+                </span>
+                <span>Sequence</span>
+                <span className={styles.mode}>{view.title ?? modeLabel}</span>
+              </span>
+            }
+          >
+            {history && (
+              <button
+                type="button"
+                className={styles.drawerItem}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setLogOpen(true);
+                }}
+              >
                 <Icon name="log" />
+                <span>
+                  <strong>Move log</strong>
+                  <small>Every move so far</small>
+                </span>
+              </button>
+            )}
+            {headerExtra && <div className={styles.drawerExtra}>{headerExtra}</div>}
+            <button
+              type="button"
+              className={[styles.drawerItem, styles.drawerLeave].join(' ')}
+              onClick={() => {
+                setMenuOpen(false);
+                if (gameOver) onExit();
+                else setExitOpen(true);
+              }}
+            >
+              <Icon name="exit" />
+              <span>
+                <strong>Leave game</strong>
+                <small>{adapter.mode === 'local' ? 'Hot-seat games are not saved.' : 'It is saved, so you can come back.'}</small>
+              </span>
+            </button>
+          </Drawer>
+        </>
+      ) : (
+        <header className={styles.top}>
+          {/* Spans the board's column, so the scoreboard is centred over the board. */}
+          <div className={styles.topBoard}>
+            <div className={styles.brand}>
+              <span className={styles.logo} aria-hidden="true">
+                <Chip team={0} />
+              </span>
+              <span className={styles.brandText}>Sequence</span>
+              <span className={styles.mode}>{view.title ?? modeLabel}</span>
+            </div>
+            <div className={styles.scores}>
+              {!phone && <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />}
+            </div>
+          </div>
+          <div className={styles.topActions}>
+            {headerExtra}
+            {history && (
+              <Tooltip text="Every move so far" align="end">
+                <button type="button" className={[styles.iconButton, styles.logButton].join(' ')} onClick={() => setLogOpen(true)} aria-label="Move log">
+                  <Icon name="log" />
+                </button>
+              </Tooltip>
+            )}
+            <Tooltip
+              text={adapter.mode === 'local' ? 'Leave this game. Hot-seat games are not saved.' : 'Leave this game. It is saved, so you can come back.'}
+              align="end"
+            >
+              <button type="button" className={styles.iconButton} onClick={() => (gameOver ? onExit() : setExitOpen(true))} aria-label="Leave game">
+                <Icon name="exit" />
               </button>
             </Tooltip>
-          )}
-          <Tooltip
-            text={adapter.mode === 'local' ? 'Leave this game. Hot-seat games are not saved.' : 'Leave this game. It is saved, so you can come back.'}
-            align="end"
-          >
-            <button type="button" className={styles.iconButton} onClick={() => (gameOver ? onExit() : setExitOpen(true))} aria-label="Leave game">
-              <Icon name="exit" />
-            </button>
-          </Tooltip>
-        </div>
-      </header>
+          </div>
+        </header>
+      )}
 
       <div className={styles.status} hidden={view.status !== 'ready'}>
         <TurnPanel
