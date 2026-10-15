@@ -4,6 +4,7 @@ import { describeTable } from './YourTables';
 
 const base: MyRoom = {
   id: '1',
+  name: 'Friday',
   createdAt: '2026-10-15T05:48:22.696Z',
   administrator: 'jabir',
   teamCount: 2,
@@ -13,6 +14,7 @@ const base: MyRoom = {
   status: 'open',
   winnerTeam: null,
   moveCount: 0,
+  lastMoveAt: null,
 };
 
 describe('describeTable', () => {
@@ -31,3 +33,4 @@ describe('describeTable', () => {
     expect(describeTable({ ...base, yourTeam: null, status: 'finished', winnerTeam: 0, moveCount: 40 })).toBe('Team Green won · 40 moves');
   });
 });
+

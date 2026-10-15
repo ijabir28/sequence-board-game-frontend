@@ -1,13 +1,16 @@
 /*
  * The board never scrolls. Its parent (the board area) is a size container; the board takes
- * whichever is smaller of the area's width and its height × the board's aspect ratio, so the
- * whole 10×10 grid is always visible however much room the hand or the rail leaves.
+ * whichever is smaller of the area's width and height, so the whole 10×10 grid is always visible
+ * however much room the hand or the rail leaves.
+ *
+ * The board, and so every cell, is square: rows and columns share one pitch, so chips and the
+ * sequence lines through their centres line up in every direction, diagonals included.
+ * BOARD_INSET and BOARD_GAP in Board.tsx must match the inset and gaps below.
  */
 .board {
-  --aspect: 0.86; /* width / height: slightly portrait cells, like cards */
   position: relative;
-  width: min(100cqw, 100cqh * var(--aspect));
-  aspect-ratio: var(--aspect);
+  width: min(100cqw, 100cqh);
+  aspect-ratio: 1;
   container-type: inline-size;
   border-radius: calc(var(--radius-card) + 2px);
   background: var(--surface-lowest);
@@ -63,13 +66,12 @@
   letter-spacing: -0.03em;
 }
 
+/* The suit sits in the bottom-right corner, mirroring the rank, so a chip in the middle never hides it. */
 .suit {
   position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding-top: 1.4cqw;
-  font-size: max(11px, 3.6cqw);
+  right: 0.6cqw;
+  bottom: 0.35cqw;
+  font-size: max(9px, 2.5cqw);
   line-height: 1;
 }
 
@@ -87,11 +89,11 @@
   font-size: max(12px, 3.6cqw);
 }
 
-/* Chip sits on the card, leaving the rank readable in the top-left corner. */
+/* Chip sits in the centre of its cell, where sequence lines pass. */
 .chip {
   position: absolute;
   left: 50%;
-  top: 56%;
+  top: 50%;
   width: 66%;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
@@ -206,5 +208,35 @@
 @keyframes beam-flow {
   to {
     stroke-dashoffset: -20;
+  }
+}
+
+/* The training hint's suggested cell: a pulsing gold ring, distinct from team colours and the last-move ring. */
+.hinted {
+  z-index: 1;
+  opacity: 1;
+}
+
+.hinted::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px dashed var(--corner-ink);
+  box-shadow: 0 0 12px rgba(245, 196, 81, 0.6);
+  pointer-events: none;
+  animation: hint-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes hint-pulse {
+  50% {
+    box-shadow: 0 0 4px rgba(245, 196, 81, 0.2);
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hinted::after {
+    animation: none;
   }
 }

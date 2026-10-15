@@ -206,3 +206,10 @@
   height: 1px;
   background: var(--outline-subtle);
 }
+
+/* A form inside a dialog: the dialog draws the card. */
+.dialogForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}

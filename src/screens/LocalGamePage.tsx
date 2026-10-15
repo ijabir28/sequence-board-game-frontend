@@ -13,7 +13,18 @@ export function LocalGamePage() {
   const [config, setConfig] = useState<LocalConfig | null>(null);
   const [round, setRound] = useState(0);
 
-  const adapter = useMemo(() => (config ? new LocalGameAdapter(config) : null), [config, round]);
+  const adapter = useMemo(
+    () =>
+      config
+        ? new LocalGameAdapter({
+            ...config,
+            rules: { autoDrawDead: config.settings.autoDrawDead },
+            turnSeconds: config.settings.turnSeconds,
+            settings: { mode: config.settings.mode, highlights: config.settings.highlights, history: config.settings.history },
+          })
+        : null,
+    [config, round],
+  );
   useEffect(() => () => adapter?.dispose(), [adapter]);
 
   if (!config || !adapter) return <LocalSetup initial={preset ?? undefined} onStart={setConfig} backAction={<Link to="/">Back</Link>} />;

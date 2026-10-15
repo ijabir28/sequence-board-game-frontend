@@ -3,6 +3,8 @@ import type { LogEntry } from '../engine/game';
 import type { Sequence } from '../engine/sequences';
 import type { TeamIndex } from '../engine/setup';
 import { ApiError, postJson, request } from './http';
+import type { HintReason } from '../engine/hints';
+import type { RawRoomSettings } from './rooms';
 
 // A table's game (backend controller/room_game.js). Every response is the game as the
 // signed-in player sees it; errors are JSON {error, message}.
@@ -13,6 +15,12 @@ export interface RoomGamePlayer {
   team: TeamIndex;
   hand_count: number;
 }
+
+/** A suggested move: training games only, for the player whose turn it is. */
+export type RawHint =
+  | { type: 'play'; hand_index: number; target: Pos; reason: HintReason }
+  | { type: 'exchange'; hand_index: number; reason: HintReason }
+  | { type: 'pass'; reason: HintReason };
 
 export interface RoomGameView {
   team_count: 2 | 3;
@@ -30,7 +38,17 @@ export interface RoomGameView {
   deck_count: number;
   sequences: Sequence[];
   winner: TeamIndex | null;
+  /** With history off, only the latest move. */
   log: LogEntry[];
+  /** The room's name and settings (missing from older backends). */
+  name?: string;
+  settings?: RawRoomSettings;
+  hint?: RawHint | null;
+  /** When the current turn began (ISO time), and the server's clock at the time of the response. */
+  turn_started_at?: string | null;
+  /** When the turn's timer runs out (ISO time); the server then plays a random card for the player. */
+  turn_deadline?: string | null;
+  server_time?: string;
 }
 
 /** The server understood the request and refused it, for example a move out of turn. */

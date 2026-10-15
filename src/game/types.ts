@@ -1,6 +1,8 @@
 import type { Pos } from '../engine/board';
 import type { BoardCardName, CardName } from '../engine/cards';
+import type { GameMode } from '../api/rooms';
 import type { LogEntry } from '../engine/game';
+import type { Hint } from '../engine/hints';
 import type { Sequence } from '../engine/sequences';
 import type { TeamIndex } from '../engine/setup';
 
@@ -35,6 +37,18 @@ export interface TeamView {
 
 export type GameStatus = 'loading' | 'ready' | 'error';
 
+/** How the game is shown, chosen with the table (or the hot-seat setup). */
+export interface PlaySettings {
+  /** Training games show hints; standard games never do. */
+  mode: GameMode;
+  /** Light up the legal cells for the selected card. */
+  highlights: boolean;
+  /** Show the move log. Off: only the latest move is known. */
+  history: boolean;
+}
+
+export const DEFAULT_PLAY_SETTINGS: PlaySettings = { mode: 'standard', highlights: true, history: true };
+
 export interface GameView {
   status: GameStatus;
   /** Set when status is 'error': what happened and what to do next. */
@@ -58,6 +72,15 @@ export interface GameView {
   log: LogEntry[];
   winner: TeamIndex | null;
   turn: number | null;
+  settings: PlaySettings;
+  /** The suggested move for the viewer: only in training games, only on the viewer's turn. */
+  hint: Hint | null;
+  /** When the current turn began, in this device's clock (ms since epoch); null when unknown. */
+  turnStartedAt: number | null;
+  /** When the current turn's timer runs out, in this device's clock; null when there is no timer. */
+  turnDeadline: number | null;
+  /** The table's name, when the game belongs to one. */
+  title?: string;
 }
 
 export type ActionResult = { ok: true } | { ok: false; message: string };

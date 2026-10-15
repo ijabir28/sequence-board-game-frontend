@@ -13,24 +13,87 @@ export interface RoomTeam {
   seats: (Seat | null)[];
 }
 
+/** `training` gives the player whose turn it is hints; `standard` games never get any. */
+export type GameMode = 'standard' | 'training';
+
+/** Options the table's host picks. They can change until the game starts. */
+export interface RoomSettings {
+  mode: GameMode;
+  /** Players can read back every move (the move log). */
+  history: boolean;
+  /** Legal cells light up when a card is picked. */
+  highlights: boolean;
+  /** A dead card is exchanged automatically when its owner's turn starts. */
+  autoDrawDead: boolean;
+  /** Seconds each player has for a turn. */
+  turnSeconds: number;
+}
+
+/** Turn timer choices offered to hosts (the backend's TURN_TIMER_PRESETS); any whole number in range works too. */
+export const TURN_TIMER_PRESETS = [30, 60, 90, 120, 180] as const;
+export const TURN_SECONDS_MIN = 15;
+export const TURN_SECONDS_MAX = 600;
+
+/** Highlights and history are off unless the host turns them on; 90 seconds a turn. Matches the backend. */
+export const DEFAULT_ROOM_SETTINGS: RoomSettings = { mode: 'standard', history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 };
+
+export function isValidTurnSeconds(seconds: number): boolean {
+  return Number.isInteger(seconds) && seconds >= TURN_SECONDS_MIN && seconds <= TURN_SECONDS_MAX;
+}
+
+export interface RawRoomSettings {
+  mode?: string;
+  history?: boolean;
+  highlights?: boolean;
+  auto_draw_dead?: boolean;
+  turn_seconds?: number;
+}
+
+/** Missing settings (an older backend) fall back to the defaults. */
+export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings {
+  return {
+    mode: raw?.mode === 'training' ? 'training' : 'standard',
+    history: raw?.history ?? DEFAULT_ROOM_SETTINGS.history,
+    highlights: raw?.highlights ?? DEFAULT_ROOM_SETTINGS.highlights,
+    autoDrawDead: raw?.auto_draw_dead ?? DEFAULT_ROOM_SETTINGS.autoDrawDead,
+    turnSeconds: typeof raw?.turn_seconds === 'number' ? raw.turn_seconds : DEFAULT_ROOM_SETTINGS.turnSeconds,
+  };
+}
+
+function rawSettings(settings: Partial<RoomSettings>): RawRoomSettings {
+  return { mode: settings.mode, history: settings.history, highlights: settings.highlights, auto_draw_dead: settings.autoDrawDead, turn_seconds: settings.turnSeconds };
+}
+
 export interface Room {
+  /** The table's code: a slug such as "friday-night-k3m9" (older tables have numeric codes). */
   id: string;
+  name: string;
+  /** The host's handle (to compare with yours), and their display name (to show). */
   administrator: string | null;
+  administratorName: string | null;
   teams: RoomTeam[];
   gameStarted: boolean;
+  settings: RoomSettings;
 }
 
 interface RawRoom {
+  name?: string;
   administrator?: string;
+  administrator_name?: string;
   teams?: { handle: string; players: ({ handle?: string; name?: string; [key: string]: unknown } | null)[] }[];
   game_started?: boolean;
+  settings?: RawRoomSettings;
 }
 
 /** Keeps only the fields the UI needs. */
 export function sanitizeRoom(id: string, raw: RawRoom): Room {
   return {
     id,
+    name: raw.name ?? `Table ${id}`,
+    settings: sanitizeSettings(raw.settings),
     administrator: raw.administrator ?? null,
+    // Older backends send only the handle; it is better than nothing.
+    administratorName: raw.administrator_name ?? raw.administrator ?? null,
     teams: (raw.teams ?? []).map((team, i) => ({
       handle: team.handle,
       index: i as TeamIndex,
@@ -40,17 +103,77 @@ export function sanitizeRoom(id: string, raw: RawRoom): Room {
   };
 }
 
-/** POST /room/create. Refusals (signed out, unsupported size) are JSON {error, message} and become an ApiError with that message. */
-export async function createRoom(teamCount: number, playersPerTeam: number): Promise<string> {
-  const response = await postJson('/room/create', { number_of_team: teamCount, number_of_player_in_each_team: playersPerTeam });
+/** Turns a 4xx JSON {error, message} into an ApiError with that message. */
+async function refusal(response: Response, fallback: string): Promise<void> {
   if (response.status >= 400 && response.status < 500) {
     const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
-    const message = typeof body?.message === 'string' ? body.message : `The server refused to open the table (${response.status}).`;
+    const message = typeof body?.message === 'string' ? body.message : `${fallback} (${response.status}).`;
     throw new ApiError('server', message, response.status);
   }
+}
+
+export interface NewRoomOptions {
+  /** Blank lets the server pick a name. */
+  name?: string;
+  settings?: Partial<RoomSettings>;
+}
+
+/** POST /room/create. Returns the new table's code. Refusals (signed out, unsupported size, bad name) become an ApiError with the server's message. */
+export async function createRoom(teamCount: number, playersPerTeam: number, options: NewRoomOptions = {}): Promise<string> {
+  const response = await postJson('/room/create', {
+    number_of_team: teamCount,
+    number_of_player_in_each_team: playersPerTeam,
+    name: options.name?.trim() || undefined,
+    ...rawSettings(options.settings ?? {}),
+  });
+  await refusal(response, 'The server refused to open the table');
   const body = await readJson<{ id: string }>(response);
   if (!body?.id) throw new Error('The server did not return a table code. Try again.');
   return String(body.id);
+}
+
+/** PATCH /room/:id/settings (host only, before the game starts). Returns the updated room. */
+export async function updateRoom(id: string, changes: { name?: string; settings?: Partial<RoomSettings> }): Promise<Room> {
+  const response = await request(`/room/${encodeURIComponent(id)}/settings`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: changes.name, ...rawSettings(changes.settings ?? {}) }),
+  });
+  await refusal(response, 'The server refused to change the table');
+  const raw = await readJson<RawRoom>(response);
+  if (!raw) throw new ApiError('unexpected', 'The server did not return the table. Reload the page.');
+  return sanitizeRoom(id, raw);
+}
+
+/** POST to a room action that answers with the room (leave, shuffle); refusals carry the server's message. */
+async function roomAction(id: string, action: 'leave' | 'shuffle', fallback: string): Promise<Room> {
+  const response = await postJson(`/room/${encodeURIComponent(id)}/${action}`, {});
+  await refusal(response, fallback);
+  const raw = await readJson<RawRoom>(response);
+  if (!raw) throw new ApiError('unexpected', 'The server did not return the table. Reload the page.');
+  return sanitizeRoom(id, raw);
+}
+
+/** POST /room/:id/leave: stand up from your seat (before the game starts). */
+export function leaveSeat(id: string): Promise<Room> {
+  return roomAction(id, 'leave', 'The server refused to free your seat');
+}
+
+/** POST /room/:id/shuffle: the host deals the seated players out to the teams at random. */
+export function shuffleSeats(id: string): Promise<Room> {
+  return roomAction(id, 'shuffle', 'The server refused to shuffle the teams');
+}
+
+/**
+ * Reads a table code from what a player typed or pasted: a code ("friday-night-k3m9", or an older numeric one)
+ * or a table link. Returns null when it can't be a code.
+ */
+export function parseTableCode(input: string): string | null {
+  let text = input.trim();
+  const link = /\/table\/([^/?#\s]+)/.exec(text);
+  if (link) text = decodeURIComponent(link[1]);
+  text = text.toLowerCase().replace(/\s+/g, '');
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(text) ? text : null;
 }
 
 /** GET /room/:id. Returns null when the room doesn't exist (the backend answers 200 with an empty body). */
@@ -85,6 +208,7 @@ export type RoomStatus = 'open' | 'playing' | 'finished';
 /** A table from the signed-in user's history (GET /user/rooms). */
 export interface MyRoom {
   id: string;
+  name: string;
   createdAt: string;
   administrator: string;
   teamCount: number;
@@ -95,10 +219,13 @@ export interface MyRoom {
   status: RoomStatus;
   winnerTeam: TeamIndex | null;
   moveCount: number;
+  /** When the last move was made (or the game started); null before the game starts. */
+  lastMoveAt: string | null;
 }
 
 interface RawMyRoom {
   id: string;
+  name?: string;
   created_at: string;
   administrator: string;
   team_count: number;
@@ -108,12 +235,14 @@ interface RawMyRoom {
   status: string;
   winner_team: number | null;
   move_count: number;
+  last_move_at?: string | null;
 }
 
 export function sanitizeMyRoom(raw: RawMyRoom): MyRoom {
   const status: RoomStatus = raw.status === 'playing' || raw.status === 'finished' ? raw.status : 'open';
   return {
     id: String(raw.id),
+    name: raw.name ?? `Table ${raw.id}`,
     createdAt: String(raw.created_at),
     administrator: String(raw.administrator),
     teamCount: Number(raw.team_count),
@@ -123,11 +252,42 @@ export function sanitizeMyRoom(raw: RawMyRoom): MyRoom {
     status,
     winnerTeam: raw.winner_team === null ? null : (raw.winner_team as TeamIndex),
     moveCount: Number(raw.move_count),
+    lastMoveAt: raw.last_move_at ? String(raw.last_move_at) : null,
   };
 }
 
-/** The tables the signed-in user created or sat at, newest first. */
-export async function listMyRooms(): Promise<MyRoom[]> {
-  const raw = await readJson<RawMyRoom[]>(await request('/user/rooms'));
-  return (raw ?? []).map(sanitizeMyRoom);
+/** One page of the user's tables. */
+export interface MyRoomsPage {
+  rooms: MyRoom[];
+  page: number;
+  perPage: number;
+  total: number;
+  pages: number;
+}
+
+interface RawMyRoomsPage {
+  rooms?: RawMyRoom[];
+  page?: number;
+  per_page?: number;
+  total?: number;
+  pages?: number;
+}
+
+/** One page of the tables the signed-in user created or sat at, newest first (GET /user/rooms). */
+export async function listMyRooms(page = 1, perPage = 10): Promise<MyRoomsPage> {
+  const raw = await readJson<RawMyRoomsPage>(await request(`/user/rooms?page=${page}&per_page=${perPage}`));
+  const rooms = (raw?.rooms ?? []).map(sanitizeMyRoom);
+  return {
+    rooms,
+    page: raw?.page ?? page,
+    perPage: raw?.per_page ?? perPage,
+    total: raw?.total ?? rooms.length,
+    pages: Math.max(1, raw?.pages ?? 1),
+  };
+}
+
+/** The game in progress you sat at that moved last, to offer for resuming (GET /user/current-game). */
+export async function getCurrentGame(): Promise<MyRoom | null> {
+  const raw = await readJson<{ room?: RawMyRoom | null }>(await request('/user/current-game'));
+  return raw?.room ? sanitizeMyRoom(raw.room) : null;
 }

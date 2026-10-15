@@ -7,8 +7,9 @@ It has two ways to play:
 
 - **On one device (hot-seat).** A complete rules engine runs in the browser, so you can play a full game without the
   server.
-- **With the server.** Create an account or sign in, open a table, share its code and take seats live. Once every seat is taken, any player
-  starts the game and everyone plays from their own device; the server deals, enforces turn order and detects
+- **With the server.** Create an account or sign in, open a named table with the options you want, share its code
+  (a slug of its name, such as `friday-night-k3m9`) and take seats live. Once every seat is taken, the host (whoever
+  opened the table) starts the game and everyone plays from their own device; the server deals, enforces turn order and detects
   sequences. Tables and games are saved on the server, so the lobby's "Your tables" list lets you resume a game
   later, even after the backend restarts. A developer page also shows the server's older built-in test game.
 
@@ -145,14 +146,31 @@ invariants.
   board sizes itself to whichever is smaller, the area's width or its height, so all 100 cells are always visible.
   - **Laptops** get a side rail with the hand and the move log.
   - **Phones and tablets** get a collapsible hand strip docked at the bottom; collapsing it gives the board more room.
+  - **Phones** also fold the turn panel and scoreboard into one line (your countdown on your turn, else whose turn
+    it is); tap it to see the full panel and the scores.
   - **Phones in landscape** use the side rail, so the board stays usable.
   - The move log is the one region that scrolls, and only inside its own box. On small screens it opens in a dialog.
+- **The scoreboard is centred over the board.** The game header uses the same columns as the screen (board | rail on
+  laptops), so the scoreboard sits over the board's centre at every size.
+- **Whose turn it is is never in doubt.** A Turn panel (`src/components/game/TurnPanel.tsx`) shows the player and
+  team in the team's colour, a countdown on your own turn (the table's turn timer, 90 s by default; other players
+  see only whose turn it is), and the turn order. The countdown turns amber at 20 s and red at 10 s. When it runs out, a random playable card from the
+  player's hand is played for them: by the server for tables, by `LocalGameAdapter` for hot-seat games, and the
+  move log says so. When it becomes your turn it flashes,
+  phones buzz, and the tab title starts with "● Your turn". Table games take the turn's start time from the server
+  (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
+- **Your hand, your order.** Drag a card to a new place with a finger, mouse or pen (the other cards slide out of the
+  way; a tap still selects), or move the focused card with Alt+←/→ (`src/components/game/useCardDrag.ts`). Only your view changes (`src/game/handOrder.ts`): moves still use the
+  real hand index, and a new card arrives where the played one was. Table games remember the order per table on this
+  device; hot-seat players each keep their own.
 - **Teams differ by more than colour:** Green chips are circles, Blue are diamonds, Red are triangles, and each has its
   own inner mark. Chips in a completed sequence get a white rim, and a glowing line runs through the sequence.
 - **Accessibility:**
   - The board is an ARIA grid. Arrow keys and Home/End move, and Enter or Space plays. Number keys 1–7 pick hand cards
-    and Escape clears the selection.
+    in the order you arranged them, and Escape clears the selection.
   - Cells have labels such as "7 of Hearts, team 2 chip (Blue, diamond), playable".
+  - Utility buttons have tooltips (`src/components/ui/Tooltip.tsx`) that show on hover and on keyboard focus, and
+    Escape dismisses them.
   - Focus is always visible, and `prefers-reduced-motion` is respected.
   - No page scrolls horizontally at 360px.
 
@@ -165,10 +183,39 @@ on the server.
 
 ## Tables and history
 
-The server stores tables, seats, games and every move in PostgreSQL. The lobby's **Your tables** card
-(`src/screens/YourTables.tsx`, from `GET /user/rooms`) lists the tables you opened or sat at with their status
-(waiting, in progress with the move count, or who won) and links to resume or view them. The full move history of a
-table is available from `GET /room/:id/turns`; the game screen's move log comes from the game view itself.
+The dashboard (`/lobby`) has two buttons. **New Game** opens a dialog to name a table and choose its teams and
+settings; **Join a table** opens a dialog for a code or link. Dialogs blur the page behind them.
+
+A table has a name and a code. The code is the slug of the name plus a short suffix (`friday-night-k3m9`), and it
+is what goes in links (`/table/friday-night-k3m9`). "Join a table" also accepts older numeric codes and pasted
+links (`parseTableCode()` in `src/api/rooms.ts`).
+
+Whoever opens a table (the host) picks its options, shown by `src/components/RoomOptions.tsx`:
+
+| Option | Default | Effect |
+|---|---|---|
+| Mode | Standard | Training: on your turn a Hint button suggests a move and says why, and card tips explain what the selected card does. Standard games never show hints or tips |
+| Highlight legal cells | off | Off: picking a card doesn't light up its cells, and wrong cells are explained by the rules |
+| Move history | off | Off: no move log; the server sends only the latest move |
+| Turn timer | 90 s | 30 s, 1 min, 1 min 30 s, 2 min, 3 min, or a custom number of seconds (15–600) |
+| Auto-draw dead cards | off | On: a dead card is swapped automatically when its owner's turn starts |
+
+Hints come from the server for tables (only to the player whose turn it is, only in training games) and from
+`src/engine/hints.ts` for hot-seat games; `src/game/describeHint.ts` words them.
+
+Only the host can start the game; other players see who they are waiting for, by display name. Until the game
+starts, a seated player can **Stand up** to change teams, and the host can **Shuffle teams** to deal the seated
+players out at random. The host can rename the table and
+change options on the table page until the game starts. Hot-seat games offer the
+same options. When the game starts, every seated player on the table page is taken into it.
+
+The server stores tables, seats, options, games and every move in PostgreSQL. The **Your tables** list
+(`src/screens/YourTables.tsx`, from `GET /user/rooms`) lists the tables you opened or sat at, ten to a page, with their status
+(waiting, in progress with the move count, or who won) and links to resume or view them. It opens in a dialog from
+the **Your tables** button; the dashboard itself shows only the game in progress you sat at that moved last
+(`GET /user/current-game`). The table page and the game's leave dialog have a **Back to dashboard** button. The full move history of a table is available from
+`GET /room/:id/turns` (unless the table plays without history); the game screen's move log comes from the game view
+itself.
 
 ## Backend limitations
 

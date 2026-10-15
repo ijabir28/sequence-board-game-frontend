@@ -10,7 +10,7 @@ export interface Sequence {
 
 export const SEQUENCE_LENGTH = 5;
 
-const DIRECTIONS: readonly Pos[] = [
+export const DIRECTIONS: readonly Pos[] = [
   { row: 0, column: 1 }, // horizontal
   { row: 1, column: 0 }, // vertical
   { row: 1, column: 1 }, // diagonal ↘

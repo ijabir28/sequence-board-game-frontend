@@ -35,6 +35,26 @@ export function onGameUpdated(roomId: string, listener: () => void): () => void 
   };
 }
 
+/** `teams_shuffled`: the host dealt the seated players out again. Carries the host and the new seating. */
+export interface TeamsShuffled {
+  roomId: string;
+  byName: string;
+  /** The room as the server sent it (raw); pass it to sanitizeRoom. */
+  room: unknown;
+}
+
+export function onTeamsShuffled(roomId: string, listener: (event: TeamsShuffled) => void): () => void {
+  const s = getSocket();
+  const handler = (data?: { room_id?: string; by?: { name?: string; handle?: string }; room?: unknown }) => {
+    if (data?.room_id !== roomId) return;
+    listener({ roomId, byName: data.by?.name ?? data.by?.handle ?? 'The host', room: data.room });
+  };
+  s.on('teams_shuffled', handler);
+  return () => {
+    s.off('teams_shuffled', handler);
+  };
+}
+
 export type ConnectionState = 'connecting' | 'live' | 'offline';
 
 export function onConnectionChange(listener: (state: ConnectionState) => void): () => void {

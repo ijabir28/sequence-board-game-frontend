@@ -61,6 +61,61 @@ describe('RoomGameAdapter', () => {
     a.dispose();
   });
 
+  it("takes the table's name and display settings from the server, defaulting for older backends", async () => {
+    stubFetch(() => ({ status: 200, body: serverView({ name: 'Friday', settings: { history: false, highlights: false, auto_draw_dead: true } }) }));
+    const a = adapter();
+    await a.refresh();
+    expect(a.getState().title).toBe('Friday');
+    expect(a.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false });
+    a.dispose();
+
+    stubFetch(() => ({ status: 200, body: serverView() }));
+    const old = adapter();
+    await old.refresh();
+    expect(old.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false });
+    old.dispose();
+  });
+
+  it("maps a training game's hint, and ignores a hint outside training", async () => {
+    const hint = { type: 'play' as const, hand_index: 0, target: { row: 0, column: 1 }, reason: { kind: 'extend' as const, length: 2 } };
+    stubFetch(() => ({ status: 200, body: serverView({ settings: { mode: 'training' }, hint }) }));
+    const a = adapter();
+    await a.refresh();
+    expect(a.getState().hint).toEqual({ type: 'play', handIndex: 0, target: { row: 0, column: 1 }, reason: { kind: 'extend', length: 2 } });
+    a.dispose();
+
+    stubFetch(() => ({ status: 200, body: serverView({ settings: { mode: 'standard' }, hint }) }));
+    const standard = adapter();
+    await standard.refresh();
+    expect(standard.getState().hint).toBeNull();
+    standard.dispose();
+  });
+
+  it("runs the turn clock on this device's time, measured once", async () => {
+    // The server's clock is 10 s behind ours; the turn started 3 s before its reading.
+    const now = Date.now();
+    const serverNow = now - 10_000;
+    const iso = (ms: number) => new Date(ms).toISOString();
+    let serverTime = serverNow;
+    stubFetch(() => ({
+      status: 200,
+      body: serverView({ turn_started_at: iso(serverNow - 3000), turn_deadline: iso(serverNow + 87_000), server_time: iso(serverTime) }),
+    }));
+    const a = adapter();
+    await a.refresh();
+    const started = a.getState().turnStartedAt!;
+    expect(Math.abs(started - (now - 3000))).toBeLessThan(200);
+    expect(a.getState().turnDeadline! - started).toBe(90_000);
+
+    // A later refresh with a later server reading must not move the start (that would re-render for nothing).
+    serverTime += 5000;
+    const listener = vi.fn();
+    a.subscribe(listener);
+    await a.refresh();
+    expect(a.getState().turnStartedAt).toBe(started);
+    a.dispose();
+  });
+
   it('posts a move and shows the board the server sends back', async () => {
     const board = serverView().board;
     board[0][1] = { name: board[0][1].name, team: 0 };

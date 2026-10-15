@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { positionsOf } from '../../engine/board';
 import { seededRandom } from '../../engine/setup';
 import { LocalGameAdapter } from './LocalGameAdapter';
@@ -8,6 +8,14 @@ function adapter() {
 }
 
 describe('LocalGameAdapter', () => {
+  it('hints only in training mode, with a legal move', () => {
+    expect(adapter().getState().hint).toBeNull();
+    const training = new LocalGameAdapter({ teamCount: 2, playersPerTeam: 1, random: seededRandom(3), settings: { mode: 'training' } });
+    const hint = training.getState().hint;
+    expect(hint?.type).toBe('play');
+    if (hint?.type === 'play') expect(training.legalTargets(hint.handIndex)).toContainEqual(hint.target);
+  });
+
   it('exposes the current player as the viewer, hot-seat', () => {
     const a = adapter();
     const view = a.getState();
@@ -40,5 +48,38 @@ describe('LocalGameAdapter', () => {
     expect(result.ok).toBe(false);
     expect(a.getState()).toBe(before);
     expect(positionsOf(before.hand[handIndex].card)).not.toContainEqual(wrong);
+  });
+});
+
+describe('LocalGameAdapter turn timer', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('plays a random card when the time runs out, but only while watched', () => {
+    vi.useFakeTimers();
+    const a = new LocalGameAdapter({ teamCount: 2, playersPerTeam: 1, random: seededRandom(3), turnSeconds: 15 });
+    const start = a.getState().turnDeadline!;
+    expect(start - Date.now()).toBe(15_000);
+
+    // Nobody subscribed: nothing happens.
+    vi.advanceTimersByTime(20_000);
+    expect(a.getState().turn).toBe(1);
+
+    const listener = vi.fn();
+    const unsubscribe = a.subscribe(listener);
+    vi.advanceTimersByTime(0);
+    expect(a.getState().turn).toBe(2);
+    expect(a.getState().log.at(-1)).toMatchObject({ player: 'Player 1', timed_out: true });
+    expect(a.getState().turnDeadline! - Date.now()).toBe(15_000);
+
+    vi.advanceTimersByTime(15_000);
+    expect(a.getState().turn).toBe(3);
+    unsubscribe();
+    vi.advanceTimersByTime(60_000);
+    expect(a.getState().turn).toBe(3);
+    a.dispose();
+  });
+
+  it('has no deadline without a timer', () => {
+    expect(adapter().getState().turnDeadline).toBeNull();
   });
 });

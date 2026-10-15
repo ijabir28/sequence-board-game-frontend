@@ -6,6 +6,7 @@ import type { TeamIndex } from '../../engine/setup';
 import { TEAM_STYLES, teamChipLabel } from '../../game/teams';
 import type { CellView } from '../../game/types';
 import { Chip } from '../Chip';
+import { cellCentre } from './geometry';
 import styles from './Board.module.css';
 
 export type TargetMode = 'place' | 'remove';
@@ -19,12 +20,14 @@ interface BoardProps {
   /** Team colour used for target highlights. */
   activeTeam: TeamIndex | null;
   lastMove: Pos | null;
+  /** A training hint's suggested cell. */
+  hint?: Pos | null;
   disabled?: boolean;
   onActivate: (pos: Pos) => void;
 }
 
 /** The 10×10 board as an ARIA grid: arrow keys move, Enter or Space plays the selected card. */
-export function Board({ board, sequences, targets, targetMode, activeTeam, lastMove, disabled = false, onActivate }: BoardProps) {
+export function Board({ board, sequences, targets, targetMode, activeTeam, lastMove, hint = null, disabled = false, onActivate }: BoardProps) {
   const [focus, setFocus] = useState<Pos>({ row: 0, column: 1 });
   const cellRefs = useRef<(HTMLDivElement | null)[]>([]);
   const targetKeys = useMemo(() => new Set(targets?.map(posKey)), [targets]);
@@ -95,6 +98,7 @@ export function Board({ board, sequences, targets, targetMode, activeTeam, lastM
                   dimmed={hasSelection && !targetKeys.has(key)}
                   removing={targetMode === 'remove'}
                   last={lastMove !== null && lastMove.row === cell.row && lastMove.column === cell.column}
+                  hinted={hint !== null && hint.row === cell.row && hint.column === cell.column}
                   onFocus={() => setFocus({ row: cell.row, column: cell.column })}
                   onClick={() => !disabled && onActivate({ row: cell.row, column: cell.column })}
                 />
@@ -115,16 +119,18 @@ interface CellProps {
   dimmed: boolean;
   removing: boolean;
   last: boolean;
+  hinted: boolean;
   onFocus: () => void;
   onClick: () => void;
   cellRef: (el: HTMLDivElement | null) => void;
 }
 
-function cellAriaLabel(cell: CellView, target: boolean, removing: boolean): string {
+function cellAriaLabel(cell: CellView, target: boolean, removing: boolean, hinted: boolean): string {
   const parts = [cellLabelText(cell.card)];
   parts.push(cell.chip === null ? (cell.card === BLANK ? 'counts for every team' : 'empty') : teamChipLabel(cell.chip));
   if (cell.locked) parts.push('in a completed sequence');
   if (target) parts.push(removing ? 'can be removed' : 'playable');
+  if (hinted) parts.push('suggested by the hint');
   return parts.join(', ');
 }
 
@@ -132,7 +138,7 @@ function cellLabelText(card: BoardCardName): string {
   return card === BLANK ? 'Corner' : cardLabel(card);
 }
 
-function Cell({ cell, tabbable, target, dimmed, removing, last, onFocus, onClick, cellRef }: CellProps) {
+function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, onFocus, onClick, cellRef }: CellProps) {
   const corner = cell.card === BLANK;
   const parsed = corner ? null : parseCard(cell.card as Exclude<BoardCardName, 'Blank'>);
   const red = parsed ? isRedSuit(parsed.suit) : false;
@@ -141,7 +147,7 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, onFocus, onClick
       role="gridcell"
       ref={cellRef}
       tabIndex={tabbable ? 0 : -1}
-      aria-label={cellAriaLabel(cell, target, removing)}
+      aria-label={cellAriaLabel(cell, target, removing, hinted)}
       aria-colindex={cell.column + 1}
       className={[
         styles.cell,
@@ -150,6 +156,7 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, onFocus, onClick
         target && styles.target,
         dimmed && styles.dimmed,
         last && styles.last,
+        hinted && styles.hinted,
       ]
         .filter(Boolean)
         .join(' ')}
@@ -182,7 +189,8 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, onFocus, onClick
 /** Glowing lines through completed sequences, drawn over the grid. */
 function SequenceBeams({ sequences }: { sequences: Sequence[] }) {
   if (sequences.length === 0) return null;
-  const center = (p: Pos) => ({ x: (p.column + 0.5) * 10, y: (p.row + 0.5) * 10 });
+  // Through the real centres of the cells, allowing for the gaps between them.
+  const center = (p: Pos) => ({ x: cellCentre(p.column), y: cellCentre(p.row) });
   return (
     <svg className={styles.beams} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       {sequences.map((s, i) => {

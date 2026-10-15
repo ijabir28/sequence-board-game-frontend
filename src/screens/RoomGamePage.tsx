@@ -17,5 +17,14 @@ export function RoomGamePage() {
   }, [id]);
 
   if (!adapter) return null;
-  return <GameScreen key={id} adapter={adapter} modeLabel={`Table ${id}`} onExit={() => navigate(`/table/${id}`)} />;
+  return (
+    <GameScreen
+      key={id}
+      adapter={adapter}
+      modeLabel={`Table ${id}`}
+      handOrderKey={`sequence:hand-order:${id}`}
+      onExit={() => navigate(`/table/${id}`)}
+      onDashboard={() => navigate('/lobby')}
+    />
+  );
 }

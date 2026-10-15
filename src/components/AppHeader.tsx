@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Chip } from './Chip';
+import { Tooltip } from './ui/Tooltip';
 import styles from './AppHeader.module.css';
 
 /** Top bar for the lobby and room pages. */
@@ -20,15 +21,17 @@ export function AppHeader() {
           <span className={styles.name}>
             Signed in as <strong>{profile.name}</strong>
           </span>
-          <button
-            type="button"
-            className={styles.switch}
-            onClick={() => {
-              void signOut().finally(() => navigate('/signin'));
-            }}
-          >
-            Sign out
-          </button>
+          <Tooltip text="Sign out on this device. Your tables and games stay saved." align="end">
+            <button
+              type="button"
+              className={styles.switch}
+              onClick={() => {
+                void signOut().finally(() => navigate('/signin'));
+              }}
+            >
+              Sign out
+            </button>
+          </Tooltip>
         </div>
       )}
     </header>

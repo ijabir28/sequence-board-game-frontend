@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../ui/Icon';
+import { Tooltip } from '../ui/Tooltip';
 import styles from './DevAdapterToggle.module.css';
 
 export type AdapterKind = 'local' | 'remote';
@@ -27,20 +28,21 @@ export function DevAdapterToggle({ current }: { current: AdapterKind }) {
   if (!devToolsEnabled()) return null;
   const other: AdapterKind = current === 'local' ? 'remote' : 'local';
   return (
-    <button
-      type="button"
-      className={styles.toggle}
-      onClick={() => navigate(ROUTES[other])}
-      aria-label={`Game engine: ${LABELS[current]}. Switch to ${LABELS[other]} (developer tool)`}
-      title={`Developer tool: switch to ${LABELS[other]}`}
-    >
-      <span className={styles.dev} aria-hidden="true">
-        dev
-      </span>
-      <span className={styles.label} aria-hidden="true">
-        {LABELS[current]}
-      </span>
-      <Icon name="swap" size={16} />
-    </button>
+    <Tooltip text={`Developer tool: switch to the ${LABELS[other].toLowerCase()} game`} align="end">
+      <button
+        type="button"
+        className={styles.toggle}
+        onClick={() => navigate(ROUTES[other])}
+        aria-label={`Game engine: ${LABELS[current]}. Switch to ${LABELS[other]} (developer tool)`}
+      >
+        <span className={styles.dev} aria-hidden="true">
+          dev
+        </span>
+        <span className={styles.label} aria-hidden="true">
+          {LABELS[current]}
+        </span>
+        <Icon name="swap" size={16} />
+      </button>
+    </Tooltip>
   );
 }

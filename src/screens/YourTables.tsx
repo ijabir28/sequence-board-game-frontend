@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { errorMessage } from '../api/http';
-import { listMyRooms, type MyRoom } from '../api/rooms';
+import { getCurrentGame, listMyRooms, type MyRoom, type MyRoomsPage } from '../api/rooms';
 import { Chip } from '../components/Chip';
 import { Button } from '../components/ui/Button';
+import { Dialog } from '../components/ui/Dialog';
 import { Icon } from '../components/ui/Icon';
+import { Pager } from '../components/ui/Pager';
 import { teamName } from '../game/teams';
 import styles from './Forms.module.css';
 import own from './YourTables.module.css';
 
-type State = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; rooms: MyRoom[] };
+export type MyRoomsState = { status: 'loading' } | { status: 'error'; message: string } | ({ status: 'ready' } & MyRoomsPage);
 
 /** One line saying how far a table got, from the viewer's side. */
 export function describeTable(room: MyRoom): string {
@@ -24,79 +26,133 @@ export function describeTable(room: MyRoom): string {
 
 const DATE = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
-/** The signed-in user's tables, newest first, so they can go back to a game (even after a server restart). */
-export function YourTables() {
-  const [state, setState] = useState<State>({ status: 'loading' });
+/** Loads one page of the signed-in user's tables (GET /user/rooms) at a time. */
+export function useMyRooms(enabled: boolean, perPage = 10) {
+  const [state, setState] = useState<MyRoomsState>({ status: 'loading' });
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
-    setState({ status: 'loading' });
+    // Keep the current list on screen while the next page loads, so the dialog doesn't jump.
+    setState((prev) => (prev.status === 'ready' ? prev : { status: 'loading' }));
     try {
-      setState({ status: 'ready', rooms: await listMyRooms() });
+      const result = await listMyRooms(page, perPage);
+      // The list shrank (or a stale page was asked for): show the last page that exists.
+      if (result.rooms.length === 0 && page > result.pages) return setPage(result.pages);
+      setState({ status: 'ready', ...result });
     } catch (e) {
       setState({ status: 'error', message: errorMessage(e) });
     }
-  }, []);
+  }, [page, perPage]);
+
+  // Loads when enabled (each time a dialog opens, so the list is fresh), not before.
+  useEffect(() => {
+    if (enabled) void load();
+  }, [enabled, load]);
+
+  return { state, page, setPage, reload: load };
+}
+
+/**
+ * The one game worth resuming: the game in progress you sat at that moved last. Nothing while loading, without
+ * one, or if it can't be loaded (the full list is one button away).
+ */
+export function CurrentGame() {
+  const [room, setRoom] = useState<MyRoom | null>(null);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let current = true;
+    getCurrentGame()
+      .then((found) => current && setRoom(found))
+      .catch(() => current && setRoom(null));
+    return () => {
+      current = false;
+    };
+  }, []);
 
+  if (!room) return null;
   return (
-    <section className={[styles.card, own.card].join(' ')} aria-labelledby="your-tables">
-      <header className={styles.header}>
-        <h2 id="your-tables">Your tables</h2>
-        <p>Tables you opened or sat at. Games in progress are saved, so you can come back to them any time.</p>
-      </header>
-
-      {state.status === 'loading' && (
-        <p className={styles.help} role="status">
-          Loading your tables…
-        </p>
-      )}
-
-      {state.status === 'error' && (
-        <div className={own.problem}>
-          <p className={styles.error} role="alert">
-            <Icon name="alert" size={18} />
-            <span>{state.message}</span>
-          </p>
-          <Button size="sm" onClick={() => void load()}>
-            Try again
-          </Button>
-        </div>
-      )}
-
-      {state.status === 'ready' && state.rooms.length === 0 && (
-        <p className={styles.help}>No tables yet. Tables you open or join will show up here.</p>
-      )}
-
-      {state.status === 'ready' && state.rooms.length > 0 && (
-        <ul className={own.list}>
-          {state.rooms.map((room) => (
-            <li key={room.id} className={own.row}>
-              <span className={own.chip} aria-hidden="true">
-                {room.yourTeam !== null && <Chip team={room.yourTeam} />}
-              </span>
-              <span className={own.details}>
-                <span className={own.code}>Table {room.id}</span>
-                <span className={own.meta}>
-                  {describeTable(room)}
-                  <span aria-hidden="true"> · </span>
-                  <time dateTime={room.createdAt}>{DATE.format(new Date(room.createdAt))}</time>
-                  {room.yourTeam !== null && <span className={own.visuallyHidden}>, you play for {teamName(room.yourTeam)}</span>}
-                </span>
-              </span>
-              <Link
-                className={own.open}
-                to={room.status === 'open' ? `/table/${room.id}` : `/table/${room.id}/game`}
-                aria-label={`${room.status === 'playing' ? 'Resume' : 'Open'} table ${room.id}`}
-              >
-                {room.status === 'playing' ? 'Resume' : room.status === 'finished' ? 'View' : 'Open'}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+    <section className={own.resume} aria-labelledby="current-game">
+      <span className={own.resumeChip} aria-hidden="true">
+        {room.yourTeam !== null && <Chip team={room.yourTeam} />}
+      </span>
+      <span className={own.details}>
+        <span className={own.eyebrow}>Game in progress</span>
+        <span className={own.resumeName} id="current-game">
+          {room.name}
+        </span>
+        <span className={own.meta}>
+          {describeTable(room)}
+          {room.yourTeam !== null && <> · you play for {teamName(room.yourTeam)}</>}
+        </span>
+      </span>
+      <Link className={own.resumeLink} to={`/table/${room.id}/game`} aria-label={`Resume ${room.name}`}>
+        Resume
+      </Link>
     </section>
+  );
+}
+
+/** All the signed-in user's tables, newest first and a page at a time, so they can go back to any game. */
+export function YourTablesDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { state, setPage, reload } = useMyRooms(open);
+  return (
+    <Dialog open={open} title="Your tables" onClose={onClose} size="wide">
+      <div className={own.dialogBody}>
+        <p className={styles.help}>Tables you opened or sat at. Games in progress are saved, so you can come back to them any time.</p>
+        {state.status === 'loading' && (
+          <p className={styles.help} role="status">
+            Loading your tables…
+          </p>
+        )}
+
+        {state.status === 'error' && (
+          <div className={own.problem}>
+            <p className={styles.error} role="alert">
+              <Icon name="alert" size={18} />
+              <span>{state.message}</span>
+            </p>
+            <Button size="sm" onClick={() => void reload()}>
+              Try again
+            </Button>
+          </div>
+        )}
+
+        {state.status === 'ready' && state.rooms.length === 0 && (
+          <p className={styles.help}>No tables yet. Tables you open or join will show up here.</p>
+        )}
+
+        {state.status === 'ready' && state.rooms.length > 0 && (
+          <ul className={own.list}>
+            {state.rooms.map((room) => (
+              <li key={room.id} className={own.row}>
+                <span className={own.chip} aria-hidden="true">
+                  {room.yourTeam !== null && <Chip team={room.yourTeam} />}
+                </span>
+                <span className={own.details}>
+                  <span className={own.code}>{room.name}</span>
+                  <span className={own.meta}>
+                    {describeTable(room)}
+                    <span aria-hidden="true"> · </span>
+                    <time dateTime={room.createdAt}>{DATE.format(new Date(room.createdAt))}</time>
+                    <span aria-hidden="true"> · </span>
+                    <span className={own.slug}>{room.id}</span>
+                    {room.yourTeam !== null && <span className={own.visuallyHidden}>, you play for {teamName(room.yourTeam)}</span>}
+                  </span>
+                </span>
+                <Link
+                  className={own.open}
+                  to={room.status === 'open' ? `/table/${room.id}` : `/table/${room.id}/game`}
+                  aria-label={`${room.status === 'playing' ? 'Resume' : 'Open'} ${room.name}`}
+                >
+                  {room.status === 'playing' ? 'Resume' : room.status === 'finished' ? 'View' : 'Open'}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {state.status === 'ready' && <Pager page={state.page} pages={state.pages} label="your tables" onPage={setPage} />}
+      </div>
+    </Dialog>
   );
 }

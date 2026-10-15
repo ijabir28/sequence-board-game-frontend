@@ -213,3 +213,74 @@
   font-size: var(--text-sm);
   text-decoration: none;
 }
+
+.options {
+  gap: var(--space-3);
+}
+
+.options h2 {
+  font-size: var(--text-lg);
+}
+
+.rename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.renameField {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+}
+
+.waiting .spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+/* "Back to dashboard", above everything on the table page, so leaving a table never means hunting for the logo. */
+.back {
+  width: min(100%, 60rem);
+  margin-bottom: var(--space-3);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 40px;
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--outline-strong);
+  color: var(--on-surface);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  background: var(--surface-high);
+}
+
+.backLink:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.teamTools {
+  display: flex;
+  justify-content: flex-end;
+}

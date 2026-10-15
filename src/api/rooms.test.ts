@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRoom, isSeated, sanitizeMyRoom, sanitizeRoom } from './rooms';
+import { createRoom, isSeated, leaveSeat, shuffleSeats, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
 
 describe('sanitizeRoom', () => {
   const raw = {
@@ -24,8 +24,25 @@ describe('sanitizeRoom', () => {
     expect(isSeated(room, 'sakib')).toBe(false);
   });
 
+  it("names the host by display name, falling back to the handle from an older backend", () => {
+    expect(sanitizeRoom('1', { ...raw, administrator_name: 'Jabir ibne kamal' }).administratorName).toBe('Jabir ibne kamal');
+    expect(sanitizeRoom('1', raw).administratorName).toBe('jabir');
+  });
+
   it('tolerates a room created without a session', () => {
     expect(sanitizeRoom('1', { teams: [] }).administrator).toBeNull();
+  });
+
+  it('reads the name and settings, with defaults for an older backend', () => {
+    const room = sanitizeRoom('friday-k3m9', { ...raw, name: 'Friday', settings: { history: false, highlights: true, auto_draw_dead: true } });
+    expect(room.name).toBe('Friday');
+    expect(room.settings).toEqual({ mode: 'standard', history: false, highlights: true, autoDrawDead: true, turnSeconds: 90 });
+    const old = sanitizeRoom('42', raw);
+    expect(old.name).toBe('Table 42');
+    expect(old.settings).toEqual({ mode: 'standard', history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 });
+    expect(sanitizeRoom('x', { ...raw, settings: { turn_seconds: 45 } }).settings.turnSeconds).toBe(45);
+    expect(sanitizeRoom('x', { ...raw, settings: { mode: 'training' } }).settings.mode).toBe('training');
+    expect(sanitizeRoom('x', { ...raw, settings: { mode: 'chaos' } }).settings.mode).toBe('standard');
   });
 });
 
@@ -46,6 +63,7 @@ describe('sanitizeMyRoom', () => {
   it('maps the history fields', () => {
     expect(sanitizeMyRoom(raw)).toEqual({
       id: '42',
+      name: 'Table 42',
       createdAt: '2026-10-15T05:48:22.696Z',
       administrator: 'jabir',
       teamCount: 2,
@@ -55,6 +73,7 @@ describe('sanitizeMyRoom', () => {
       status: 'finished',
       winnerTeam: 0,
       moveCount: 31,
+      lastMoveAt: null,
     });
   });
 
@@ -79,5 +98,94 @@ describe('createRoom', () => {
   it('returns the new code', async () => {
     vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ id: '123' }), { status: 200 }));
     await expect(createRoom(2, 1)).resolves.toBe('123');
+  });
+
+  it('sends the name and settings in the backend shape', async () => {
+    let sent: unknown;
+    vi.stubGlobal('fetch', async (_: string, init: RequestInit) => {
+      sent = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ id: 'friday-k3m9' }), { status: 200 });
+    });
+    await expect(createRoom(2, 1, { name: ' Friday ', settings: { history: false, autoDrawDead: true } })).resolves.toBe('friday-k3m9');
+    expect(sent).toEqual({ number_of_team: 2, number_of_player_in_each_team: 1, name: 'Friday', history: false, auto_draw_dead: true });
+  });
+});
+
+describe('updateRoom', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('patches the settings and returns the room', async () => {
+    let call: { url: string; method?: string } | undefined;
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      call = { url, method: init.method };
+      return new Response(JSON.stringify({ name: 'Friday', teams: [], settings: { highlights: false } }), { status: 200 });
+    });
+    const room = await updateRoom('friday-k3m9', { settings: { highlights: false } });
+    expect(call).toEqual({ url: '/room/friday-k3m9/settings', method: 'PATCH' });
+    expect(room.settings.highlights).toBe(false);
+  });
+
+  it("shows the server's reason when only the host may change settings", async () => {
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: 'NOT_HOST', message: 'Only the host can.' }), { status: 403 }));
+    await expect(updateRoom('x', { settings: { history: false } })).rejects.toMatchObject({ message: 'Only the host can.' });
+  });
+});
+
+describe('parseTableCode', () => {
+  it('accepts slugs, older numeric codes and table links', () => {
+    expect(parseTableCode('  Friday-Night-K3M9 ')).toBe('friday-night-k3m9');
+    expect(parseTableCode('731791 746123232')).toBe('731791746123232');
+    expect(parseTableCode('http://localhost:5173/table/lucky-otter-ab12/game')).toBe('lucky-otter-ab12');
+  });
+
+  it('refuses text that cannot be a code', () => {
+    for (const bad of ['', 'friday night!', '-x', 'a--b']) expect(parseTableCode(bad)).toBeNull();
+  });
+});
+
+describe('turn timer', () => {
+  it('accepts whole seconds from 15 to 600', () => {
+    expect([15, 90, 600].every(isValidTurnSeconds)).toBe(true);
+    expect([14, 601, 30.5, NaN].some(isValidTurnSeconds)).toBe(false);
+  });
+});
+
+describe('listMyRooms', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('asks for a page and reads the totals', async () => {
+    let url = '';
+    vi.stubGlobal('fetch', async (input: string) => {
+      url = input;
+      return new Response(JSON.stringify({ rooms: [], page: 2, per_page: 5, total: 7, pages: 2 }), { status: 200 });
+    });
+    await expect(listMyRooms(2, 5)).resolves.toEqual({ rooms: [], page: 2, perPage: 5, total: 7, pages: 2 });
+    expect(url).toBe('/user/rooms?page=2&per_page=5');
+  });
+});
+
+describe('seat actions', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('stands up and shuffles, returning the updated room', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      calls.push(`${init.method} ${url}`);
+      return new Response(JSON.stringify({ teams: [{ handle: 'TEAM_1', players: [null] }] }), { status: 200 });
+    });
+    expect((await leaveSeat('t')).teams[0].seats).toEqual([null]);
+    await shuffleSeats('t');
+    expect(calls).toEqual(['POST /room/t/leave', 'POST /room/t/shuffle']);
+  });
+
+  it("passes the server's reason through", async () => {
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: 'NOT_SEATED', message: "You don't have a seat at this table." }), { status: 409 }));
+    await expect(leaveSeat('t')).rejects.toMatchObject({ message: "You don't have a seat at this table." });
   });
 });
