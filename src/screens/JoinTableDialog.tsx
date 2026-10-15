@@ -4,7 +4,7 @@ import { errorMessage } from '../api/http';
 import { getRoom, parseTableCode } from '../api/rooms';
 import { Button } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
-import { Icon } from '../components/ui/Icon';
+import { useToast } from '../components/toast/Toaster';
 import styles from './Forms.module.css';
 
 /** "Join a table": enter the code or link a friend shared, and go to that table. */
@@ -13,7 +13,14 @@ export function JoinTableDialog({ open, onClose }: { open: boolean; onClose: () 
   const formId = useId();
   const [code, setCode] = useState('');
   const [joining, setJoining] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setFormError] = useState<string | null>(null);
+  const toast = useToast();
+  // The message floats as a toast; the field stays marked until the next try.
+  const setError = (text: string | null) => {
+    setFormError(text);
+    if (text) toast.error(text, { id: 'join-table' });
+    else toast.dismiss('join-table');
+  };
 
   const join = async (event: FormEvent) => {
     event.preventDefault();
@@ -62,18 +69,12 @@ export function JoinTableDialog({ open, onClose }: { open: boolean; onClose: () 
             data-autofocus
             placeholder="friday-night-k3m9"
             aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${formId}-error` : `${formId}-help`}
+            aria-describedby={`${formId}-help`}
           />
           <span className={styles.help} id={`${formId}-help`}>
             Enter the code or paste the link a friend shared with you.
           </span>
         </label>
-        {error && (
-          <p className={styles.error} role="alert" id={`${formId}-error`}>
-            <Icon name="alert" size={18} />
-            <span>{error}</span>
-          </p>
-        )}
       </form>
     </Dialog>
   );

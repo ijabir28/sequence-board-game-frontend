@@ -149,13 +149,7 @@
   color: var(--on-surface-muted);
 }
 
-.feedback {
-  color: var(--on-surface);
-}
 
-.feedbackError {
-  color: var(--error);
-}
 
 .notice {
   display: flex;
@@ -303,14 +297,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  /* Feedback must be readable in full, so it may wrap (up to three lines). */
-  .feedback {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   .hint {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Pos } from '../../engine/board';
 import { cardKind, cardShort, type CardName } from '../../engine/cards';
 import { describeHint } from '../../game/describeHint';
@@ -17,6 +17,7 @@ import { Tooltip } from '../ui/Tooltip';
 import { HandPanel } from './HandPanel';
 import { MoveLog } from './MoveLog';
 import { Scoreboard } from './Scoreboard';
+import { useToast } from '../toast/Toaster';
 import { TurnPanel } from './TurnPanel';
 import styles from './GameScreen.module.css';
 
@@ -34,12 +35,20 @@ interface GameScreenProps {
   handOrderKey?: string;
 }
 
-type Feedback = { tone: 'error' | 'info'; text: string } | null;
+/** Game messages share one toast, so a new one replaces the last instead of piling up. */
+const FEEDBACK_TOAST = 'game-feedback';
 
 export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, handOrderKey }: GameScreenProps) {
   const view = useGame(adapter);
   const [selected, setSelected] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState<Feedback>(null);
+  const toast = useToast();
+  // A new selection or move clears a stale error or tip, but lets good news run its course.
+  const feedbackTone = useRef<'error' | 'info' | 'success' | null>(null);
+  const setFeedback = (feedback: { tone: 'error' | 'info' | 'success'; text: string } | null) => {
+    if (feedback) toast.show(feedback.tone, feedback.text, { id: FEEDBACK_TOAST });
+    else if (feedbackTone.current !== 'success') toast.dismiss(FEEDBACK_TOAST);
+    feedbackTone.current = feedback?.tone ?? feedbackTone.current;
+  };
   const [revealedFor, setRevealedFor] = useState<string | null>(null);
   const [handOpen, setHandOpen] = useState(true);
   const [logOpen, setLogOpen] = useState(false);
@@ -172,7 +181,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (selected === null || !selectedCard) return;
     const card = selectedCard;
     if (await run(() => adapter.exchangeDeadCard(selected))) {
-      setFeedback({ tone: 'info', text: `${cardShort(card)} was dead: you drew a new card.` });
+      setFeedback({ tone: 'success', text: `${cardShort(card)} was dead: you drew a new card.` });
     }
   };
   const onPass = async () => {
@@ -344,19 +353,10 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             />
           </div>
         </div>
-        {/* Feedback takes the ticker's line, so messages never push the board around. */}
-        {feedback ? (
-          <p
-            className={[styles.line, styles.feedback, feedback.tone === 'error' && styles.feedbackError].filter(Boolean).join(' ')}
-            role={feedback.tone === 'error' ? 'alert' : 'status'}
-          >
-            {feedback.text}
-          </p>
-        ) : (
-          <p className={[styles.line, styles.ticker].join(' ')} aria-hidden="true">
-            {lastEntry ? describeLog(lastEntry) : 'No moves yet.'}
-          </p>
-        )}
+        {/* Messages float as toasts, so this line only ever shows the latest move. */}
+        <p className={[styles.line, styles.ticker].join(' ')} aria-hidden="true">
+          {lastEntry ? describeLog(lastEntry) : 'No moves yet.'}
+        </p>
         {view.notice && (
           <p className={styles.notice}>
             <Icon name="alert" size={16} />

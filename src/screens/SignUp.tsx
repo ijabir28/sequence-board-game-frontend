@@ -4,8 +4,8 @@ import { errorMessage } from '../api/http';
 import { AccountError, type AccountField } from '../api/user';
 import { useAuth } from '../auth/AuthContext';
 import { Chip } from '../components/Chip';
+import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
-import { Icon } from '../components/ui/Icon';
 import styles from './Forms.module.css';
 import own from './SignIn.module.css';
 
@@ -38,7 +38,14 @@ export function SignUp() {
   const [handle, setHandle] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<FormError | null>(null);
+  const [error, setFormError] = useState<FormError | null>(null);
+  const toast = useToast();
+  // The message floats as a toast; the field it is about stays marked until the next try.
+  const setError = (next: FormError | null) => {
+    setFormError(next);
+    if (next) toast.error(next.text, { id: 'signup' });
+    else toast.dismiss('signup');
+  };
   const [busy, setBusy] = useState(false);
 
   const submit = async (event: FormEvent) => {
@@ -64,7 +71,6 @@ export function SignUp() {
 
   const fieldProps = (field: AccountField) => ({
     'aria-invalid': error?.field === field || undefined,
-    'aria-describedby': error?.field === field ? 'signup-error' : undefined,
   });
 
   return (
@@ -79,13 +85,6 @@ export function SignUp() {
           <h1>Create your account</h1>
           <p>Pick a handle your friends will recognise. You'll be signed in straight away.</p>
         </header>
-
-        {error && (
-          <p className={styles.error} role="alert" id="signup-error">
-            <Icon name="alert" size={18} />
-            <span>{error.text}</span>
-          </p>
-        )}
 
         <label className={styles.field}>
           <span className={styles.label}>Handle</span>
