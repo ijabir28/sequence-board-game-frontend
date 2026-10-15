@@ -36,6 +36,49 @@
   max-width: none;
 }
 
+/* Each card sits in a slot that the layout sizes; the card fills it. */
+.slot {
+  display: flex;
+  min-width: 0;
+}
+
+.slot > * {
+  width: 100%;
+  max-width: none;
+}
+
+/* Mouse and pen can drag cards to rearrange them. */
+@media (pointer: fine) {
+  .arrangeable .slot {
+    cursor: grab;
+  }
+
+  .arrangeable .slot:active {
+    cursor: grabbing;
+  }
+}
+
+.arrange {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.arrangeLabel {
+  margin-right: var(--space-1);
+  color: var(--on-surface-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.moveButtons {
+  display: inline-flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
 .back {
   aspect-ratio: 5 / 7;
   border-radius: var(--radius-card);
