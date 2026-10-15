@@ -23,8 +23,11 @@ interface BoardProps {
   /** A training hint's suggested cell. */
   hint?: Pos | null;
   disabled?: boolean;
-  /** It is the viewer's turn: the board's edge lights up in their team's colour. */
-  yourTurn?: boolean;
+  /**
+   * Whose-turn edge, in the active team's colour: `strength` from 1 (turn just started, thick) to 0 (time up, thin);
+   * `yours` adds a pulse; `paused` holds it still. Null hides it (game over).
+   */
+  turnEdge?: { strength: number; yours: boolean; paused: boolean } | null;
   onActivate: (pos: Pos) => void;
 }
 
@@ -38,7 +41,7 @@ export function Board({
   lastMove,
   hint = null,
   disabled = false,
-  yourTurn = false,
+  turnEdge = null,
   onActivate,
 }: BoardProps) {
   const [focus, setFocus] = useState<Pos>({ row: 0, column: 1 });
@@ -84,10 +87,22 @@ export function Board({
 
   return (
     <div
-      className={[styles.board, yourTurn && styles.yourTurn, hasSelection && styles.selecting, targetMode === 'remove' && styles.removing]
+      className={[
+        styles.board,
+        turnEdge && styles.turnEdge,
+        turnEdge?.yours && styles.yourTurn,
+        turnEdge?.paused && styles.edgePaused,
+        hasSelection && styles.selecting,
+        targetMode === 'remove' && styles.removing,
+      ]
         .filter(Boolean)
         .join(' ')}
-      style={teamStyle ? ({ '--active-team': teamStyle.color, '--active-glow': teamStyle.glow } as React.CSSProperties) : undefined}
+      style={
+        {
+          ...(teamStyle ? { '--active-team': teamStyle.color, '--active-glow': teamStyle.glow } : {}),
+          ...(turnEdge ? { '--edge-strength': turnEdge.strength.toFixed(3) } : {}),
+        } as React.CSSProperties
+      }
     >
       <div
         role="grid"

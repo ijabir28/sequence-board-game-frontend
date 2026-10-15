@@ -9,7 +9,8 @@
  */
 .board {
   position: relative;
-  width: min(100cqw, 100cqh);
+  /* Room for the turn edge (up to 12px) and its glow, inside the board area. */
+  width: calc(min(100cqw, 100cqh) - 2 * 14px);
   aspect-ratio: 1;
   container-type: inline-size;
   border-radius: calc(var(--radius-card) + 2px);
@@ -20,28 +21,52 @@
     var(--shadow-raised);
 }
 
-/* Your turn: the board's edge takes your team's colour and breathes, alongside the turn panel. */
-.yourTurn {
+/*
+ * Whose turn it is: a thick edge in the active team's colour, from EDGE_MAX when the turn starts down to EDGE_MIN as
+ * its time runs out (--edge-strength, 1 to 0, set by Board.tsx). The board leaves EDGE_ROOM free around itself (see
+ * .board's width) so its parent's overflow never clips the edge.
+ */
+.turnEdge {
+  --edge-width: calc(3px + 9px * var(--edge-strength, 1));
   box-shadow:
     inset 0 0 0 1px var(--outline-subtle),
-    0 0 0 2px var(--active-team, var(--primary)),
-    0 0 22px 2px var(--active-glow, rgba(78, 222, 163, 0.4)),
-    var(--shadow-raised);
-  animation: your-turn-edge 2.4s ease-in-out infinite;
+    0 0 0 var(--edge-width) var(--active-team, var(--primary)),
+    0 0 calc(var(--edge-width) * 2) calc(var(--edge-width) / 2) var(--active-glow, rgba(78, 222, 163, 0.4));
+  transition: box-shadow 1s linear;
+}
+
+/* Your own turn also breathes, so it can't be missed. */
+.yourTurn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 calc(var(--edge-width) * 3) var(--edge-width) var(--active-glow, rgba(78, 222, 163, 0.4));
+  pointer-events: none;
+  animation: your-turn-edge 1.6s ease-in-out infinite;
 }
 
 @keyframes your-turn-edge {
   50% {
-    box-shadow:
-      inset 0 0 0 1px var(--outline-subtle),
-      0 0 0 3px var(--active-team, var(--primary)),
-      0 0 34px 6px var(--active-glow, rgba(78, 222, 163, 0.4)),
-      var(--shadow-raised);
+    opacity: 0.2;
   }
 }
 
+/* The current player is away: the edge holds still and dims. */
+.edgePaused {
+  opacity: 0.85;
+}
+
+.edgePaused::after {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .yourTurn {
+  .turnEdge {
+    transition: none;
+  }
+
+  .yourTurn::after {
     animation: none;
   }
 }

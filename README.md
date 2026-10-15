@@ -158,7 +158,7 @@ invariants.
   team in the team's colour, a countdown on your own turn (the table's turn timer, 90 s by default; other players
   see only whose turn it is), and the turn order. The countdown turns amber at 20 s and red at 10 s. When it runs out, a random playable card from the
   player's hand is played for them: by the server for tables, by `LocalGameAdapter` for hot-seat games, and the
-  move log says so. On your turn the board's outer edge also lights up and gently pulses in your team's colour. When it becomes your turn it flashes,
+  move log says so. On every turn the board's outer edge lights up in the current team's colour: 12 px thick when the turn starts, thinning to 3 px as its time runs out (`src/game/turnEdge.ts`; without a timer it thins over a minute, and it holds still while the turn is paused). On your own turn it also pulses. When it becomes your turn it flashes,
   phones buzz, and the tab title starts with "● Your turn". Table games take the turn's start time from the server
   (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
 - **Messages float.** Success and error messages (moves, joining or leaving a seat, saving options, signing in,
