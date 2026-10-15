@@ -123,7 +123,7 @@ export function HandPanel({
                   <p>
                     Pass the device to <strong>{cover.playerName}</strong>.
                   </p>
-                  <Button variant="primary" onClick={cover.onReveal}>
+                  <Button variant="primary" onClick={cover.onReveal} tip={`Only ${cover.playerName} should look: this shows their cards`}>
                     <Icon name="eye" />
                     Show {cover.playerName}'s hand
                   </Button>

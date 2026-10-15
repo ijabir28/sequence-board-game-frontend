@@ -3,7 +3,8 @@ import { BOARD_SIZE, posKey, type Pos } from '../../engine/board';
 import { BLANK, cardLabel, isRedSuit, parseCard, SUIT_SYMBOL, type BoardCardName } from '../../engine/cards';
 import type { Sequence } from '../../engine/sequences';
 import type { TeamIndex } from '../../engine/setup';
-import { TEAM_STYLES, teamChipLabel } from '../../game/teams';
+import { TEAM_STYLES, teamChipLabel, teamName } from '../../game/teams';
+import { tipProps } from '../ui/TooltipLayer';
 import type { CellView } from '../../game/types';
 import { Chip } from '../Chip';
 import { cellCentre } from './geometry';
@@ -163,6 +164,17 @@ function cellAriaLabel(cell: CellView, target: boolean, removing: boolean, hinte
   return parts.join(', ');
 }
 
+/** What hovering (or long-pressing) a cell says: the card, who holds it, and what a click would do. */
+function cellTip(cell: CellView, target: boolean, removing: boolean, hinted: boolean): string {
+  const corner = cell.card === BLANK;
+  const name = corner ? 'Free corner' : cardLabel(cell.card);
+  let state: string;
+  if (cell.chip !== null) state = `${teamName(cell.chip)} chip${cell.locked ? ', locked in a sequence' : ''}`;
+  else state = corner ? 'counts for every team' : 'empty';
+  const action = target ? (removing ? 'Click to remove this chip.' : 'Click to place your chip here.') : hinted ? 'The hint suggests this cell.' : '';
+  return [`${name}: ${state}.`, action].filter(Boolean).join(' ');
+}
+
 function cellLabelText(card: BoardCardName): string {
   return card === BLANK ? 'Corner' : cardLabel(card);
 }
@@ -178,6 +190,7 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, onFocus,
       tabIndex={tabbable ? 0 : -1}
       aria-label={cellAriaLabel(cell, target, removing, hinted)}
       aria-colindex={cell.column + 1}
+      {...tipProps(cellTip(cell, target, removing, hinted))}
       className={[
         styles.cell,
         corner && styles.corner,
