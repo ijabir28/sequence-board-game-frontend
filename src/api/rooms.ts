@@ -68,7 +68,9 @@ export interface Room {
   /** The table's code: a slug such as "friday-night-k3m9" (older tables have numeric codes). */
   id: string;
   name: string;
+  /** The host's handle (to compare with yours), and their display name (to show). */
   administrator: string | null;
+  administratorName: string | null;
   teams: RoomTeam[];
   gameStarted: boolean;
   settings: RoomSettings;
@@ -77,6 +79,7 @@ export interface Room {
 interface RawRoom {
   name?: string;
   administrator?: string;
+  administrator_name?: string;
   teams?: { handle: string; players: ({ handle?: string; name?: string; [key: string]: unknown } | null)[] }[];
   game_started?: boolean;
   settings?: RawRoomSettings;
@@ -89,6 +92,8 @@ export function sanitizeRoom(id: string, raw: RawRoom): Room {
     name: raw.name ?? `Table ${id}`,
     settings: sanitizeSettings(raw.settings),
     administrator: raw.administrator ?? null,
+    // Older backends send only the handle; it is better than nothing.
+    administratorName: raw.administrator_name ?? raw.administrator ?? null,
     teams: (raw.teams ?? []).map((team, i) => ({
       handle: team.handle,
       index: i as TeamIndex,
@@ -138,6 +143,25 @@ export async function updateRoom(id: string, changes: { name?: string; settings?
   const raw = await readJson<RawRoom>(response);
   if (!raw) throw new ApiError('unexpected', 'The server did not return the table. Reload the page.');
   return sanitizeRoom(id, raw);
+}
+
+/** POST to a room action that answers with the room (leave, shuffle); refusals carry the server's message. */
+async function roomAction(id: string, action: 'leave' | 'shuffle', fallback: string): Promise<Room> {
+  const response = await postJson(`/room/${encodeURIComponent(id)}/${action}`, {});
+  await refusal(response, fallback);
+  const raw = await readJson<RawRoom>(response);
+  if (!raw) throw new ApiError('unexpected', 'The server did not return the table. Reload the page.');
+  return sanitizeRoom(id, raw);
+}
+
+/** POST /room/:id/leave: stand up from your seat (before the game starts). */
+export function leaveSeat(id: string): Promise<Room> {
+  return roomAction(id, 'leave', 'The server refused to free your seat');
+}
+
+/** POST /room/:id/shuffle: the host deals the seated players out to the teams at random. */
+export function shuffleSeats(id: string): Promise<Room> {
+  return roomAction(id, 'shuffle', 'The server refused to shuffle the teams');
 }
 
 /**
