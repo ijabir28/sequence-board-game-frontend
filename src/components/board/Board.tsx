@@ -163,13 +163,7 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, onFocus,
       onFocus={onFocus}
       onClick={onClick}
     >
-      {parsed && cell.chip !== null ? (
-        // The chip covers the middle, so the card's rank and suit move together into the corner.
-        <span className={styles.label} aria-hidden="true">
-          {parsed.rank}
-          <span className={styles.labelSuit}>{SUIT_SYMBOL[parsed.suit]}</span>
-        </span>
-      ) : parsed ? (
+      {parsed ? (
         <>
           <span className={styles.rank} aria-hidden="true">
             {parsed.rank}
