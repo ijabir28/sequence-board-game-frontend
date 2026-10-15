@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { errorMessage } from '../api/http';
-import { InvalidCredentialsError } from '../api/user';
+import { AccountError } from '../api/user';
 import { useAuth } from '../auth/AuthContext';
 import { Chip } from '../components/Chip';
 import { Button } from '../components/ui/Button';
@@ -30,7 +30,8 @@ export function SignIn() {
       await signIn(handle.trim(), password);
       navigate(from, { replace: true });
     } catch (e) {
-      setError({ text: e instanceof InvalidCredentialsError ? e.message : errorMessage(e), field: e instanceof InvalidCredentialsError ? 'credentials' : 'server' });
+      if (e instanceof AccountError) setError({ text: e.message, field: e.field === 'credentials' ? 'credentials' : 'server' });
+      else setError({ text: errorMessage(e), field: 'server' });
     } finally {
       setBusy(false);
     }
