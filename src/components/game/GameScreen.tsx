@@ -43,6 +43,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
   const currentPlayer = view.players.find((p) => p.id === view.currentPlayerId) ?? null;
   const activeTeam = currentPlayer?.team ?? viewer?.team ?? null;
   const selectedCard = selected !== null ? view.hand[selected]?.card : undefined;
+  const { highlights, history } = view.settings;
 
   // A new hand (after a move, or the next hot-seat player) starts with nothing selected.
   useEffect(() => {
@@ -109,10 +110,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
       return;
     }
     if (selected === null || !selectedCard) {
-      setFeedback({ tone: 'info', text: 'Pick a card from your hand first, then a highlighted cell.' });
+      setFeedback({ tone: 'info', text: `Pick a card from your hand first, then ${highlights ? 'a highlighted cell' : 'a cell for it'}.` });
       return;
     }
-    if (!targets?.some((t) => t.row === pos.row && t.column === pos.column)) {
+    // Without highlights the player finds the cell themselves, so the rules engine explains a wrong pick.
+    if (highlights && !targets?.some((t) => t.row === pos.row && t.column === pos.column)) {
       const what = cardKind(selectedCard) === 'one-eyed-jack' ? "a chip you can remove" : 'a legal move';
       setFeedback({ tone: 'error', text: `That cell isn't ${what} for ${cardShort(selectedCard)}. Pick a highlighted cell.` });
       return;
@@ -127,7 +129,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
     if (passed && adapter.hotSeat) setRevealedFor(null);
   };
 
-  const hint = handHint({ selectedCard, dead: selected !== null && !!view.hand[selected]?.dead, targets, canExchange: view.canExchange });
+  const hint = handHint({ selectedCard, dead: selected !== null && !!view.hand[selected]?.dead, targets, canExchange: view.canExchange, highlights });
 
   const footer = (
     <div className={styles.actions}>
@@ -183,14 +185,16 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
             <Chip team={0} />
           </span>
           <span className={styles.brandText}>Sequence</span>
-          <span className={styles.mode}>{modeLabel}</span>
+          <span className={styles.mode}>{view.title ?? modeLabel}</span>
         </div>
         <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
         <div className={styles.topActions}>
           {headerExtra}
-          <button type="button" className={[styles.iconButton, styles.logButton].join(' ')} onClick={() => setLogOpen(true)} aria-label="Move log">
-            <Icon name="log" />
-          </button>
+          {history && (
+            <button type="button" className={[styles.iconButton, styles.logButton].join(' ')} onClick={() => setLogOpen(true)} aria-label="Move log">
+              <Icon name="log" />
+            </button>
+          )}
           <button type="button" className={styles.iconButton} onClick={() => (gameOver ? onExit() : setExitOpen(true))} aria-label="Leave game">
             <Icon name="exit" />
           </button>
@@ -230,7 +234,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
           <Board
             board={view.board}
             sequences={view.sequences}
-            targets={targets}
+            targets={highlights ? targets : null}
             targetMode={selectedCard && cardKind(selectedCard) === 'one-eyed-jack' ? 'remove' : 'place'}
             activeTeam={activeTeam}
             lastMove={lastMove}
@@ -273,13 +277,21 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
             summary={gameOver ? `${teamName(view.winner!)} wins` : undefined}
           />
         )}
-        <section className={styles.logPanel} aria-label="Move log">
-          <h2 className={styles.railHeading}>Move log</h2>
-          <div className={styles.logScroll}>
-            <MoveLog entries={view.log} emptyText="Moves will appear here." />
-          </div>
-          {view.deckCount !== null && <p className={styles.deck}>{view.deckCount} cards left in the deck</p>}
-        </section>
+        {history ? (
+          <section className={styles.logPanel} aria-label="Move log">
+            <h2 className={styles.railHeading}>Move log</h2>
+            <div className={styles.logScroll}>
+              <MoveLog entries={view.log} emptyText="Moves will appear here." />
+            </div>
+            {view.deckCount !== null && <p className={styles.deck}>{view.deckCount} cards left in the deck</p>}
+          </section>
+        ) : (
+          view.status === 'ready' && (
+            <p className={styles.deck}>
+              {view.deckCount !== null && `${view.deckCount} cards left in the deck. `}This table plays without a move log.
+            </p>
+          )
+        )}
       </aside>
 
       <div className="visually-hidden" aria-live="polite">
@@ -287,7 +299,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
         {!gameOver && currentPlayer ? `. ${currentPlayer.name}'s turn.` : ''}
       </div>
 
-      <Dialog open={logOpen} title="Move log" onClose={() => setLogOpen(false)}>
+      <Dialog open={logOpen && history} title="Move log" onClose={() => setLogOpen(false)}>
         <MoveLog entries={view.log} emptyText="No moves yet. Moves will appear here as they are played." />
       </Dialog>
 
@@ -346,20 +358,22 @@ function handHint({
   dead,
   targets,
   canExchange,
+  highlights,
 }: {
   selectedCard: CardName | undefined;
   dead: boolean;
   targets: Pos[] | null;
   canExchange: boolean;
+  highlights: boolean;
 }): string {
-  if (!selectedCard) return 'Pick a card, then a highlighted cell. Keys 1–7 pick cards.';
+  if (!selectedCard) return `Pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}. Keys 1–7 pick cards.`;
   const card = selectedCard;
   if (dead) {
     return canExchange
       ? `${cardShort(card)} is dead: both of its cells are taken. Exchange it for a new card.`
       : `${cardShort(card)} is dead. You already exchanged a card this turn, so play another card.`;
   }
-  if (targets && targets.length === 0) {
+  if (highlights && targets && targets.length === 0) {
     return cardKind(card) === 'one-eyed-jack' ? 'No opponent chip can be removed right now.' : `${cardShort(card)} has no open cell.`;
   }
   switch (cardKind(card)) {
@@ -368,6 +382,6 @@ function handHint({
     case 'one-eyed-jack':
       return "One-eyed jack: remove an opponent's chip that isn't in a sequence.";
     default:
-      return `Place ${cardShort(card)} on one of its highlighted cells.`;
+      return highlights ? `Place ${cardShort(card)} on one of its highlighted cells.` : `Place ${cardShort(card)} on one of its two cells.`;
   }
 }

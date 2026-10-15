@@ -15,7 +15,9 @@ export function describeLog(entry: LogEntry): string {
       return `${entry.player} used ${cardShort(entry.card)} to remove ${teamName(entry.removedTeam)}'s chip from ${cell}`;
     }
     case 'exchange':
-      return `${entry.player} swapped dead card ${cardShort(entry.card)} for a new one`;
+      return entry.auto
+        ? `${entry.player}'s dead card ${cardShort(entry.card)} was swapped for a new one automatically`
+        : `${entry.player} swapped dead card ${cardShort(entry.card)} for a new one`;
     case 'pass':
       return `${entry.player} had no playable card and passed`;
     case 'sequence':

@@ -213,3 +213,25 @@
   font-size: var(--text-sm);
   text-decoration: none;
 }
+
+.options {
+  gap: var(--space-3);
+}
+
+.options h2 {
+  font-size: var(--text-lg);
+}
+
+.rename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.renameField {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  min-width: 0;
+}

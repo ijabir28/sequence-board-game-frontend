@@ -3,6 +3,7 @@ import type { LogEntry } from '../engine/game';
 import type { Sequence } from '../engine/sequences';
 import type { TeamIndex } from '../engine/setup';
 import { ApiError, postJson, request } from './http';
+import type { RawRoomSettings } from './rooms';
 
 // A table's game (backend controller/room_game.js). Every response is the game as the
 // signed-in player sees it; errors are JSON {error, message}.
@@ -30,7 +31,11 @@ export interface RoomGameView {
   deck_count: number;
   sequences: Sequence[];
   winner: TeamIndex | null;
+  /** With history off, only the latest move. */
   log: LogEntry[];
+  /** The room's name and settings (missing from older backends). */
+  name?: string;
+  settings?: RawRoomSettings;
 }
 
 /** The server understood the request and refused it, for example a move out of turn. */

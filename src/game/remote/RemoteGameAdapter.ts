@@ -4,7 +4,7 @@ import { BLANK, isCardName, type BoardCardName, type CardName } from '../../engi
 import { isDeadCard, legalTargets, type GameState } from '../../engine/game';
 import type { Pos } from '../../engine/board';
 import type { TeamIndex } from '../../engine/setup';
-import type { ActionResult, CellView, GameAdapter, GameView, PlayerView } from '../types';
+import { DEFAULT_PLAY_SETTINGS, type ActionResult, type CellView, type GameAdapter, type GameView, type PlayerView } from '../types';
 import {
   interpretPlay,
   LEGACY_PLAYERS,
@@ -38,6 +38,7 @@ const EMPTY_VIEW: GameView = {
   log: [],
   winner: null,
   turn: null,
+  settings: DEFAULT_PLAY_SETTINGS,
 };
 
 /** Talks to the backend's legacy HTTP game, polling because it emits no game events. */

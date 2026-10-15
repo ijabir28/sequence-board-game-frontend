@@ -9,7 +9,7 @@ import { teamName } from '../game/teams';
 import styles from './Forms.module.css';
 import own from './YourTables.module.css';
 
-type State = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; rooms: MyRoom[] };
+export type MyRoomsState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; rooms: MyRoom[] };
 
 /** One line saying how far a table got, from the viewer's side. */
 export function describeTable(room: MyRoom): string {
@@ -24,9 +24,14 @@ export function describeTable(room: MyRoom): string {
 
 const DATE = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
-/** The signed-in user's tables, newest first, so they can go back to a game (even after a server restart). */
-export function YourTables() {
-  const [state, setState] = useState<State>({ status: 'loading' });
+/** Games in progress where the user has a seat: the ones worth resuming first. */
+export function resumableTables(rooms: MyRoom[]): MyRoom[] {
+  return rooms.filter((room) => room.status === 'playing' && room.yourTeam !== null);
+}
+
+/** Loads the signed-in user's tables (GET /user/rooms). */
+export function useMyRooms() {
+  const [state, setState] = useState<MyRoomsState>({ status: 'loading' });
 
   const load = useCallback(async () => {
     setState({ status: 'loading' });
@@ -41,6 +46,36 @@ export function YourTables() {
     void load();
   }, [load]);
 
+  return { state, reload: load };
+}
+
+/** A call to action for games in progress, so a player who left (or whose server restarted) can jump back in. */
+export function ResumeBanner({ state }: { state: MyRoomsState }) {
+  if (state.status !== 'ready') return null;
+  const games = resumableTables(state.rooms);
+  if (games.length === 0) return null;
+  return (
+    <section className={own.resume} aria-label="Games in progress">
+      {games.slice(0, 3).map((room) => (
+        <div key={room.id} className={own.resumeRow}>
+          <span className={own.chip} aria-hidden="true">
+            {room.yourTeam !== null && <Chip team={room.yourTeam} />}
+          </span>
+          <span className={own.details}>
+            <span className={own.code}>Your game at {room.name} is in progress</span>
+            <span className={own.meta}>{describeTable(room)}</span>
+          </span>
+          <Link className={own.resumeLink} to={`/table/${room.id}/game`}>
+            Resume
+          </Link>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/** The signed-in user's tables, newest first, so they can go back to a game (even after a server restart). */
+export function YourTables({ state, reload }: { state: MyRoomsState; reload: () => Promise<void> }) {
   return (
     <section className={[styles.card, own.card].join(' ')} aria-labelledby="your-tables">
       <header className={styles.header}>
@@ -60,7 +95,7 @@ export function YourTables() {
             <Icon name="alert" size={18} />
             <span>{state.message}</span>
           </p>
-          <Button size="sm" onClick={() => void load()}>
+          <Button size="sm" onClick={() => void reload()}>
             Try again
           </Button>
         </div>
@@ -78,18 +113,20 @@ export function YourTables() {
                 {room.yourTeam !== null && <Chip team={room.yourTeam} />}
               </span>
               <span className={own.details}>
-                <span className={own.code}>Table {room.id}</span>
+                <span className={own.code}>{room.name}</span>
                 <span className={own.meta}>
                   {describeTable(room)}
                   <span aria-hidden="true"> · </span>
                   <time dateTime={room.createdAt}>{DATE.format(new Date(room.createdAt))}</time>
+                  <span aria-hidden="true"> · </span>
+                  <span className={own.slug}>{room.id}</span>
                   {room.yourTeam !== null && <span className={own.visuallyHidden}>, you play for {teamName(room.yourTeam)}</span>}
                 </span>
               </span>
               <Link
                 className={own.open}
                 to={room.status === 'open' ? `/table/${room.id}` : `/table/${room.id}/game`}
-                aria-label={`${room.status === 'playing' ? 'Resume' : 'Open'} table ${room.id}`}
+                aria-label={`${room.status === 'playing' ? 'Resume' : 'Open'} ${room.name}`}
               >
                 {room.status === 'playing' ? 'Resume' : room.status === 'finished' ? 'View' : 'Open'}
               </Link>

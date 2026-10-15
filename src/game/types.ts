@@ -35,6 +35,16 @@ export interface TeamView {
 
 export type GameStatus = 'loading' | 'ready' | 'error';
 
+/** How the game is shown, chosen with the table (or the hot-seat setup). */
+export interface PlaySettings {
+  /** Light up the legal cells for the selected card. */
+  highlights: boolean;
+  /** Show the move log. Off: only the latest move is known. */
+  history: boolean;
+}
+
+export const DEFAULT_PLAY_SETTINGS: PlaySettings = { highlights: true, history: true };
+
 export interface GameView {
   status: GameStatus;
   /** Set when status is 'error': what happened and what to do next. */
@@ -58,6 +68,9 @@ export interface GameView {
   log: LogEntry[];
   winner: TeamIndex | null;
   turn: number | null;
+  settings: PlaySettings;
+  /** The table's name, when the game belongs to one. */
+  title?: string;
 }
 
 export type ActionResult = { ok: true } | { ok: false; message: string };

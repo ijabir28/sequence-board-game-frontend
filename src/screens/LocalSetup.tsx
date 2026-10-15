@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { HAND_SIZE_BY_PLAYER_COUNT, playersPerTeamOptions, seatTeams, sequencesToWin, type TeamCount } from '../engine/setup';
+import { DEFAULT_ROOM_SETTINGS, type RoomSettings } from '../api/rooms';
 import { Chip } from '../components/Chip';
+import { RoomOptions } from '../components/RoomOptions';
 import { Button } from '../components/ui/Button';
 import { TEAM_STYLES } from '../game/teams';
 import styles from './Forms.module.css';
@@ -9,6 +11,7 @@ export interface LocalConfig {
   teamCount: TeamCount;
   playersPerTeam: number;
   playerNames: string[];
+  settings: RoomSettings;
 }
 
 interface LocalSetupProps {
@@ -23,6 +26,7 @@ export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
   const [teamCount, setTeamCount] = useState<TeamCount>(initial?.teamCount ?? 2);
   const [playersPerTeam, setPlayersPerTeam] = useState(initial?.playersPerTeam ?? 1);
   const [names, setNames] = useState<string[]>(initial?.playerNames ?? []);
+  const [settings, setSettings] = useState<RoomSettings>(initial?.settings ?? DEFAULT_ROOM_SETTINGS);
 
   const perTeamOptions = playersPerTeamOptions(teamCount);
   const seats = seatTeams(teamCount, playersPerTeam);
@@ -35,7 +39,7 @@ export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    onStart({ teamCount, playersPerTeam, playerNames: seats.map((_, i) => names[i]?.trim() || `Player ${i + 1}`) });
+    onStart({ teamCount, playersPerTeam, playerNames: seats.map((_, i) => names[i]?.trim() || `Player ${i + 1}`), settings });
   };
 
   return (
@@ -101,6 +105,11 @@ export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
               </li>
             ))}
           </ol>
+        </fieldset>
+
+        <fieldset className={styles.fieldset}>
+          <legend>Options</legend>
+          <RoomOptions value={settings} onChange={setSettings} />
         </fieldset>
 
         <div className={styles.footer}>

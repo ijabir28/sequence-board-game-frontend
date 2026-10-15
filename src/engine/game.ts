@@ -15,13 +15,21 @@ export interface Player {
 export type LogEntry =
   | { kind: 'place'; turn: number; player: string; team: TeamIndex; card: CardName; pos: Pos; wild: boolean }
   | { kind: 'remove'; turn: number; player: string; team: TeamIndex; card: CardName; pos: Pos; removedTeam: TeamIndex }
-  | { kind: 'exchange'; turn: number; player: string; team: TeamIndex; card: CardName }
+  | { kind: 'exchange'; turn: number; player: string; team: TeamIndex; card: CardName; auto?: boolean }
   | { kind: 'pass'; turn: number; player: string; team: TeamIndex }
   | { kind: 'sequence'; turn: number; team: TeamIndex; cells: Pos[] }
   | { kind: 'win'; turn: number; team: TeamIndex };
 
+/** Optional rules a table is played with. */
+export interface GameRules {
+  /** A dead card is exchanged automatically when its owner's turn starts. */
+  autoDrawDead: boolean;
+}
+
 export interface GameState {
   teamCount: TeamCount;
+  /** Missing in states made before rules existed, which play without them. */
+  rules?: GameRules;
   players: Player[];
   /** Hands by player index, in seat order. */
   hands: CardName[][];
@@ -72,10 +80,11 @@ export interface NewGameOptions {
   playersPerTeam: number;
   /** Optional names in seat order; missing names default to "Player n". */
   playerNames?: string[];
+  rules?: Partial<GameRules>;
   random?: () => number;
 }
 
-export function createGame({ teamCount, playersPerTeam, playerNames = [], random = Math.random }: NewGameOptions): GameState {
+export function createGame({ teamCount, playersPerTeam, playerNames = [], rules = {}, random = Math.random }: NewGameOptions): GameState {
   if (!isSupportedTable(teamCount, playersPerTeam)) {
     throw new RangeError(`Unsupported table: ${teamCount} teams of ${playersPerTeam}`);
   }
@@ -88,20 +97,24 @@ export function createGame({ teamCount, playersPerTeam, playerNames = [], random
   const handSize = handSizeFor(players.length)!;
   const deck = shuffle(fullDeck(), random);
   const hands = players.map(() => deck.splice(0, handSize));
-  return {
-    teamCount,
-    players,
-    hands,
-    chips: emptyChipGrid(),
-    deck,
-    discard: [],
-    current: 0,
-    turn: 1,
-    exchangedThisTurn: false,
-    sequences: [],
-    winner: null,
-    log: [],
-  };
+  return startTurn(
+    {
+      teamCount,
+      rules: { autoDrawDead: rules.autoDrawDead === true },
+      players,
+      hands,
+      chips: emptyChipGrid(),
+      deck,
+      discard: [],
+      current: 0,
+      turn: 1,
+      exchangedThisTurn: false,
+      sequences: [],
+      winner: null,
+      log: [],
+    },
+    random,
+  );
 }
 
 export function currentPlayer(state: GameState): Player {
@@ -157,7 +170,7 @@ function targetMessage(code: RuleErrorCode, card: CardName): string {
     case 'LOCKED_CHIP':
       return "That chip is part of a completed sequence and can't be removed. Pick another chip.";
     case 'CELL_MISMATCH':
-      return `${cardShort(card)} can only go on a ${cardShort(card)} cell. Pick one of the highlighted cells.`;
+      return `${cardShort(card)} can only go on a ${cardShort(card)} cell.`;
     case 'CELL_OCCUPIED':
       return 'That cell already has a chip. Pick an empty cell.';
     default:
@@ -186,7 +199,7 @@ export function applyMove(state: GameState, move: Move, random: () => number = M
         throw new RuleError('HAS_MOVES', 'You still have a card you can play, so you cannot pass.');
       }
       const { name, team } = currentPlayer(state);
-      return endTurn({ ...state, log: [...state.log, { kind: 'pass', turn: state.turn, player: name, team }] });
+      return endTurn({ ...state, log: [...state.log, { kind: 'pass', turn: state.turn, player: name, team }] }, random);
     }
   }
 }
@@ -222,7 +235,7 @@ function play(state: GameState, handIndex: number, target: Pos, random: () => nu
   }
 
   const drawn = replaceCard({ ...state, chips, sequences, log }, handIndex, random);
-  return winner !== null ? { ...drawn, winner } : endTurn(drawn);
+  return winner !== null ? { ...drawn, winner } : endTurn(drawn, random);
 }
 
 function exchange(state: GameState, handIndex: number, random: () => number): GameState {
@@ -256,8 +269,26 @@ function replaceCard(state: GameState, handIndex: number, random: () => number):
   return { ...state, hands, deck, discard };
 }
 
-function endTurn(state: GameState): GameState {
-  return { ...state, current: (state.current + 1) % state.players.length, turn: state.turn + 1, exchangedThisTurn: false };
+function endTurn(state: GameState, random: () => number): GameState {
+  return startTurn({ ...state, current: (state.current + 1) % state.players.length, turn: state.turn + 1, exchangedThisTurn: false }, random);
+}
+
+/**
+ * With the autoDrawDead rule, a dead card in the new current player's hand is exchanged for them: their one
+ * exchange for the turn, logged with `auto: true`. Matches the backend's start_turn().
+ */
+function startTurn(state: GameState, random: () => number): GameState {
+  if (!state.rules?.autoDrawDead || state.winner !== null || state.exchangedThisTurn) return state;
+  const handIndex = state.hands[state.current].findIndex((card) => isDeadCard(state, card));
+  if (handIndex === -1) return state;
+  const card = state.hands[state.current][handIndex];
+  const player = currentPlayer(state);
+  const next = replaceCard(state, handIndex, random);
+  return {
+    ...next,
+    exchangedThisTurn: true,
+    log: [...next.log, { kind: 'exchange', turn: state.turn, player: player.name, team: player.team, card, auto: true }],
+  };
 }
 
 export function sequenceCount(state: GameState, team: TeamIndex): number {

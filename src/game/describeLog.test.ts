@@ -10,6 +10,9 @@ describe('describeLog', () => {
     expect(describeLog({ kind: 'remove', turn: 2, player: 'Ben', team: 1, card: 'J-Spade', pos: { row: 0, column: 1 }, removedTeam: 0 })).toBe(
       "Ben used J♠ to remove Team Green's chip from 6♦",
     );
+    expect(describeLog({ kind: 'exchange', turn: 3, player: 'Ana', team: 0, card: '7-Heart', auto: true })).toBe(
+      "Ana's dead card 7♥ was swapped for a new one automatically",
+    );
     expect(describeLog({ kind: 'win', turn: 9, team: 2 })).toBe('Team Red won the game');
   });
 });

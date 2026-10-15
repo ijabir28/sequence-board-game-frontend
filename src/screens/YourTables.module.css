@@ -88,3 +88,49 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.slug {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+/* "Your game is in progress": spans the lobby grid, above everything else. */
+.resume {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.resumeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.resumeLink {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.resumeLink:hover {
+  filter: brightness(1.08);
+}
+
+.resumeLink:focus-visible {
+  box-shadow: var(--focus-ring);
+}
