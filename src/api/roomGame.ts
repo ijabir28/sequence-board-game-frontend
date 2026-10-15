@@ -46,6 +46,8 @@ export interface RoomGameView {
   hint?: RawHint | null;
   /** When the current turn began (ISO time), and the server's clock at the time of the response. */
   turn_started_at?: string | null;
+  /** When the turn's timer runs out (ISO time); the server then plays a random card for the player. */
+  turn_deadline?: string | null;
   server_time?: string;
 }
 

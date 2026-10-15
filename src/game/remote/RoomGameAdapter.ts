@@ -45,6 +45,7 @@ const EMPTY_VIEW: GameView = {
   settings: DEFAULT_PLAY_SETTINGS,
   hint: null,
   turnStartedAt: null,
+  turnDeadline: null,
 };
 
 /** A table's game, run by the server. Each player sees only their own hand. */
@@ -202,6 +203,7 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     // The server only sends hints in training games; never show one elsewhere.
     hint: mode === 'training' ? toHint(server.hint) : null,
     turnStartedAt: server.winner === null && server.turn_started_at ? Date.parse(server.turn_started_at) + clockSkew : null,
+    turnDeadline: server.winner === null && server.turn_deadline ? Date.parse(server.turn_deadline) + clockSkew : null,
     notice: viewer ? undefined : "You don't have a seat in this game, so you're watching.",
     board: server.board.map((row, r) =>
       row.map((cell, c) => {

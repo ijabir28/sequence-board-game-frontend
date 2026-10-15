@@ -41,6 +41,7 @@ const EMPTY_VIEW: GameView = {
   settings: DEFAULT_PLAY_SETTINGS,
   hint: null,
   turnStartedAt: null,
+  turnDeadline: null,
 };
 
 /** Talks to the backend's legacy HTTP game, polling because it emits no game events. */

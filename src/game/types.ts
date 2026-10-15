@@ -77,6 +77,8 @@ export interface GameView {
   hint: Hint | null;
   /** When the current turn began, in this device's clock (ms since epoch); null when unknown. */
   turnStartedAt: number | null;
+  /** When the current turn's timer runs out, in this device's clock; null when there is no timer. */
+  turnDeadline: number | null;
   /** The table's name, when the game belongs to one. */
   title?: string;
 }
