@@ -8,8 +8,8 @@ It has two ways to play:
 - **On one device (hot-seat).** A complete rules engine runs in the browser, so you can play a full game without the
   server.
 - **With the server.** Create an account or sign in, open a named table with the options you want, share its code
-  (a slug of its name, such as `friday-night-k3m9`) and take seats live. Once every seat is taken, any player
-  starts the game and everyone plays from their own device; the server deals, enforces turn order and detects
+  (a slug of its name, such as `friday-night-k3m9`) and take seats live. Once every seat is taken, the host (whoever
+  opened the table) starts the game and everyone plays from their own device; the server deals, enforces turn order and detects
   sequences. Tables and games are saved on the server, so the lobby's "Your tables" list lets you resume a game
   later, even after the backend restarts. A developer page also shows the server's older built-in test game.
 
@@ -174,11 +174,16 @@ Whoever opens a table (the host) picks its options, shown by `src/components/Roo
 
 | Option | Default | Effect |
 |---|---|---|
+| Mode | Standard | Training: on your turn a Hint button suggests a move and says why, and card tips explain what the selected card does. Standard games never show hints or tips |
 | Highlight legal cells | on | Off: picking a card doesn't light up its cells, and wrong cells are explained by the rules |
 | Move history | on | Off: no move log; the server sends only the latest move |
 | Auto-draw dead cards | off | On: a dead card is swapped automatically when its owner's turn starts |
 
-The host can rename the table and change options on the table page until the game starts. Hot-seat games offer the
+Hints come from the server for tables (only to the player whose turn it is, only in training games) and from
+`src/engine/hints.ts` for hot-seat games; `src/game/describeHint.ts` words them.
+
+Only the host can start the game; other players see who they are waiting for. The host can rename the table and
+change options on the table page until the game starts. Hot-seat games offer the
 same options. When the game starts, every seated player on the table page is taken into it.
 
 The server stores tables, seats, options, games and every move in PostgreSQL. The lobby's **Your tables** card
