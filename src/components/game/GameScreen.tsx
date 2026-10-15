@@ -12,6 +12,7 @@ import { Chip } from '../Chip';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
 import { Icon } from '../ui/Icon';
+import { Tooltip } from '../ui/Tooltip';
 import { HandPanel } from './HandPanel';
 import { MoveLog } from './MoveLog';
 import { Scoreboard } from './Scoreboard';
@@ -170,21 +171,27 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra,
       )}
       <div className={styles.actionButtons}>
         {hint && !hintShown && (
-          <Button size="sm" variant="ghost" onClick={showHint} title="Suggest a move for this turn (training mode)">
-            <Icon name="bulb" size={16} />
-            Hint
-          </Button>
+          <Tooltip text="Suggest a move for this turn, and say why" side="top" align="end">
+            <Button size="sm" variant="ghost" onClick={showHint}>
+              <Icon name="bulb" size={16} />
+              Hint
+            </Button>
+          </Tooltip>
         )}
         {selected !== null && view.hand[selected]?.dead && view.canExchange && (
-          <Button size="sm" variant="primary" onClick={onExchange} busy={busy}>
-            <Icon name="swap" size={16} />
-            Exchange dead card
-          </Button>
+          <Tooltip text="Discard it and draw a new card. One exchange per turn, before you play." side="top" align="end">
+            <Button size="sm" variant="primary" onClick={onExchange} busy={busy}>
+              <Icon name="swap" size={16} />
+              Exchange dead card
+            </Button>
+          </Tooltip>
         )}
         {view.canPass && (
-          <Button size="sm" onClick={onPass} busy={busy}>
-            Pass turn
-          </Button>
+          <Tooltip text="No card in your hand can be played, so you may pass" side="top" align="end">
+            <Button size="sm" onClick={onPass} busy={busy}>
+              Pass turn
+            </Button>
+          </Tooltip>
         )}
       </div>
     </div>
@@ -220,24 +227,36 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra,
       style={activeTeam !== null ? ({ '--active-team': TEAM_STYLES[activeTeam].color, '--active-glow': TEAM_STYLES[activeTeam].glow } as React.CSSProperties) : undefined}
     >
       <header className={styles.top}>
-        <div className={styles.brand}>
-          <span className={styles.logo} aria-hidden="true">
-            <Chip team={0} />
-          </span>
-          <span className={styles.brandText}>Sequence</span>
-          <span className={styles.mode}>{view.title ?? modeLabel}</span>
+        {/* Spans the board's column, so the scoreboard is centred over the board. */}
+        <div className={styles.topBoard}>
+          <div className={styles.brand}>
+            <span className={styles.logo} aria-hidden="true">
+              <Chip team={0} />
+            </span>
+            <span className={styles.brandText}>Sequence</span>
+            <span className={styles.mode}>{view.title ?? modeLabel}</span>
+          </div>
+          <div className={styles.scores}>
+            <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
+          </div>
         </div>
-        <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
         <div className={styles.topActions}>
           {headerExtra}
           {history && (
-            <button type="button" className={[styles.iconButton, styles.logButton].join(' ')} onClick={() => setLogOpen(true)} aria-label="Move log">
-              <Icon name="log" />
-            </button>
+            <Tooltip text="Every move so far" align="end">
+              <button type="button" className={[styles.iconButton, styles.logButton].join(' ')} onClick={() => setLogOpen(true)} aria-label="Move log">
+                <Icon name="log" />
+              </button>
+            </Tooltip>
           )}
-          <button type="button" className={styles.iconButton} onClick={() => (gameOver ? onExit() : setExitOpen(true))} aria-label="Leave game">
-            <Icon name="exit" />
-          </button>
+          <Tooltip
+            text={adapter.mode === 'local' ? 'Leave this game. Hot-seat games are not saved.' : 'Leave this game. It is saved, so you can come back.'}
+            align="end"
+          >
+            <button type="button" className={styles.iconButton} onClick={() => (gameOver ? onExit() : setExitOpen(true))} aria-label="Leave game">
+              <Icon name="exit" />
+            </button>
+          </Tooltip>
         </div>
       </header>
 
