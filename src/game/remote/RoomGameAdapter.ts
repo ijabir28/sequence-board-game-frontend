@@ -44,6 +44,7 @@ const EMPTY_VIEW: GameView = {
   turn: null,
   settings: DEFAULT_PLAY_SETTINGS,
   hint: null,
+  turnStartedAt: null,
 };
 
 /** A table's game, run by the server. Each player sees only their own hand. */
@@ -57,6 +58,8 @@ export class RoomGameAdapter implements GameAdapter {
   private timer: ReturnType<typeof setInterval> | undefined;
   private disposed = false;
   private inFlight: Promise<void> | null = null;
+  /** This device's clock minus the server's, measured once so the turn start stays put between refreshes. */
+  private clockSkew: number | null = null;
 
   constructor(private readonly options: RoomGameOptions) {}
 
@@ -147,7 +150,11 @@ export class RoomGameAdapter implements GameAdapter {
 
   private accept(server: RoomGameView) {
     this.server = server;
-    this.publish(toView(server));
+    if (this.clockSkew === null && server.server_time) {
+      const serverNow = Date.parse(server.server_time);
+      if (!Number.isNaN(serverNow)) this.clockSkew = Date.now() - serverNow;
+    }
+    this.publish(toView(server, this.clockSkew ?? 0));
   }
 
   /** The engine only needs the board, sequences and the viewer's hand to list legal cells. */
@@ -180,7 +187,8 @@ export class RoomGameAdapter implements GameAdapter {
   }
 }
 
-export function toView(server: RoomGameView): GameView {
+/** `clockSkew` is this device's clock minus the server's, in ms. */
+export function toView(server: RoomGameView, clockSkew = 0): GameView {
   const players: PlayerView[] = server.players.map((p) => ({ id: p.handle, name: p.name, team: p.team }));
   const viewer = players.find((p) => p.id === server.viewer) ?? null;
   const teamIndexes = Array.from({ length: server.team_count }, (_, i) => i as TeamIndex);
@@ -193,6 +201,7 @@ export function toView(server: RoomGameView): GameView {
     settings: { mode, highlights, history },
     // The server only sends hints in training games; never show one elsewhere.
     hint: mode === 'training' ? toHint(server.hint) : null,
+    turnStartedAt: server.winner === null && server.turn_started_at ? Date.parse(server.turn_started_at) + clockSkew : null,
     notice: viewer ? undefined : "You don't have a seat in this game, so you're watching.",
     board: server.board.map((row, r) =>
       row.map((cell, c) => {

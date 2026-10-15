@@ -29,13 +29,14 @@ export class LocalGameAdapter implements GameAdapter {
   private listeners = new Set<() => void>();
   private random: () => number;
   private settings: PlaySettings;
+  private turnStartedAt = Date.now();
 
   constructor(options: LocalGameOptions) {
     this.random = options.random ?? Math.random;
     this.settings = { ...DEFAULT_PLAY_SETTINGS, ...options.settings };
     this.state = createGame(options);
     this.hotSeat = this.state.players.length > 1;
-    this.view = toView(this.state, this.settings);
+    this.view = toView(this.state, this.settings, this.turnStartedAt);
   }
 
   getState(): GameView {
@@ -70,19 +71,22 @@ export class LocalGameAdapter implements GameAdapter {
   }
 
   private apply(next: () => GameState): Promise<ActionResult> {
+    const before = this.state;
     try {
       this.state = next();
     } catch (error) {
       if (error instanceof RuleError) return Promise.resolve({ ok: false, message: error.message });
       throw error;
     }
-    this.view = toView(this.state, this.settings);
+    // An exchange keeps the turn, so it keeps the clock running.
+    if (this.state.turn !== before.turn || this.state.current !== before.current) this.turnStartedAt = Date.now();
+    this.view = toView(this.state, this.settings, this.turnStartedAt);
     this.listeners.forEach((listener) => listener());
     return Promise.resolve({ ok: true });
   }
 }
 
-function toView(state: GameState, settings: PlaySettings): GameView {
+function toView(state: GameState, settings: PlaySettings, turnStartedAt: number): GameView {
   const player = state.players[state.current];
   const teamIndexes = Array.from({ length: state.teamCount }, (_, i) => i as TeamIndex);
   return {
@@ -111,5 +115,6 @@ function toView(state: GameState, settings: PlaySettings): GameView {
     turn: state.turn,
     settings,
     hint: settings.mode === 'training' ? suggestMove(state) : null,
+    turnStartedAt: state.winner === null ? turnStartedAt : null,
   };
 }
