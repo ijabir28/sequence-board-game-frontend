@@ -1,8 +1,9 @@
 import type { TeamIndex } from '../engine/setup';
 import { postJson, readJson, request } from './http';
 
-/** A seated player. The backend's player objects also carry a plain-text password; it is dropped here. */
+/** A seated player. */
 export interface Seat {
+  handle: string;
   name: string;
 }
 
@@ -20,10 +21,10 @@ export interface Room {
 
 interface RawRoom {
   administrator?: string;
-  teams?: { handle: string; players: ({ name?: string; [key: string]: unknown } | null)[] }[];
+  teams?: { handle: string; players: ({ handle?: string; name?: string; [key: string]: unknown } | null)[] }[];
 }
 
-/** Keeps only the fields the UI needs. Never let `password` past this function. */
+/** Keeps only the fields the UI needs. */
 export function sanitizeRoom(id: string, raw: RawRoom): Room {
   return {
     id,
@@ -31,7 +32,7 @@ export function sanitizeRoom(id: string, raw: RawRoom): Room {
     teams: (raw.teams ?? []).map((team, i) => ({
       handle: team.handle,
       index: i as TeamIndex,
-      seats: (team.players ?? []).map((p) => (p ? { name: String(p.name ?? 'Unknown player') } : null)),
+      seats: (team.players ?? []).map((p) => (p ? { handle: String(p.handle ?? ''), name: String(p.name ?? 'Unknown player') } : null)),
     })),
   };
 }
@@ -50,16 +51,18 @@ export async function getRoom(id: string): Promise<Room | null> {
   return raw ? sanitizeRoom(id, raw) : null;
 }
 
-export type JoinResult = 'success' | 'seat-taken' | 'not-found';
+export type JoinResult = 'success' | 'seat-taken' | 'already-seated' | 'signed-out' | 'not-found';
 
 /** POST /room/:id/join is always HTTP 200; the outcome is in `message`. */
 export async function joinRoom(id: string, teamHandle: string): Promise<JoinResult> {
   const body = await readJson<{ message: unknown }>(await postJson(`/room/${encodeURIComponent(id)}/join`, { team_handle: teamHandle }));
   if (body?.message === 'success') return 'success';
   if (body?.message === 'SEAT_TAKEN') return 'seat-taken';
+  if (body?.message === 'ALREADY_SEATED') return 'already-seated';
+  if (body?.message === 'NOT_SIGNED_IN') return 'signed-out';
   return 'not-found';
 }
 
-export function isSeated(room: Room, name: string): boolean {
-  return room.teams.some((t) => t.seats.some((s) => s?.name === name));
+export function isSeated(room: Room, handle: string): boolean {
+  return room.teams.some((t) => t.seats.some((s) => s?.handle === handle));
 }
