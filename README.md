@@ -148,6 +148,10 @@ invariants.
   - **Phones and tablets** get a collapsible hand strip docked at the bottom; collapsing it gives the board more room.
   - **Phones in landscape** use the side rail, so the board stays usable.
   - The move log is the one region that scrolls, and only inside its own box. On small screens it opens in a dialog.
+- **Whose turn it is is never in doubt.** A Turn panel (`src/components/game/TurnPanel.tsx`) shows the player and
+  team in the team's colour, a timer for the current turn, and the turn order. When it becomes your turn it flashes,
+  phones buzz, and the tab title starts with "● Your turn". Table games take the turn's start time from the server
+  (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
 - **Your hand, your order.** Sort (by suit and rank, jacks last), Shuffle, drag a card with a mouse or pen, or select
   a card and use the arrow buttons or Alt+←/→. Only your view changes (`src/game/handOrder.ts`): moves still use the
   real hand index, and a new card arrives where the played one was. Table games remember the order per table on this
