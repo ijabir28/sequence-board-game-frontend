@@ -4,6 +4,7 @@ import { describeTable } from './YourTables';
 
 const base: MyRoom = {
   id: '1',
+  name: 'Friday',
   createdAt: '2026-10-15T05:48:22.696Z',
   administrator: 'jabir',
   teamCount: 2,

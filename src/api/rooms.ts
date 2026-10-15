@@ -13,23 +13,61 @@ export interface RoomTeam {
   seats: (Seat | null)[];
 }
 
+/** Options the table's host picks. They can change until the game starts. */
+export interface RoomSettings {
+  /** Players can read back every move (the move log). */
+  history: boolean;
+  /** Legal cells light up when a card is picked. */
+  highlights: boolean;
+  /** A dead card is exchanged automatically when its owner's turn starts. */
+  autoDrawDead: boolean;
+}
+
+export const DEFAULT_ROOM_SETTINGS: RoomSettings = { history: true, highlights: true, autoDrawDead: false };
+
+export interface RawRoomSettings {
+  history?: boolean;
+  highlights?: boolean;
+  auto_draw_dead?: boolean;
+}
+
+/** Missing settings (an older backend) fall back to the defaults. */
+export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings {
+  return {
+    history: raw?.history ?? DEFAULT_ROOM_SETTINGS.history,
+    highlights: raw?.highlights ?? DEFAULT_ROOM_SETTINGS.highlights,
+    autoDrawDead: raw?.auto_draw_dead ?? DEFAULT_ROOM_SETTINGS.autoDrawDead,
+  };
+}
+
+function rawSettings(settings: Partial<RoomSettings>): RawRoomSettings {
+  return { history: settings.history, highlights: settings.highlights, auto_draw_dead: settings.autoDrawDead };
+}
+
 export interface Room {
+  /** The table's code: a slug such as "friday-night-k3m9" (older tables have numeric codes). */
   id: string;
+  name: string;
   administrator: string | null;
   teams: RoomTeam[];
   gameStarted: boolean;
+  settings: RoomSettings;
 }
 
 interface RawRoom {
+  name?: string;
   administrator?: string;
   teams?: { handle: string; players: ({ handle?: string; name?: string; [key: string]: unknown } | null)[] }[];
   game_started?: boolean;
+  settings?: RawRoomSettings;
 }
 
 /** Keeps only the fields the UI needs. */
 export function sanitizeRoom(id: string, raw: RawRoom): Room {
   return {
     id,
+    name: raw.name ?? `Table ${id}`,
+    settings: sanitizeSettings(raw.settings),
     administrator: raw.administrator ?? null,
     teams: (raw.teams ?? []).map((team, i) => ({
       handle: team.handle,
@@ -40,17 +78,58 @@ export function sanitizeRoom(id: string, raw: RawRoom): Room {
   };
 }
 
-/** POST /room/create. Refusals (signed out, unsupported size) are JSON {error, message} and become an ApiError with that message. */
-export async function createRoom(teamCount: number, playersPerTeam: number): Promise<string> {
-  const response = await postJson('/room/create', { number_of_team: teamCount, number_of_player_in_each_team: playersPerTeam });
+/** Turns a 4xx JSON {error, message} into an ApiError with that message. */
+async function refusal(response: Response, fallback: string): Promise<void> {
   if (response.status >= 400 && response.status < 500) {
     const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
-    const message = typeof body?.message === 'string' ? body.message : `The server refused to open the table (${response.status}).`;
+    const message = typeof body?.message === 'string' ? body.message : `${fallback} (${response.status}).`;
     throw new ApiError('server', message, response.status);
   }
+}
+
+export interface NewRoomOptions {
+  /** Blank lets the server pick a name. */
+  name?: string;
+  settings?: Partial<RoomSettings>;
+}
+
+/** POST /room/create. Returns the new table's code. Refusals (signed out, unsupported size, bad name) become an ApiError with the server's message. */
+export async function createRoom(teamCount: number, playersPerTeam: number, options: NewRoomOptions = {}): Promise<string> {
+  const response = await postJson('/room/create', {
+    number_of_team: teamCount,
+    number_of_player_in_each_team: playersPerTeam,
+    name: options.name?.trim() || undefined,
+    ...rawSettings(options.settings ?? {}),
+  });
+  await refusal(response, 'The server refused to open the table');
   const body = await readJson<{ id: string }>(response);
   if (!body?.id) throw new Error('The server did not return a table code. Try again.');
   return String(body.id);
+}
+
+/** PATCH /room/:id/settings (host only, before the game starts). Returns the updated room. */
+export async function updateRoom(id: string, changes: { name?: string; settings?: Partial<RoomSettings> }): Promise<Room> {
+  const response = await request(`/room/${encodeURIComponent(id)}/settings`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: changes.name, ...rawSettings(changes.settings ?? {}) }),
+  });
+  await refusal(response, 'The server refused to change the table');
+  const raw = await readJson<RawRoom>(response);
+  if (!raw) throw new ApiError('unexpected', 'The server did not return the table. Reload the page.');
+  return sanitizeRoom(id, raw);
+}
+
+/**
+ * Reads a table code from what a player typed or pasted: a code ("friday-night-k3m9", or an older numeric one)
+ * or a table link. Returns null when it can't be a code.
+ */
+export function parseTableCode(input: string): string | null {
+  let text = input.trim();
+  const link = /\/table\/([^/?#\s]+)/.exec(text);
+  if (link) text = decodeURIComponent(link[1]);
+  text = text.toLowerCase().replace(/\s+/g, '');
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(text) ? text : null;
 }
 
 /** GET /room/:id. Returns null when the room doesn't exist (the backend answers 200 with an empty body). */
@@ -85,6 +164,7 @@ export type RoomStatus = 'open' | 'playing' | 'finished';
 /** A table from the signed-in user's history (GET /user/rooms). */
 export interface MyRoom {
   id: string;
+  name: string;
   createdAt: string;
   administrator: string;
   teamCount: number;
@@ -99,6 +179,7 @@ export interface MyRoom {
 
 interface RawMyRoom {
   id: string;
+  name?: string;
   created_at: string;
   administrator: string;
   team_count: number;
@@ -114,6 +195,7 @@ export function sanitizeMyRoom(raw: RawMyRoom): MyRoom {
   const status: RoomStatus = raw.status === 'playing' || raw.status === 'finished' ? raw.status : 'open';
   return {
     id: String(raw.id),
+    name: raw.name ?? `Table ${raw.id}`,
     createdAt: String(raw.created_at),
     administrator: String(raw.administrator),
     teamCount: Number(raw.team_count),
