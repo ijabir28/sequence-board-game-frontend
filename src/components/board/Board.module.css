@@ -66,13 +66,12 @@
   letter-spacing: -0.03em;
 }
 
+/* The suit sits in the bottom-right corner, mirroring the rank, so a chip in the middle never hides it. */
 .suit {
   position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding-top: 1.4cqw;
-  font-size: max(11px, 3.6cqw);
+  right: 0.6cqw;
+  bottom: 0.35cqw;
+  font-size: max(9px, 2.5cqw);
   line-height: 1;
 }
 
