@@ -148,11 +148,15 @@ invariants.
   - **Phones and tablets** get a collapsible hand strip docked at the bottom; collapsing it gives the board more room.
   - **Phones in landscape** use the side rail, so the board stays usable.
   - The move log is the one region that scrolls, and only inside its own box. On small screens it opens in a dialog.
+- **Your hand, your order.** Sort (by suit and rank, jacks last), Shuffle, drag a card with a mouse or pen, or select
+  a card and use the arrow buttons or Alt+←/→. Only your view changes (`src/game/handOrder.ts`): moves still use the
+  real hand index, and a new card arrives where the played one was. Table games remember the order per table on this
+  device; hot-seat players each keep their own.
 - **Teams differ by more than colour:** Green chips are circles, Blue are diamonds, Red are triangles, and each has its
   own inner mark. Chips in a completed sequence get a white rim, and a glowing line runs through the sequence.
 - **Accessibility:**
   - The board is an ARIA grid. Arrow keys and Home/End move, and Enter or Space plays. Number keys 1–7 pick hand cards
-    and Escape clears the selection.
+    in the order you arranged them, and Escape clears the selection.
   - Cells have labels such as "7 of Hearts, team 2 chip (Blue, diamond), playable".
   - Focus is always visible, and `prefers-reduced-motion` is respected.
   - No page scrolls horizontally at 360px.
