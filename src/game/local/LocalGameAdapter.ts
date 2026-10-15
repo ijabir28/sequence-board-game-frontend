@@ -150,5 +150,9 @@ function toView(state: GameState, settings: PlaySettings, turnStartedAt: number,
     hint: settings.mode === 'training' ? suggestMove(state) : null,
     turnStartedAt: state.winner === null ? turnStartedAt : null,
     turnDeadline,
+    // Everyone shares this device, so nobody can be away.
+    turnPaused: false,
+    turnTimeLeft: null,
+    away: [],
   };
 }

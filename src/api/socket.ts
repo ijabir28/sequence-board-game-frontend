@@ -76,3 +76,19 @@ export function onConnectionChange(listener: (state: ConnectionState) => void): 
     s.off('reconnecting', connecting);
   };
 }
+
+/**
+ * Tells the server this player has the table's game open (`join_game`), again after every reconnect, until the
+ * returned function is called (`leave_game`). While the current player isn't at the table, their turn is paused.
+ * `token` is the `presence_token` from the player's own game view.
+ */
+export function announcePresence(roomId: string, handle: string, token: string): () => void {
+  const s = getSocket();
+  const join = () => s.emit('join_game', { room_id: roomId, handle, token });
+  if (s.connected) join();
+  s.on('connect', join);
+  return () => {
+    s.off('connect', join);
+    s.emit('leave_game', { room_id: roomId });
+  };
+}
