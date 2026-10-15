@@ -198,7 +198,9 @@ Whoever opens a table (the host) picks its options, shown by `src/components/Roo
 Hints come from the server for tables (only to the player whose turn it is, only in training games) and from
 `src/engine/hints.ts` for hot-seat games; `src/game/describeHint.ts` words them.
 
-Only the host can start the game; other players see who they are waiting for. The host can rename the table and
+Only the host can start the game; other players see who they are waiting for, by display name. Until the game
+starts, a seated player can **Stand up** to change teams, and the host can **Shuffle teams** to deal the seated
+players out at random. The host can rename the table and
 change options on the table page until the game starts. Hot-seat games offer the
 same options. When the game starts, every seated player on the table page is taken into it.
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRoom, isSeated, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
+import { createRoom, isSeated, leaveSeat, shuffleSeats, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
 
 describe('sanitizeRoom', () => {
   const raw = {
@@ -22,6 +22,11 @@ describe('sanitizeRoom', () => {
     const room = sanitizeRoom('42', raw);
     expect(isSeated(room, 'jabir')).toBe(true);
     expect(isSeated(room, 'sakib')).toBe(false);
+  });
+
+  it("names the host by display name, falling back to the handle from an older backend", () => {
+    expect(sanitizeRoom('1', { ...raw, administrator_name: 'Jabir ibne kamal' }).administratorName).toBe('Jabir ibne kamal');
+    expect(sanitizeRoom('1', raw).administratorName).toBe('jabir');
   });
 
   it('tolerates a room created without a session', () => {
@@ -160,5 +165,27 @@ describe('listMyRooms', () => {
     });
     await expect(listMyRooms(2, 5)).resolves.toEqual({ rooms: [], page: 2, perPage: 5, total: 7, pages: 2 });
     expect(url).toBe('/user/rooms?page=2&per_page=5');
+  });
+});
+
+describe('seat actions', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('stands up and shuffles, returning the updated room', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      calls.push(`${init.method} ${url}`);
+      return new Response(JSON.stringify({ teams: [{ handle: 'TEAM_1', players: [null] }] }), { status: 200 });
+    });
+    expect((await leaveSeat('t')).teams[0].seats).toEqual([null]);
+    await shuffleSeats('t');
+    expect(calls).toEqual(['POST /room/t/leave', 'POST /room/t/shuffle']);
+  });
+
+  it("passes the server's reason through", async () => {
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: 'NOT_SEATED', message: "You don't have a seat at this table." }), { status: 409 }));
+    await expect(leaveSeat('t')).rejects.toMatchObject({ message: "You don't have a seat at this table." });
   });
 });
