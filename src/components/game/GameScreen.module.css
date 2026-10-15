@@ -243,7 +243,8 @@
   min-width: 0;
   min-height: 0;
   padding: var(--space-2) var(--gutter);
-  overflow: hidden;
+  /* The board fills this area; your-turn edge and glow spill out over the space around it (shadows never scroll). */
+  overflow: visible;
   container-type: size;
 }
 
