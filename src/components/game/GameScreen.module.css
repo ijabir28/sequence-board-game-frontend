@@ -272,6 +272,13 @@
 
 /* Narrow: keep the status rows to one line each so their height never changes. */
 @media not ((min-aspect-ratio: 1/1) and ((min-width: 1100px) or (max-height: 520px))) {
+  /* Under the docked hand, the rail has no padding of its own. */
+  .railNote {
+    margin: 0;
+    padding: var(--space-1) var(--gutter) var(--space-2);
+    background: var(--surface-low);
+  }
+
   .ticker {
     overflow: hidden;
     text-overflow: ellipsis;

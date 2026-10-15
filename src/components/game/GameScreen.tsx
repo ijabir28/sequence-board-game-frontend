@@ -5,6 +5,7 @@ import { describeHint } from '../../game/describeHint';
 import { describeLog } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter } from '../../game/types';
+import { useHandOrder } from '../../game/useHandOrder';
 import { useGame } from '../../game/useGame';
 import { Board } from '../board/Board';
 import { Chip } from '../Chip';
@@ -24,11 +25,13 @@ interface GameScreenProps {
   onNewGame?: () => void;
   /** Extra controls for the top bar (for example the dev adapter toggle). */
   headerExtra?: ReactNode;
+  /** Where to remember how each player arranged their hand on this device (e.g. per table). */
+  handOrderKey?: string;
 }
 
 type Feedback = { tone: 'error' | 'info'; text: string } | null;
 
-export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra }: GameScreenProps) {
+export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra, handOrderKey }: GameScreenProps) {
   const view = useGame(adapter);
   const [selected, setSelected] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -44,6 +47,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
   const currentPlayer = view.players.find((p) => p.id === view.currentPlayerId) ?? null;
   const activeTeam = currentPlayer?.team ?? viewer?.team ?? null;
   const selectedCard = selected !== null ? view.hand[selected]?.card : undefined;
+  // How the viewer arranged their hand. Only the view changes; moves still use real hand indexes.
+  const { order, setOrder } = useHandOrder(viewer?.id ?? null, view.hand.length, handOrderKey);
   const { highlights, history } = view.settings;
   // Hints and card tips are for training games only.
   const training = view.settings.mode === 'training';
@@ -98,7 +103,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
     const onKey = (event: KeyboardEvent) => {
       const el = event.target as HTMLElement;
       if (el.closest('input, textarea, select, dialog[open]') || event.altKey || event.ctrlKey || event.metaKey) return;
-      if (/^[1-9]$/.test(event.key)) selectCard(Number(event.key) - 1);
+      // Number keys follow the cards as the player arranged them.
+      if (/^[1-9]$/.test(event.key)) {
+        const handIndex = order[Number(event.key) - 1];
+        if (handIndex !== undefined) selectCard(handIndex);
+      }
       if (event.key === 'Escape') setSelected(null);
     };
     window.addEventListener('keydown', onKey);
@@ -297,6 +306,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
           <HandPanel
             title={handTitle}
             hand={view.hand}
+            order={order}
+            onReorder={handVisible && !gameOver ? setOrder : undefined}
             selected={selected}
             onSelect={selectCard}
             cover={adapter.hotSeat && !handVisible && !gameOver && viewer ? { playerName: viewer.name, onReveal: () => setRevealedFor(viewer.id) } : null}
@@ -318,7 +329,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
           </section>
         ) : (
           view.status === 'ready' && (
-            <p className={styles.deck}>
+            <p className={[styles.deck, styles.railNote].join(' ')}>
               {view.deckCount !== null && `${view.deckCount} cards left in the deck. `}This table plays without a move log.
             </p>
           )
