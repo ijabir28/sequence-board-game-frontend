@@ -17,11 +17,13 @@ export interface Room {
   id: string;
   administrator: string | null;
   teams: RoomTeam[];
+  gameStarted: boolean;
 }
 
 interface RawRoom {
   administrator?: string;
   teams?: { handle: string; players: ({ handle?: string; name?: string; [key: string]: unknown } | null)[] }[];
+  game_started?: boolean;
 }
 
 /** Keeps only the fields the UI needs. */
@@ -34,6 +36,7 @@ export function sanitizeRoom(id: string, raw: RawRoom): Room {
       index: i as TeamIndex,
       seats: (team.players ?? []).map((p) => (p ? { handle: String(p.handle ?? ''), name: String(p.name ?? 'Unknown player') } : null)),
     })),
+    gameStarted: raw.game_started === true,
   };
 }
 
@@ -51,7 +54,7 @@ export async function getRoom(id: string): Promise<Room | null> {
   return raw ? sanitizeRoom(id, raw) : null;
 }
 
-export type JoinResult = 'success' | 'seat-taken' | 'already-seated' | 'signed-out' | 'not-found';
+export type JoinResult = 'success' | 'seat-taken' | 'already-seated' | 'signed-out' | 'game-started' | 'not-found';
 
 /** POST /room/:id/join is always HTTP 200; the outcome is in `message`. */
 export async function joinRoom(id: string, teamHandle: string): Promise<JoinResult> {
@@ -60,9 +63,14 @@ export async function joinRoom(id: string, teamHandle: string): Promise<JoinResu
   if (body?.message === 'SEAT_TAKEN') return 'seat-taken';
   if (body?.message === 'ALREADY_SEATED') return 'already-seated';
   if (body?.message === 'NOT_SIGNED_IN') return 'signed-out';
+  if (body?.message === 'GAME_ALREADY_STARTED') return 'game-started';
   return 'not-found';
 }
 
 export function isSeated(room: Room, handle: string): boolean {
   return room.teams.some((t) => t.seats.some((s) => s?.handle === handle));
+}
+
+export function isFull(room: Room): boolean {
+  return room.teams.every((t) => t.seats.every((s) => s !== null));
 }

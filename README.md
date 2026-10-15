@@ -7,9 +7,9 @@ It has two ways to play:
 
 - **On one device (hot-seat).** A complete rules engine runs in the browser, so you can play a full game without the
   server.
-- **With the server.** Sign in, open a table, share its code and take seats live. The backend can't run a game yet (see
-  [Backend limitations](#backend-limitations)), so a table's line-up can be handed to a hot-seat game, and a developer
-  preview shows the server's built-in test game.
+- **With the server.** Sign in, open a table, share its code and take seats live. Once every seat is taken, any player
+  starts the game and everyone plays from their own device; the server deals, enforces turn order and detects
+  sequences. A developer page also shows the server's older built-in test game.
 
 ## Setup
 
@@ -91,7 +91,10 @@ The game screen only talks to a `GameAdapter`: `getState`, `subscribe`, `legalTa
 
 - **`LocalGameAdapter`** wraps the rules engine. `src/engine/board-layout.json` is a verbatim copy of the backend's
   `data/board_deck.json`, and card names match the backend (`10-Heart`, `J-Spade`, `Blank`).
-- **`RemoteGameAdapter`** implements the backend contract: it polls `GET /board/deck` and `GET /game/hand_cards` (there
+- **`RoomGameAdapter`** plays a table's game: `POST /room/:id/start`, then `GET /room/:id/game` and
+  `POST /room/:id/game/{play,exchange,pass}`. It re-fetches on the `game_updated` socket event (plus a slow safety
+  poll), and the server's reason for a refused move (for example "It's Sakib's turn.") is shown as is.
+- **`RemoteGameAdapter`** implements the legacy test game's contract: it polls `GET /board/deck` and `GET /game/hand_cards` (there
   are no game socket events) and sends `GET /game/play` with `board_card_index` as URL-encoded JSON. A
   `404 Invalid Move` becomes a readable message.
 
@@ -145,6 +148,5 @@ game-related ones are all in `src/game/remote/backendQuirks.ts`.
 | `GET /user/profile` without a session crashes the server | Called only right after a successful sign-in. The profile is remembered locally. |
 | No sign-out | "Switch user" forgets the profile on this device. The server session expires after an hour. |
 | Wrong password returns a `302` redirect | Sign-in uses `redirect: 'manual'` and treats any redirect as wrong credentials. |
-| `room_updated` goes to every client and has no room id | Each table page re-fetches its own room when the event arrives. |
-| No way to start a game from a table | "Play this table on one device" opens a hot-seat game with the table's line-up. |
-| No turn order, sequences, dead cards or win in the server game | The server game is labelled a preview, and those controls are hidden. |
+| `room_updated` and `game_updated` go to every client | Pages ignore other rooms' `game_updated` and re-fetch their own room or game. |
+| The legacy test game (`/game/*`) has no turn order, sequences, dead cards or win | `/server-game` is a developer tool, labelled as such. Real games run at a table (`/table/:id/game`). |

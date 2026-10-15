@@ -11,9 +11,8 @@ export function getSocket(): SocketIOClient.Socket {
 }
 
 /**
- * `room_updated` is broadcast to every connected client and its payload has no room id, so
- * callers can't tell which room changed. We pass no payload on: listeners re-fetch their own
- * room, which also keeps passwords in the payload out of the app.
+ * `room_updated` is broadcast to every connected client. We pass no payload on: listeners
+ * re-fetch their own room.
  */
 export function onRoomUpdated(listener: () => void): () => void {
   const s = getSocket();
@@ -21,6 +20,18 @@ export function onRoomUpdated(listener: () => void): () => void {
   s.on('room_updated', handler);
   return () => {
     s.off('room_updated', handler);
+  };
+}
+
+/** `game_updated` carries only the room id; listeners re-fetch the game for their own view. */
+export function onGameUpdated(roomId: string, listener: () => void): () => void {
+  const s = getSocket();
+  const handler = (data?: { room_id?: string }) => {
+    if (data?.room_id === roomId) listener();
+  };
+  s.on('game_updated', handler);
+  return () => {
+    s.off('game_updated', handler);
   };
 }
 
