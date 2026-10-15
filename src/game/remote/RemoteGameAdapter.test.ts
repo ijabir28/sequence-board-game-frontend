@@ -67,17 +67,16 @@ describe('RemoteGameAdapter', () => {
     adapter.dispose();
   });
 
-  it('sends board_card_index as URL-encoded JSON and explains the known 500', async () => {
+  it('sends board_card_index as URL-encoded JSON', async () => {
     const calls = stubFetch(
       backend({
-        '/game/play': () => ({ status: 500, body: '<pre>ReferenceError: current_team is not defined</pre>' }),
+        '/game/play': () => ({ status: 200, body: '{"verdict":"Valid","team":"team1"}' }),
       }),
     );
     const adapter = new RemoteGameAdapter({ handle: 'jabir', displayName: 'Jabir', pollIntervalMs: 60_000 });
     await ready(adapter);
     const result = await adapter.playCard(1, { row: 0, column: 6 });
-    expect(result.ok).toBe(false);
-    expect(!result.ok && result.message).toMatch(/known backend bug/);
+    expect(result.ok).toBe(true);
     const play = calls.find((c) => c.startsWith('/game/play'))!;
     const params = new URLSearchParams(play.split('?')[1]);
     expect(params.get('player_handler')).toBe('jabir');

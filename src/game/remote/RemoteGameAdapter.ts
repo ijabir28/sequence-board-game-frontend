@@ -92,8 +92,6 @@ export class RemoteGameAdapter implements GameAdapter {
         return { ok: true };
       case 'invalid':
         return { ok: false, message: PLAY_MESSAGES.invalid };
-      case 'known-500':
-        return { ok: false, message: PLAY_MESSAGES['known-500'] };
       case 'server-error':
         return { ok: false, message: PLAY_MESSAGES.serverError(outcome.status) };
     }

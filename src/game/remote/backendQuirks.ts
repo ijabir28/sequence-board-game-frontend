@@ -28,25 +28,17 @@ export const POLL_INTERVAL_MS = 3000;
 export type PlayOutcome =
   | { kind: 'applied' }
   | { kind: 'invalid' }
-  /** Valid move, but the server throws while applying it (current_team is never defined). */
-  | { kind: 'known-500' }
   | { kind: 'server-error'; status: number };
 
-/**
- * Interprets GET /game/play. Intended: 200 {verdict: "Valid"}; invalid is 404 "Invalid Move";
- * today every valid move is a 500 HTML page because of the current_team ReferenceError.
- */
+/** Interprets GET /game/play: a valid move is 200 {verdict: "Valid"}, an invalid one is 404 "Invalid Move". */
 export function interpretPlay(status: number, body: string): PlayOutcome {
   if (status === 200) return { kind: 'applied' };
   if (status === 404 && /invalid move/i.test(body)) return { kind: 'invalid' };
-  if (status === 500 && /current_team|alternate_team/i.test(body)) return { kind: 'known-500' };
   return { kind: 'server-error', status };
 }
 
 export const PLAY_MESSAGES = {
   invalid: 'The server rejected that move. Pick a highlighted cell and try again.',
-  'known-500':
-    "The server accepted the move but failed while saving it (a known backend bug: every valid move fails). The board hasn't changed. Use a hot-seat game to play for now.",
   serverError: (status: number) => `The server failed with status ${status}, so the move wasn't made. Try again.`,
 } as const;
 
