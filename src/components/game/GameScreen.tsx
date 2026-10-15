@@ -194,6 +194,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     !gameOver &&
     view.canExchange &&
     (manualDead ? cardKind(selectedCard) === 'normal' : !!view.hand[selected]?.dead);
+  // Phones and tablets keep the exchange button in the hand strip's heading row, so it is never scrolled or squeezed
+  // out of view. It shows whenever an exchange is possible this turn and is enabled once a card that may be exchanged
+  // is selected.
+  const offerExchange =
+    handVisible && !gameOver && view.canExchange && (manualDead || view.hand.some((h) => h.dead));
   const exchangesNote =
     view.exchangesLeft === null ? 'You may exchange any number this turn.' : `${view.exchangesLeft} exchange${view.exchangesLeft === 1 ? '' : 's'} left this turn.`;
   const onExchange = async () => {
@@ -207,6 +212,20 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     const passed = await run(() => adapter.pass());
     if (passed && adapter.hotSeat) setRevealedFor(null);
   };
+
+  const barExchange = offerExchange ? (
+    <Button
+      size="sm"
+      variant={exchangeable && !manualDead ? 'primary' : 'secondary'}
+      onClick={onExchange}
+      busy={busy}
+      disabled={!exchangeable}
+      aria-label={manualDead ? 'Exchange the selected card as dead' : 'Exchange the dead card'}
+    >
+      <Icon name="swap" size={16} />
+      Exchange
+    </Button>
+  ) : null;
 
   const prompt = handHint({
     selectedCard,
@@ -238,20 +257,23 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           </Tooltip>
         )}
         {exchangeable && (
-          <Tooltip
-            text={
-              manualDead
-                ? `If both of ${cardShort(selectedCard!)}'s cells are taken, swap it for a new card. ${exchangesNote}`
-                : `Discard it and draw a new card, before you play. ${exchangesNote}`
-            }
-            side="top"
-            align="end"
-          >
-            <Button size="sm" variant={manualDead ? 'secondary' : 'primary'} onClick={onExchange} busy={busy}>
-              <Icon name="swap" size={16} />
-              {manualDead ? 'Exchange as dead' : 'Exchange dead card'}
-            </Button>
-          </Tooltip>
+          // Wide screens only: phones and tablets have it in the hand strip's heading row (barExchange).
+          <span className={styles.footerExchange}>
+            <Tooltip
+              text={
+                manualDead
+                  ? `If both of ${cardShort(selectedCard!)}'s cells are taken, swap it for a new card. ${exchangesNote}`
+                  : `Discard it and draw a new card, before you play. ${exchangesNote}`
+              }
+              side="top"
+              align="end"
+            >
+              <Button size="sm" variant={manualDead ? 'secondary' : 'primary'} onClick={onExchange} busy={busy}>
+                <Icon name="swap" size={16} />
+                {manualDead ? 'Exchange as dead' : 'Exchange dead card'}
+              </Button>
+            </Tooltip>
+          </span>
         )}
         {view.canPass && (
           <Tooltip text="No card in your hand can be played, so you may pass" side="top" align="end">
@@ -480,6 +502,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             footer={footer}
             replaceWith={winnerPanel}
             summary={gameOver ? `${teamName(view.winner!)} wins` : undefined}
+            barAction={barExchange}
           />
         )}
         {history ? (

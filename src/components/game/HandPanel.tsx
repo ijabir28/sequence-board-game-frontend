@@ -27,6 +27,8 @@ interface HandPanelProps {
   replaceWith?: ReactNode;
   /** Overrides the summary next to the title in the docked strip. */
   summary?: string;
+  /** A control at the end of the docked strip's heading row, always in view (phones and tablets only). */
+  barAction?: ReactNode;
 }
 
 /**
@@ -45,6 +47,7 @@ export function HandPanel({
   footer,
   replaceWith,
   summary: summaryOverride,
+  barAction,
 }: HandPanelProps) {
   const arrange = !cover && onReorder ? onReorder : null;
   const move = (from: number, to: number) => arrange?.(movedOrder(order, from, to));
@@ -73,10 +76,11 @@ export function HandPanel({
   return (
     <section className={styles.panel} aria-label={title}>
       <h2 className={styles.title}>{title}</h2>
-      {/* The docked strip's heading: the title with what is selected. */}
+      {/* The docked strip's heading: the title with what is selected, and an action that stays in view. */}
       <div className={styles.bar}>
         <span className={styles.barTitle}>{title}</span>
         <span className={styles.summary}>{summary}</span>
+        {barAction && <span className={styles.barAction}>{barAction}</span>}
       </div>
       <div className={styles.body}>
         {replaceWith ?? (
