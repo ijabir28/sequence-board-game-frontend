@@ -128,7 +128,9 @@ function TurnTimer({ id, value, onChange, disabled }: { id: string; value: numbe
       <p className={styles.row}>
         <span className={styles.text}>
           <span className={styles.label}>Turn timer</span>
-          <span className={styles.description}>Each player has {describeTurnSeconds(value)} per turn.</span>
+          <span className={styles.description}>
+            Each player has {describeTurnSeconds(value)} per turn; then a random card is played for them.
+          </span>
         </span>
         <span className={[styles.state, styles.stateOn].join(' ')}>{describeTurnSeconds(value)}</span>
       </p>
@@ -184,7 +186,7 @@ function TurnTimer({ id, value, onChange, disabled }: { id: string; value: numbe
       <span id={`${id}-timer-help`} className={[styles.description, invalid && styles.invalid].filter(Boolean).join(' ')}>
         {invalid
           ? `Enter a whole number of seconds from ${TURN_SECONDS_MIN} to ${TURN_SECONDS_MAX}.`
-          : `Each player has ${describeTurnSeconds(value)} per turn.`}
+          : `Each player has ${describeTurnSeconds(value)} per turn. When it runs out, a random card from their hand is played for them.`}
       </span>
     </fieldset>
   );

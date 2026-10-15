@@ -16,29 +16,40 @@ interface TurnPanelProps {
   winner: TeamIndex | null;
   turn: number | null;
   turnStartedAt: number | null;
+  /** When the turn's timer runs out; null when the game has no timer. */
+  turnDeadline: number | null;
 }
 
-/** A turn this long gets the timer's warning colour. */
+/** Without a turn timer, a turn this long gets the clock's warning colour. */
 const SLOW_TURN_MS = 60_000;
+/** With a turn timer, the countdown turns amber, then red and urgent. */
+const WARN_MS = 20_000;
+const URGENT_MS = 10_000;
 
 /**
  * Whose turn it is, in its own box so it can't be missed: the player and team, a running timer, and the turn
  * order with the current player marked. When it becomes your turn, the box flashes and the tab title says so.
  */
-export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, turn, turnStartedAt }: TurnPanelProps) {
+export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, turn, turnStartedAt, turnDeadline }: TurnPanelProps) {
   const current = players.find((p) => p.id === currentPlayerId) ?? null;
   const yours = !hotSeat && current !== null && viewer !== null && current.id === viewer.id;
   const running = winner === null && current !== null && turnStartedAt !== null;
-  const now = useNow(running);
+  const now = useNow(running, 500);
   const alerting = useTurnAlert(yours, current?.id ?? null, hotSeat);
 
   const team = winner ?? current?.team ?? viewer?.team ?? null;
   const style = team !== null ? TEAM_STYLES[team] : null;
   const elapsed = running ? now - turnStartedAt! : 0;
+  const counting = running && turnDeadline !== null;
+  const left = counting ? Math.max(0, turnDeadline! - now) : 0;
+  const total = counting ? Math.max(1, turnDeadline! - turnStartedAt!) : 1;
+  const urgency = !counting ? (elapsed >= SLOW_TURN_MS ? 'warn' : null) : left <= URGENT_MS ? 'urgent' : left <= WARN_MS ? 'warn' : null;
 
   return (
     <section
-      className={[styles.panel, yours && styles.yours, alerting && styles.alert].filter(Boolean).join(' ')}
+      className={[styles.panel, yours && styles.yours, alerting && styles.alert, yours && urgency === 'urgent' && styles.hurry]
+        .filter(Boolean)
+        .join(' ')}
       style={style ? ({ '--turn-team': style.color, '--turn-glow': style.glow } as React.CSSProperties) : undefined}
       aria-label="Turn"
     >
@@ -71,15 +82,32 @@ export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, t
           </p>
         </div>
         {running && (
-          <span className={[styles.timer, elapsed >= SLOW_TURN_MS && styles.slow].filter(Boolean).join(' ')} role="timer" aria-label="Time on this turn">
+          <span
+            className={[styles.timer, urgency === 'warn' && styles.slow, urgency === 'urgent' && styles.urgent].filter(Boolean).join(' ')}
+            role="timer"
+            aria-label={counting ? 'Time left this turn' : 'Time on this turn'}
+          >
             <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
               <circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
               <path d="M12 9v4l2.5 2M10 2h4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            {formatElapsed(elapsed)}
+            {counting ? (left > 0 ? formatElapsed(left + 999) : "Time's up") : formatElapsed(elapsed)}
           </span>
         )}
       </div>
+      {counting && (
+        <div className={styles.track} aria-hidden="true">
+          <span
+            className={[styles.bar, urgency === 'warn' && styles.barWarn, urgency === 'urgent' && styles.barUrgent].filter(Boolean).join(' ')}
+            style={{ transform: `scaleX(${left / total})` }}
+          />
+        </div>
+      )}
+      {yours && counting && left <= URGENT_MS && (
+        <p className={styles.warning} role="alert">
+          {left > 0 ? 'Hurry: when time runs out, a random card is played for you.' : 'Time is up: a random card is being played for you.'}
+        </p>
+      )}
       {players.length > 1 && winner === null && (
         <ol className={styles.order} aria-label="Turn order">
           {players.map((p) => {

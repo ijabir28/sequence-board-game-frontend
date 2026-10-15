@@ -93,6 +93,54 @@
   color: var(--warning);
 }
 
+.urgent {
+  background: var(--error-container);
+  color: #fff;
+  animation: urgent-pulse 1s ease-in-out infinite;
+}
+
+@keyframes urgent-pulse {
+  50% {
+    opacity: 0.65;
+  }
+}
+
+/* How much of the turn is left, draining from right to left. */
+.track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-lowest);
+}
+
+.bar {
+  display: block;
+  height: 100%;
+  background: var(--turn-team);
+  transform-origin: left;
+  transition: transform 500ms linear, background var(--dur) var(--ease-out);
+}
+
+.barWarn {
+  background: var(--warning);
+}
+
+.barUrgent {
+  background: var(--error);
+}
+
+/* Your turn is about to run out. */
+.hurry {
+  border-color: var(--error);
+  box-shadow: 0 0 0 1px var(--error), 0 0 18px rgba(255, 180, 171, 0.35);
+}
+
+.warning {
+  color: var(--error);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
 .order {
   display: flex;
   gap: var(--space-1);
@@ -141,7 +189,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .alert {
+  .alert,
+  .urgent {
     animation: none;
+  }
+
+  .bar {
+    transition: none;
   }
 }

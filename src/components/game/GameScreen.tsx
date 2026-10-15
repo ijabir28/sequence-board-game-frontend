@@ -272,6 +272,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           winner={view.winner}
           turn={view.turn}
           turnStartedAt={view.turnStartedAt}
+          turnDeadline={view.turnDeadline}
         />
         {/* Feedback takes the ticker's line, so messages never push the board around. */}
         {feedback ? (
