@@ -11,7 +11,8 @@ import own from './SignIn.module.css';
 
 // Same rules as the backend (entity/user.js), checked here for instant feedback. The server has the final say.
 const HANDLE_PATTERN = /^[a-z0-9_]{3,20}$/;
-const NAME_MAX = 50;
+/** Display names are short so they fit in turn panels and seat lists. */
+export const NAME_MAX = 10;
 const PASSWORD_MIN = 8;
 const PASSWORD_MAX = 200;
 
@@ -111,7 +112,9 @@ export function SignUp() {
             maxLength={NAME_MAX}
             {...fieldProps('name')}
           />
-          <span className={styles.help}>Shown to other players at the table.</span>
+          <span className={styles.help}>
+            Shown to other players at the table. Up to {NAME_MAX} characters ({name.length}/{NAME_MAX}).
+          </span>
         </label>
         <label className={styles.field}>
           <span className={styles.label}>Password</span>
