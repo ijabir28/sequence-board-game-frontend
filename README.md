@@ -148,6 +148,8 @@ invariants.
   - **Phones and tablets** get a collapsible hand strip docked at the bottom; collapsing it gives the board more room.
   - **Phones in landscape** use the side rail, so the board stays usable.
   - The move log is the one region that scrolls, and only inside its own box. On small screens it opens in a dialog.
+- **The scoreboard is centred over the board.** The game header uses the same columns as the screen (board | rail on
+  laptops), so the scoreboard sits over the board's centre at every size.
 - **Whose turn it is is never in doubt.** A Turn panel (`src/components/game/TurnPanel.tsx`) shows the player and
   team in the team's colour, a timer for the current turn, and the turn order. When it becomes your turn it flashes,
   phones buzz, and the tab title starts with "● Your turn". Table games take the turn's start time from the server
@@ -162,6 +164,8 @@ invariants.
   - The board is an ARIA grid. Arrow keys and Home/End move, and Enter or Space plays. Number keys 1–7 pick hand cards
     in the order you arranged them, and Escape clears the selection.
   - Cells have labels such as "7 of Hearts, team 2 chip (Blue, diamond), playable".
+  - Utility buttons have tooltips (`src/components/ui/Tooltip.tsx`) that show on hover and on keyboard focus, and
+    Escape dismisses them.
   - Focus is always visible, and `prefers-reduced-motion` is respected.
   - No page scrolls horizontally at 360px.
 
