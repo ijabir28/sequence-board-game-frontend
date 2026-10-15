@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import { startRoomGame } from '../api/roomGame';
-import { isFull, isSeated, joinRoom, leaveSeat, shuffleSeats, updateRoom, type Room, type RoomSettings, type RoomTeam } from '../api/rooms';
+import { isFull, isSeated, joinRoom, leaveSeat, sanitizeRoom, shuffleSeats, updateRoom, type Room, type RoomSettings, type RoomTeam } from '../api/rooms';
+import { onTeamsShuffled } from '../api/socket';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { Chip } from '../components/Chip';
@@ -11,12 +12,17 @@ import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { Tooltip } from '../components/ui/Tooltip';
 import { isSupportedTable, sequencesToWin } from '../engine/setup';
+import { describeShuffle } from '../game/teamNotice';
 import { TEAM_STYLES } from '../game/teams';
 import styles from './Forms.module.css';
 import own from './RoomPage.module.css';
 import { useRoom } from './useRoom';
 
 type Notice = { tone: 'error' | 'success'; text: string; action?: 'signin' } | null;
+
+/** Good news (a seat taken, the teams reshuffled) clears itself after this long; errors stay until replaced. */
+const SUCCESS_NOTICE_MS = 4000;
+const SHUFFLE_NOTICE_MS = 7000;
 
 export function RoomPage() {
   const { id = '' } = useParams();
@@ -25,6 +31,29 @@ export function RoomPage() {
   const { state, connection, reload } = useRoom(id);
   const [joining, setJoining] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
+  const [noticeMs, setNoticeMs] = useState(SUCCESS_NOTICE_MS);
+  const showSuccess = (text: string, ms = SUCCESS_NOTICE_MS) => {
+    setNoticeMs(ms);
+    setNotice({ tone: 'success', text });
+  };
+
+  useEffect(() => {
+    if (notice?.tone !== 'success') return;
+    const timer = setTimeout(() => setNotice(null), noticeMs);
+    return () => clearTimeout(timer);
+  }, [notice, noticeMs]);
+
+  // When the host reshuffles, every player is told their new team, replacing whatever notice was showing.
+  const you = profile?.handle ?? null;
+  useEffect(
+    () =>
+      onTeamsShuffled(id, (event) => {
+        const shuffled = sanitizeRoom(id, event.room as Parameters<typeof sanitizeRoom>[1]);
+        showSuccess(describeShuffle(shuffled, event.byName, you), SHUFFLE_NOTICE_MS);
+        void reload();
+      }),
+    [id, you, reload],
+  );
   const [starting, setStarting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [seatAction, setSeatAction] = useState<'leave' | 'shuffle' | null>(null);
@@ -34,12 +63,11 @@ export function RoomPage() {
     setSeatAction(action);
     setNotice(null);
     try {
-      await (action === 'leave' ? leaveSeat(id) : shuffleSeats(id));
+      const updated = await (action === 'leave' ? leaveSeat(id) : shuffleSeats(id));
       await reload();
-      setNotice({
-        tone: 'success',
-        text: action === 'leave' ? 'You stood up. Pick a team to sit down again.' : 'The teams were shuffled.',
-      });
+      // The teams_shuffled broadcast says the same to everyone; this covers a host whose socket is offline.
+      if (action === 'leave') showSuccess('You stood up. Pick a team to sit down again.');
+      else showSuccess(describeShuffle(updated, profile?.name ?? 'You', you), SHUFFLE_NOTICE_MS);
     } catch (e) {
       setNotice({ tone: 'error', text: errorMessage(e) });
       void reload();
@@ -112,7 +140,7 @@ export function RoomPage() {
         setNotice({ tone: 'error', text: 'The server has no table with this code. Go back to the lobby and open a new one.' });
       } else {
         await reload();
-        setNotice({ tone: 'success', text: `You joined Team ${name}.` });
+        showSuccess(`You joined Team ${name}.`);
       }
     } catch (e) {
       setNotice({ tone: 'error', text: errorMessage(e) });
