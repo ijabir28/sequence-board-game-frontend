@@ -60,7 +60,7 @@ export function RoomPage() {
           action: 'signin',
         });
       } else if (result === 'not-found') {
-        setNotice({ tone: 'error', text: 'The server no longer has this table (it forgets tables when it restarts). Go back to the lobby and open a new one.' });
+        setNotice({ tone: 'error', text: 'The server has no table with this code. Go back to the lobby and open a new one.' });
       } else {
         await reload();
         setNotice({ tone: 'success', text: `You joined Team ${name}.` });
@@ -85,7 +85,7 @@ export function RoomPage() {
         {state.status === 'not-found' && (
           <div className={[styles.card, own.state].join(' ')}>
             <h1>Table not found</h1>
-            <p>There is no table with code {id}. The code may be mistyped, or the server restarted and forgot it.</p>
+            <p>There is no table with code {id}. Check that the code is typed correctly.</p>
             <Link to="/lobby" className={own.linkButton}>
               Back to the lobby
             </Link>

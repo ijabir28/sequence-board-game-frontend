@@ -1,5 +1,5 @@
 import type { TeamIndex } from '../engine/setup';
-import { postJson, readJson, request } from './http';
+import { ApiError, postJson, readJson, request } from './http';
 
 /** A seated player. */
 export interface Seat {
@@ -40,10 +40,15 @@ export function sanitizeRoom(id: string, raw: RawRoom): Room {
   };
 }
 
+/** POST /room/create. Refusals (signed out, unsupported size) are JSON {error, message} and become an ApiError with that message. */
 export async function createRoom(teamCount: number, playersPerTeam: number): Promise<string> {
-  const body = await readJson<{ id: string }>(
-    await postJson('/room/create', { number_of_team: teamCount, number_of_player_in_each_team: playersPerTeam }),
-  );
+  const response = await postJson('/room/create', { number_of_team: teamCount, number_of_player_in_each_team: playersPerTeam });
+  if (response.status >= 400 && response.status < 500) {
+    const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
+    const message = typeof body?.message === 'string' ? body.message : `The server refused to open the table (${response.status}).`;
+    throw new ApiError('server', message, response.status);
+  }
+  const body = await readJson<{ id: string }>(response);
   if (!body?.id) throw new Error('The server did not return a table code. Try again.');
   return String(body.id);
 }
@@ -73,4 +78,56 @@ export function isSeated(room: Room, handle: string): boolean {
 
 export function isFull(room: Room): boolean {
   return room.teams.every((t) => t.seats.every((s) => s !== null));
+}
+
+export type RoomStatus = 'open' | 'playing' | 'finished';
+
+/** A table from the signed-in user's history (GET /user/rooms). */
+export interface MyRoom {
+  id: string;
+  createdAt: string;
+  administrator: string;
+  teamCount: number;
+  playersPerTeam: number;
+  seatsTaken: number;
+  /** null when the user created the table but never sat at it. */
+  yourTeam: TeamIndex | null;
+  status: RoomStatus;
+  winnerTeam: TeamIndex | null;
+  moveCount: number;
+}
+
+interface RawMyRoom {
+  id: string;
+  created_at: string;
+  administrator: string;
+  team_count: number;
+  players_per_team: number;
+  seats_taken: number;
+  your_team: number | null;
+  status: string;
+  winner_team: number | null;
+  move_count: number;
+}
+
+export function sanitizeMyRoom(raw: RawMyRoom): MyRoom {
+  const status: RoomStatus = raw.status === 'playing' || raw.status === 'finished' ? raw.status : 'open';
+  return {
+    id: String(raw.id),
+    createdAt: String(raw.created_at),
+    administrator: String(raw.administrator),
+    teamCount: Number(raw.team_count),
+    playersPerTeam: Number(raw.players_per_team),
+    seatsTaken: Number(raw.seats_taken),
+    yourTeam: raw.your_team === null ? null : (raw.your_team as TeamIndex),
+    status,
+    winnerTeam: raw.winner_team === null ? null : (raw.winner_team as TeamIndex),
+    moveCount: Number(raw.move_count),
+  };
+}
+
+/** The tables the signed-in user created or sat at, newest first. */
+export async function listMyRooms(): Promise<MyRoom[]> {
+  const raw = await readJson<RawMyRoom[]>(await request('/user/rooms'));
+  return (raw ?? []).map(sanitizeMyRoom);
 }
