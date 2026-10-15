@@ -9,6 +9,7 @@ import { Chip } from '../components/Chip';
 import { RoomOptions } from '../components/RoomOptions';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
+import { Tooltip } from '../components/ui/Tooltip';
 import { isSupportedTable, sequencesToWin } from '../engine/setup';
 import { TEAM_STYLES } from '../game/teams';
 import styles from './Forms.module.css';
@@ -354,14 +355,18 @@ function ShareCode({ id }: { id: string }) {
         <span className="visually-hidden">Table code</span>
         <input className={styles.input} value={id} readOnly onFocus={(e) => e.target.select()} />
       </label>
-      <Button size="sm" onClick={() => copy('code')}>
-        <Icon name={copied === 'code' ? 'check' : 'copy'} size={16} />
-        {copied === 'code' ? 'Copied' : 'Copy code'}
-      </Button>
-      <Button size="sm" onClick={() => copy('link')}>
-        <Icon name={copied === 'link' ? 'check' : 'copy'} size={16} />
-        {copied === 'link' ? 'Copied' : 'Copy link'}
-      </Button>
+      <Tooltip text="Copy the code. Friends enter it under Join a table." align="end">
+        <Button size="sm" onClick={() => copy('code')}>
+          <Icon name={copied === 'code' ? 'check' : 'copy'} size={16} />
+          {copied === 'code' ? 'Copied' : 'Copy code'}
+        </Button>
+      </Tooltip>
+      <Tooltip text="Copy a link that opens this table" align="end">
+        <Button size="sm" onClick={() => copy('link')}>
+          <Icon name={copied === 'link' ? 'check' : 'copy'} size={16} />
+          {copied === 'link' ? 'Copied' : 'Copy link'}
+        </Button>
+      </Tooltip>
       <span className="visually-hidden" aria-live="polite">
         {copied ? `${copied === 'code' ? 'Code' : 'Link'} copied` : ''}
       </span>

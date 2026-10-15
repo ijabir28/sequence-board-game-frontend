@@ -5,6 +5,7 @@ import type { HandCardView } from '../../game/types';
 import { HandCard } from '../hand/HandCard';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
+import { Tooltip } from '../ui/Tooltip';
 import styles from './HandPanel.module.css';
 
 interface HandPanelProps {
@@ -115,36 +116,42 @@ export function HandPanel({
             {arrange && (
               <div className={styles.arrange} role="toolbar" aria-label="Arrange your hand">
                 <span className={styles.arrangeLabel}>Arrange</span>
-                <Button size="sm" variant="ghost" onClick={() => arrange(sortedOrder(hand.map((h) => h.card)))} title="Sort by suit and rank, jacks last">
-                  <Icon name="sort" size={16} />
-                  Sort
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => arrange(shuffledOrder(order))} title="Shuffle the cards in your hand">
-                  <Icon name="shuffle" size={16} />
-                  Shuffle
-                </Button>
+                <Tooltip text="Sort by suit and rank, jacks last. Only you see your order." side="top" align="start">
+                  <Button size="sm" variant="ghost" onClick={() => arrange(sortedOrder(hand.map((h) => h.card)))}>
+                    <Icon name="sort" size={16} />
+                    Sort
+                  </Button>
+                </Tooltip>
+                <Tooltip text="Mix up the order of your cards. Drag a card to move it." side="top">
+                  <Button size="sm" variant="ghost" onClick={() => arrange(shuffledOrder(order))}>
+                    <Icon name="shuffle" size={16} />
+                    Shuffle
+                  </Button>
+                </Tooltip>
                 {selectedSlot !== -1 && (
                   <span className={styles.moveButtons}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={selectedSlot === 0}
-                      onClick={() => move(selectedSlot, selectedSlot - 1)}
-                      aria-label="Move the selected card left"
-                      title="Move the selected card left (Alt+←)"
-                    >
-                      <Icon name="chevronLeft" size={16} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={selectedSlot === order.length - 1}
-                      onClick={() => move(selectedSlot, selectedSlot + 1)}
-                      aria-label="Move the selected card right"
-                      title="Move the selected card right (Alt+→)"
-                    >
-                      <Icon name="chevronRight" size={16} />
-                    </Button>
+                    <Tooltip text="Move left (Alt+←)" side="top">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={selectedSlot === 0}
+                        onClick={() => move(selectedSlot, selectedSlot - 1)}
+                        aria-label="Move the selected card left"
+                      >
+                        <Icon name="chevronLeft" size={16} />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip text="Move right (Alt+→)" side="top" align="end">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={selectedSlot === order.length - 1}
+                        onClick={() => move(selectedSlot, selectedSlot + 1)}
+                        aria-label="Move the selected card right"
+                      >
+                        <Icon name="chevronRight" size={16} />
+                      </Button>
+                    </Tooltip>
                   </span>
                 )}
               </div>
