@@ -23,11 +23,24 @@ interface BoardProps {
   /** A training hint's suggested cell. */
   hint?: Pos | null;
   disabled?: boolean;
+  /** It is the viewer's turn: the board's edge lights up in their team's colour. */
+  yourTurn?: boolean;
   onActivate: (pos: Pos) => void;
 }
 
 /** The 10×10 board as an ARIA grid: arrow keys move, Enter or Space plays the selected card. */
-export function Board({ board, sequences, targets, targetMode, activeTeam, lastMove, hint = null, disabled = false, onActivate }: BoardProps) {
+export function Board({
+  board,
+  sequences,
+  targets,
+  targetMode,
+  activeTeam,
+  lastMove,
+  hint = null,
+  disabled = false,
+  yourTurn = false,
+  onActivate,
+}: BoardProps) {
   const [focus, setFocus] = useState<Pos>({ row: 0, column: 1 });
   const cellRefs = useRef<(HTMLDivElement | null)[]>([]);
   const targetKeys = useMemo(() => new Set(targets?.map(posKey)), [targets]);
@@ -71,7 +84,9 @@ export function Board({ board, sequences, targets, targetMode, activeTeam, lastM
 
   return (
     <div
-      className={[styles.board, hasSelection && styles.selecting, targetMode === 'remove' && styles.removing].filter(Boolean).join(' ')}
+      className={[styles.board, yourTurn && styles.yourTurn, hasSelection && styles.selecting, targetMode === 'remove' && styles.removing]
+        .filter(Boolean)
+        .join(' ')}
       style={teamStyle ? ({ '--active-team': teamStyle.color, '--active-glow': teamStyle.glow } as React.CSSProperties) : undefined}
     >
       <div
