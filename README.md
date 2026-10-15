@@ -13,13 +13,16 @@ It has two ways to play:
 
 ## Setup
 
-You need Node.js 18 or later (tested with Node 24) and the backend repository checked out next to this one:
+You need Node.js 18 or later (tested with Node 24) and the backend repository checked out next to this one, both
+inside a shared `sequence-board-game/` folder:
 
 ```
-personal/
+sequence-board-game/
 ├── sequence-board-game/            backend (Express + Socket.IO)
 └── sequence-board-game-frontend/   this project
 ```
+
+The two repos only need to be siblings: the steps below and the docs refer to the backend as `../sequence-board-game`.
 
 1. **Start the backend first**, on port 3000:
 
