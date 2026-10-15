@@ -91,6 +91,27 @@ describe('RoomGameAdapter', () => {
     standard.dispose();
   });
 
+  it("runs the turn clock on this device's time, measured once", async () => {
+    // The server's clock is 10 s behind ours; the turn started 3 s before its reading.
+    const now = Date.now();
+    const serverNow = now - 10_000;
+    const iso = (ms: number) => new Date(ms).toISOString();
+    let serverTime = serverNow;
+    stubFetch(() => ({ status: 200, body: serverView({ turn_started_at: iso(serverNow - 3000), server_time: iso(serverTime) }) }));
+    const a = adapter();
+    await a.refresh();
+    const started = a.getState().turnStartedAt!;
+    expect(Math.abs(started - (now - 3000))).toBeLessThan(200);
+
+    // A later refresh with a later server reading must not move the start (that would re-render for nothing).
+    serverTime += 5000;
+    const listener = vi.fn();
+    a.subscribe(listener);
+    await a.refresh();
+    expect(a.getState().turnStartedAt).toBe(started);
+    a.dispose();
+  });
+
   it('posts a move and shows the board the server sends back', async () => {
     const board = serverView().board;
     board[0][1] = { name: board[0][1].name, team: 0 };

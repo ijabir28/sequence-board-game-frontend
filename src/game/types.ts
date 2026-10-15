@@ -75,6 +75,8 @@ export interface GameView {
   settings: PlaySettings;
   /** The suggested move for the viewer: only in training games, only on the viewer's turn. */
   hint: Hint | null;
+  /** When the current turn began, in this device's clock (ms since epoch); null when unknown. */
+  turnStartedAt: number | null;
   /** The table's name, when the game belongs to one. */
   title?: string;
 }

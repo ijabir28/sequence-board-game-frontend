@@ -44,6 +44,9 @@ export interface RoomGameView {
   name?: string;
   settings?: RawRoomSettings;
   hint?: RawHint | null;
+  /** When the current turn began (ISO time), and the server's clock at the time of the response. */
+  turn_started_at?: string | null;
+  server_time?: string;
 }
 
 /** The server understood the request and refused it, for example a move out of turn. */
