@@ -145,8 +145,6 @@ game-related ones are all in `src/game/remote/backendQuirks.ts`.
 | `GET /user/profile` without a session crashes the server | Called only right after a successful sign-in. The profile is remembered locally. |
 | No sign-out | "Switch user" forgets the profile on this device. The server session expires after an hour. |
 | Wrong password returns a `302` redirect | Sign-in uses `redirect: 'manual'` and treats any redirect as wrong credentials. |
-| Room payloads include plain-text passwords | Stripped at the API boundary (`sanitizeRoom`). They never reach state or the DOM. |
 | `room_updated` goes to every client and has no room id | Each table page re-fetches its own room when the event arrives. |
-| Join says `success` with no session | After joining, the room is re-fetched. If you weren't seated, you're asked to sign in again. |
 | No way to start a game from a table | "Play this table on one device" opens a hot-seat game with the table's line-up. |
 | No turn order, sequences, dead cards or win in the server game | The server game is labelled a preview, and those controls are hidden. |
