@@ -35,6 +35,9 @@ export function RoomPage() {
         setNotice({ tone: 'error', text: `Team ${name} is full. Pick a team with an open seat.` });
       } else if (result === 'already-seated') {
         setNotice({ tone: 'error', text: 'You already have a seat at this table. Each player takes one seat.' });
+      } else if (result === 'game-started') {
+        setNotice({ tone: 'error', text: "This table's game has already started, so its seats are fixed." });
+        void reload();
       } else if (result === 'signed-out') {
         setNotice({
           tone: 'error',

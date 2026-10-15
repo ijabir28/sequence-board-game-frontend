@@ -11,8 +11,9 @@ describe('sanitizeRoom', () => {
   };
 
   it('keeps seats with handles', () => {
-    const room = sanitizeRoom('42', raw);
+    const room = sanitizeRoom('42', { ...raw, game_started: true });
     expect(room.teams[0].seats).toEqual([{ handle: 'jabir', name: 'Jabir ibne kamal' }, null]);
+    expect(room.gameStarted).toBe(true);
     expect(room.teams[1].index).toBe(1);
     expect(room.administrator).toBe('jabir');
   });
