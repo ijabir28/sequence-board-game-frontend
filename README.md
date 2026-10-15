@@ -7,7 +7,8 @@ It has two ways to play:
 
 - **On one device (hot-seat).** A complete rules engine runs in the browser, so you can play a full game without the
   server.
-- **With the server.** Create an account or sign in, open a table, share its code and take seats live. Once every seat is taken, any player
+- **With the server.** Create an account or sign in, open a named table with the options you want, share its code
+  (a slug of its name, such as `friday-night-k3m9`) and take seats live. Once every seat is taken, any player
   starts the game and everyone plays from their own device; the server deals, enforces turn order and detects
   sequences. Tables and games are saved on the server, so the lobby's "Your tables" list lets you resume a game
   later, even after the backend restarts. A developer page also shows the server's older built-in test game.
@@ -165,10 +166,27 @@ on the server.
 
 ## Tables and history
 
-The server stores tables, seats, games and every move in PostgreSQL. The lobby's **Your tables** card
+A table has a name and a code. The code is the slug of the name plus a short suffix (`friday-night-k3m9`), and it
+is what goes in links (`/table/friday-night-k3m9`). "Join a table" also accepts older numeric codes and pasted
+links (`parseTableCode()` in `src/api/rooms.ts`).
+
+Whoever opens a table (the host) picks its options, shown by `src/components/RoomOptions.tsx`:
+
+| Option | Default | Effect |
+|---|---|---|
+| Highlight legal cells | on | Off: picking a card doesn't light up its cells, and wrong cells are explained by the rules |
+| Move history | on | Off: no move log; the server sends only the latest move |
+| Auto-draw dead cards | off | On: a dead card is swapped automatically when its owner's turn starts |
+
+The host can rename the table and change options on the table page until the game starts. Hot-seat games offer the
+same options. When the game starts, every seated player on the table page is taken into it.
+
+The server stores tables, seats, options, games and every move in PostgreSQL. The lobby's **Your tables** card
 (`src/screens/YourTables.tsx`, from `GET /user/rooms`) lists the tables you opened or sat at with their status
-(waiting, in progress with the move count, or who won) and links to resume or view them. The full move history of a
-table is available from `GET /room/:id/turns`; the game screen's move log comes from the game view itself.
+(waiting, in progress with the move count, or who won) and links to resume or view them; games in progress where
+you have a seat are also offered at the top of the lobby. The full move history of a table is available from
+`GET /room/:id/turns` (unless the table plays without history); the game screen's move log comes from the game view
+itself.
 
 ## Backend limitations
 
