@@ -6,7 +6,7 @@
  *   top                                      top    top
  *   status                                   board  status
  *   board                                    board  rail (hand + log)
- *   rail (collapsible hand strip)
+ *   rail (hand strip, always open)
  */
 .screen {
   display: grid;
@@ -315,6 +315,10 @@
   gap: var(--space-2);
 }
 
+.footerExchange {
+  display: contents;
+}
+
 .gameOver {
   display: flex;
   flex-direction: column;
@@ -368,6 +372,17 @@
 
   .hint {
     font-size: var(--text-xs);
+  }
+
+  /* Two lines of prompt (or a row of buttons) are always reserved, so the board doesn't resize as the prompt
+     changes length. */
+  .actions {
+    min-height: calc(2 * 1.5 * var(--text-xs));
+  }
+
+  /* The exchange button lives in the hand strip's heading row instead. */
+  .footerExchange {
+    display: none;
   }
 }
 

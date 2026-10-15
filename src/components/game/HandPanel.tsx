@@ -1,4 +1,4 @@
-import { useId, type KeyboardEvent, type ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { cardShort } from '../../engine/cards';
 import { movedOrder } from '../../game/handOrder';
 import type { HandCardView } from '../../game/types';
@@ -20,20 +20,20 @@ interface HandPanelProps {
   onSelect: (index: number) => void;
   /** Hot-seat: the hand stays face down until its owner reveals it. */
   cover: { playerName: string; onReveal: () => void } | null;
-  open: boolean;
-  onToggle: () => void;
   disabled?: boolean;
   /** Contextual hint and buttons under the cards. */
   footer?: ReactNode;
   /** Replaces the cards entirely (for example the game-over panel). */
   replaceWith?: ReactNode;
-  /** Overrides the collapsed-strip summary. */
+  /** Overrides the summary next to the title in the docked strip. */
   summary?: string;
+  /** A control at the end of the docked strip's heading row, always in view (phones and tablets only). */
+  barAction?: ReactNode;
 }
 
 /**
  * The player's hand. On wide screens it sits in the side rail; on phones and tablets it is a
- * horizontal strip docked at the bottom that can be collapsed to give the board more room.
+ * horizontal strip docked at the bottom, always open.
  */
 export function HandPanel({
   title,
@@ -43,14 +43,12 @@ export function HandPanel({
   selected,
   onSelect,
   cover,
-  open,
-  onToggle,
   disabled,
   footer,
   replaceWith,
   summary: summaryOverride,
+  barAction,
 }: HandPanelProps) {
-  const bodyId = useId();
   const arrange = !cover && onReorder ? onReorder : null;
   const move = (from: number, to: number) => arrange?.(movedOrder(order, from, to));
   const keys = order.map((handIndex) => `${handIndex}-${hand[handIndex]?.card}`);
@@ -76,15 +74,15 @@ export function HandPanel({
       : `${hand.length} card${hand.length === 1 ? '' : 's'}`;
 
   return (
-    <section className={styles.panel} data-open={open} aria-label={title}>
+    <section className={styles.panel} aria-label={title}>
       <h2 className={styles.title}>{title}</h2>
-      <button type="button" className={styles.toggle} aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
-        <span className={styles.toggleTitle}>{title}</span>
+      {/* The docked strip's heading: the title with what is selected, and an action that stays in view. */}
+      <div className={styles.bar}>
+        <span className={styles.barTitle}>{title}</span>
         <span className={styles.summary}>{summary}</span>
-        <Icon name={open ? 'chevronDown' : 'chevronUp'} />
-        <span className="visually-hidden">{open ? 'Collapse' : 'Expand'}</span>
-      </button>
-      <div id={bodyId} className={styles.body}>
+        {barAction && <span className={styles.barAction}>{barAction}</span>}
+      </div>
+      <div className={styles.body}>
         {replaceWith ?? (
           <>
             <div
