@@ -13,6 +13,10 @@ describe('describeLog', () => {
     expect(describeLog({ kind: 'exchange', turn: 3, player: 'Ana', team: 0, card: '7-Heart', auto: true })).toBe(
       "Ana's dead card 7♥ was swapped for a new one automatically",
     );
+    expect(describeLog({ kind: 'place', turn: 4, player: 'Ana', team: 0, card: 'J-Club', pos: { row: 0, column: 1 }, wild: true, timed_out: true })).toBe(
+      'Ana ran out of time, so J♣ was played for them on 6♦',
+    );
+    expect(describeLog({ kind: 'pass', turn: 5, player: 'Ben', team: 1, timed_out: true })).toBe('Ben ran out of time with no playable card, so their turn passed');
     expect(describeLog({ kind: 'win', turn: 9, team: 2 })).toBe('Team Red won the game');
   });
 });

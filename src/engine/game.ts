@@ -12,11 +12,12 @@ export interface Player {
   team: TeamIndex;
 }
 
+/** `timed_out`: the move was made for the player because their turn timer ran out (same key as the backend). */
 export type LogEntry =
-  | { kind: 'place'; turn: number; player: string; team: TeamIndex; card: CardName; pos: Pos; wild: boolean }
-  | { kind: 'remove'; turn: number; player: string; team: TeamIndex; card: CardName; pos: Pos; removedTeam: TeamIndex }
-  | { kind: 'exchange'; turn: number; player: string; team: TeamIndex; card: CardName; auto?: boolean }
-  | { kind: 'pass'; turn: number; player: string; team: TeamIndex }
+  | { kind: 'place'; turn: number; player: string; team: TeamIndex; card: CardName; pos: Pos; wild: boolean; timed_out?: boolean }
+  | { kind: 'remove'; turn: number; player: string; team: TeamIndex; card: CardName; pos: Pos; removedTeam: TeamIndex; timed_out?: boolean }
+  | { kind: 'exchange'; turn: number; player: string; team: TeamIndex; card: CardName; auto?: boolean; timed_out?: boolean }
+  | { kind: 'pass'; turn: number; player: string; team: TeamIndex; timed_out?: boolean }
   | { kind: 'sequence'; turn: number; team: TeamIndex; cells: Pos[] }
   | { kind: 'win'; turn: number; team: TeamIndex };
 
@@ -184,6 +185,40 @@ export function hasLegalPlay(state: GameState): boolean {
 
 export function canExchange(state: GameState): boolean {
   return state.winner === null && !state.exchangedThisTurn && state.hands[state.current].some((c) => isDeadCard(state, c));
+}
+
+/**
+ * The move made for a player whose turn timer ran out: a random playable card on a random legal cell; with none,
+ * a dead card exchange (when allowed), else a pass. Matches the backend's random_move().
+ */
+export function randomMove(state: GameState, random: () => number = Math.random): Move {
+  const hand = state.hands[state.current];
+  const playable = hand
+    .map((_, handIndex) => ({ handIndex, targets: legalTargets(state, handIndex) }))
+    .filter((option) => option.targets.length > 0);
+  if (playable.length > 0) {
+    const { handIndex, targets } = playable[Math.floor(random() * playable.length)];
+    return { type: 'play', handIndex, target: targets[Math.floor(random() * targets.length)] };
+  }
+  if (canExchange(state)) return { type: 'exchange', handIndex: hand.findIndex((card) => isDeadCard(state, card)) };
+  return { type: 'pass' };
+}
+
+/**
+ * Plays out a timed-out turn: random moves until the turn ends (an exchange keeps it), with the player's log
+ * entries marked `timed_out`.
+ */
+export function playTimedOutTurn(state: GameState, random: () => number = Math.random): GameState {
+  let next = state;
+  do {
+    const before = next;
+    const after = applyMove(before, randomMove(before, random), random);
+    const added = after.log
+      .slice(before.log.length)
+      .map((entry) => (entry.turn === state.turn && entry.kind !== 'sequence' && entry.kind !== 'win' ? { ...entry, timed_out: true } : entry));
+    next = { ...after, log: [...before.log, ...added] };
+  } while (next.winner === null && next.turn === state.turn && next.current === state.current);
+  return next;
 }
 
 /** Applies a move for the current player. Throws RuleError for illegal moves. */

@@ -5,6 +5,25 @@ import { teamName } from './teams';
 
 /** One plain-language line per log entry, e.g. "Ana played 7♥". */
 export function describeLog(entry: LogEntry): string {
+  return 'timed_out' in entry && entry.timed_out ? describeTimedOut(entry) : describeMove(entry);
+}
+
+/** A move made for a player whose turn timer ran out. */
+function describeTimedOut(entry: Extract<LogEntry, { player: string }>): string {
+  const late = `${entry.player} ran out of time`;
+  switch (entry.kind) {
+    case 'place':
+      return `${late}, so ${cardShort(entry.card)} was played for them on ${cardShort(BOARD_LAYOUT[entry.pos.row][entry.pos.column])}`;
+    case 'remove':
+      return `${late}, so ${cardShort(entry.card)} removed ${teamName(entry.removedTeam)}'s chip for them`;
+    case 'exchange':
+      return `${late}, so their dead card ${cardShort(entry.card)} was swapped`;
+    case 'pass':
+      return `${late} with no playable card, so their turn passed`;
+  }
+}
+
+function describeMove(entry: LogEntry): string {
   switch (entry.kind) {
     case 'place': {
       const cell = cardShort(BOARD_LAYOUT[entry.pos.row][entry.pos.column]);

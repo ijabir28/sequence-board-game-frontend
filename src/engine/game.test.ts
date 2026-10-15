@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { positionsOf, type Pos } from './board';
 import type { CardName } from './cards';
-import { applyMove, canExchange, createGame, isDeadCard, legalTargets, RuleError, sequenceCount, type GameState } from './game';
+import { applyMove, canExchange, createGame, isDeadCard, legalTargets, playTimedOutTurn, randomMove, RuleError, sequenceCount, type GameState } from './game';
 import { seededRandom, type TeamIndex } from './setup';
 
 const p = (row: number, column: number): Pos => ({ row, column });
@@ -253,5 +253,31 @@ describe('autoDrawDead rule', () => {
       expect(next.hands[1][0]).toBe('7-Heart');
       expect(next.exchangedThisTurn).toBe(false);
     }
+  });
+});
+
+describe('timed-out turns', () => {
+  it('randomMove picks a playable card and a legal cell for it', () => {
+    const g = newGame();
+    for (let i = 0; i < 20; i++) {
+      const move = randomMove(g);
+      expect(move.type).toBe('play');
+      if (move.type === 'play') expect(legalTargets(g, move.handIndex)).toContainEqual(move.target);
+    }
+  });
+
+  it('randomMove exchanges a dead card when nothing is playable, then passes', () => {
+    const dead = withChips(withHand(newGame(), ['7-Heart']), positionsOf('7-Heart').map((pos) => [pos, 1] as [Pos, TeamIndex]));
+    expect(randomMove(dead)).toEqual({ type: 'exchange', handIndex: 0 });
+    expect(randomMove({ ...dead, exchangedThisTurn: true })).toEqual({ type: 'pass' });
+  });
+
+  it('playTimedOutTurn ends the turn and marks only the late player\'s entries', () => {
+    const g = newGame();
+    const next = playTimedOutTurn(g, seededRandom(5));
+    expect(next.current).toBe(1);
+    expect(next.turn).toBe(2);
+    expect(next.log).toHaveLength(1);
+    expect(next.log[0]).toMatchObject({ kind: 'place', player: 'Player 1', timed_out: true });
   });
 });
