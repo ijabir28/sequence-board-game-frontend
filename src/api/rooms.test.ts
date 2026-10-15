@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRoom, isSeated, isValidTurnSeconds, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
+import { createRoom, isSeated, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
 
 describe('sanitizeRoom', () => {
   const raw = {
@@ -146,3 +146,18 @@ describe('turn timer', () => {
   });
 });
 
+describe('listMyRooms', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('asks for a page and reads the totals', async () => {
+    let url = '';
+    vi.stubGlobal('fetch', async (input: string) => {
+      url = input;
+      return new Response(JSON.stringify({ rooms: [], page: 2, per_page: 5, total: 7, pages: 2 }), { status: 200 });
+    });
+    await expect(listMyRooms(2, 5)).resolves.toEqual({ rooms: [], page: 2, perPage: 5, total: 7, pages: 2 });
+    expect(url).toBe('/user/rooms?page=2&per_page=5');
+  });
+});

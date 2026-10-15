@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { errorMessage } from '../api/http';
-import { listMyRooms, type MyRoom } from '../api/rooms';
+import { listMyRooms, type MyRoom, type MyRoomsPage } from '../api/rooms';
 import { Chip } from '../components/Chip';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
+import { Pager } from '../components/ui/Pager';
 import { teamName } from '../game/teams';
 import styles from './Forms.module.css';
 import own from './YourTables.module.css';
 
-export type MyRoomsState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; rooms: MyRoom[] };
+export type MyRoomsState = { status: 'loading' } | { status: 'error'; message: string } | ({ status: 'ready' } & MyRoomsPage);
 
 /** One line saying how far a table got, from the viewer's side. */
 export function describeTable(room: MyRoom): string {
@@ -29,24 +30,29 @@ export function resumableTables(rooms: MyRoom[]): MyRoom[] {
   return rooms.filter((room) => room.status === 'playing' && room.yourTeam !== null);
 }
 
-/** Loads the signed-in user's tables (GET /user/rooms). */
-export function useMyRooms() {
+/** Loads one page of the signed-in user's tables (GET /user/rooms) at a time. */
+export function useMyRooms(perPage = 10) {
   const [state, setState] = useState<MyRoomsState>({ status: 'loading' });
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
-    setState({ status: 'loading' });
+    // Keep the current list on screen while the next page loads, so the dialog doesn't jump.
+    setState((prev) => (prev.status === 'ready' ? prev : { status: 'loading' }));
     try {
-      setState({ status: 'ready', rooms: await listMyRooms() });
+      const result = await listMyRooms(page, perPage);
+      // The list shrank (or a stale page was asked for): show the last page that exists.
+      if (result.rooms.length === 0 && page > result.pages) return setPage(result.pages);
+      setState({ status: 'ready', ...result });
     } catch (e) {
       setState({ status: 'error', message: errorMessage(e) });
     }
-  }, []);
+  }, [page, perPage]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  return { state, reload: load };
+  return { state, page, setPage, reload: load };
 }
 
 /** A call to action for games in progress, so a player who left (or whose server restarted) can jump back in. */
@@ -75,7 +81,15 @@ export function ResumeBanner({ state }: { state: MyRoomsState }) {
 }
 
 /** The signed-in user's tables, newest first, so they can go back to a game (even after a server restart). */
-export function YourTables({ state, reload }: { state: MyRoomsState; reload: () => Promise<void> }) {
+export function YourTables({
+  state,
+  reload,
+  onPage,
+}: {
+  state: MyRoomsState;
+  reload: () => Promise<void>;
+  onPage: (page: number) => void;
+}) {
   return (
     <section className={[styles.card, own.card].join(' ')} aria-labelledby="your-tables">
       <header className={styles.header}>
@@ -134,6 +148,8 @@ export function YourTables({ state, reload }: { state: MyRoomsState; reload: () 
           ))}
         </ul>
       )}
+
+      {state.status === 'ready' && <Pager page={state.page} pages={state.pages} label="your tables" onPage={onPage} />}
     </section>
   );
 }

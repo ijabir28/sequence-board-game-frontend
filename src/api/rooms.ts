@@ -228,8 +228,32 @@ export function sanitizeMyRoom(raw: RawMyRoom): MyRoom {
   };
 }
 
-/** The tables the signed-in user created or sat at, newest first. */
-export async function listMyRooms(): Promise<MyRoom[]> {
-  const raw = await readJson<RawMyRoom[]>(await request('/user/rooms'));
-  return (raw ?? []).map(sanitizeMyRoom);
+/** One page of the user's tables. */
+export interface MyRoomsPage {
+  rooms: MyRoom[];
+  page: number;
+  perPage: number;
+  total: number;
+  pages: number;
+}
+
+interface RawMyRoomsPage {
+  rooms?: RawMyRoom[];
+  page?: number;
+  per_page?: number;
+  total?: number;
+  pages?: number;
+}
+
+/** One page of the tables the signed-in user created or sat at, newest first (GET /user/rooms). */
+export async function listMyRooms(page = 1, perPage = 10): Promise<MyRoomsPage> {
+  const raw = await readJson<RawMyRoomsPage>(await request(`/user/rooms?page=${page}&per_page=${perPage}`));
+  const rooms = (raw?.rooms ?? []).map(sanitizeMyRoom);
+  return {
+    rooms,
+    page: raw?.page ?? page,
+    perPage: raw?.per_page ?? perPage,
+    total: raw?.total ?? rooms.length,
+    pages: Math.max(1, raw?.pages ?? 1),
+  };
 }

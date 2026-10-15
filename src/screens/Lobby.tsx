@@ -193,7 +193,7 @@ export function Lobby() {
             )}
           </div>
 
-          <YourTables state={myRooms.state} reload={myRooms.reload} />
+          <YourTables state={myRooms.state} reload={myRooms.reload} onPage={myRooms.setPage} />
         </div>
       </div>
     </>
