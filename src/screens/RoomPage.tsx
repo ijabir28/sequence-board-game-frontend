@@ -273,7 +273,7 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
       {seated && <p className={styles.help}>You have a seat at this table. Each player takes one seat.</p>}
 
       <section className={[styles.card, own.start].join(' ')}>
-        <h2>{room.gameStarted ? 'Game in progress' : 'Start the game'}</h2>
+        <h2>{room.gameStarted ? 'Game in progress' : host ? 'Start the game' : 'Waiting for the host'}</h2>
         {room.gameStarted ? (
           <>
             <p className={styles.help}>{seated ? 'The game has started. Your hand is waiting.' : 'The game has started. You can watch it.'}</p>
