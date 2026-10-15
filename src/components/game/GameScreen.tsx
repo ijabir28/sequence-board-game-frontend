@@ -273,31 +273,12 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
 
   const handTitle = gameOver ? 'Game over' : adapter.hotSeat && viewer ? `${viewer.name}'s hand` : 'Your hand';
 
-  // In the header on larger screens; on phones it sits, compact, on the left of the turn panel.
-  const leaveButton = (
-    <Tooltip
-      text={adapter.mode === 'local' ? 'Leave this game. Hot-seat games are not saved.' : 'Leave this game. It is saved, so you can come back.'}
-      align={phone ? 'start' : 'end'}
-    >
-      <button
-        type="button"
-        className={[styles.iconButton, phone && styles.leaveCompact].filter(Boolean).join(' ')}
-        onClick={() => (gameOver ? onExit() : setExitOpen(true))}
-        aria-label="Leave game"
-      >
-        <Icon name="exit" />
-      </button>
-    </Tooltip>
-  );
-  // Phones with nothing else for the header to hold (the brand is hidden on the smallest) drop it.
-  const bareHeader = phone && !history && !headerExtra;
-
   return (
     <div
       className={styles.screen}
       style={activeTeam !== null ? ({ '--active-team': TEAM_STYLES[activeTeam].color, '--active-glow': TEAM_STYLES[activeTeam].glow } as React.CSSProperties) : undefined}
     >
-      <header className={[styles.top, bareHeader && styles.topBare].filter(Boolean).join(' ')}>
+      <header className={styles.top}>
         {/* Spans the board's column, so the scoreboard is centred over the board. */}
         <div className={styles.topBoard}>
           <div className={styles.brand}>
@@ -320,42 +301,44 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
               </button>
             </Tooltip>
           )}
-          {!phone && leaveButton}
+          <Tooltip
+            text={adapter.mode === 'local' ? 'Leave this game. Hot-seat games are not saved.' : 'Leave this game. It is saved, so you can come back.'}
+            align="end"
+          >
+            <button type="button" className={styles.iconButton} onClick={() => (gameOver ? onExit() : setExitOpen(true))} aria-label="Leave game">
+              <Icon name="exit" />
+            </button>
+          </Tooltip>
         </div>
       </header>
 
       <div className={styles.status} hidden={view.status !== 'ready'}>
-        <div className={styles.turnRow}>
-          {phone && leaveButton}
-          <div className={styles.turnPanel}>
-            <TurnPanel
-              players={view.players}
-              currentPlayerId={view.currentPlayerId}
-              viewer={viewer}
-              hotSeat={adapter.hotSeat}
-              winner={view.winner}
-              turn={view.turn}
-              turnStartedAt={view.turnStartedAt}
-              turnDeadline={view.turnDeadline}
-              turnPaused={view.turnPaused}
-              turnTimeLeft={view.turnTimeLeft}
-              away={view.away}
-              collapsible={
-                phone
-                  ? {
-                      open: statusOpen,
-                      onToggle: () => setStatusOpen((open) => !open),
-                      children: (
-                        <div className={styles.foldedScores}>
-                          <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
-                        </div>
-                      ),
-                    }
-                  : undefined
-              }
-            />
-          </div>
-        </div>
+        <TurnPanel
+          players={view.players}
+          currentPlayerId={view.currentPlayerId}
+          viewer={viewer}
+          hotSeat={adapter.hotSeat}
+          winner={view.winner}
+          turn={view.turn}
+          turnStartedAt={view.turnStartedAt}
+          turnDeadline={view.turnDeadline}
+          turnPaused={view.turnPaused}
+          turnTimeLeft={view.turnTimeLeft}
+          away={view.away}
+          collapsible={
+            phone
+              ? {
+                  open: statusOpen,
+                  onToggle: () => setStatusOpen((open) => !open),
+                  children: (
+                    <div className={styles.foldedScores}>
+                      <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
+                    </div>
+                  ),
+                }
+              : undefined
+          }
+        />
         {/* Messages float as toasts, so this line only ever shows the latest move. */}
         <p className={[styles.line, styles.ticker].join(' ')} aria-hidden="true">
           {lastEntry ? describeLog(lastEntry) : 'No moves yet.'}

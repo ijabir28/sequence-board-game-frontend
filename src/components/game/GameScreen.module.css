@@ -113,28 +113,6 @@
   padding: var(--space-2) var(--gutter) 0;
 }
 
-/* Phones: the leave button, compact, on the left of the turn panel. */
-.turnRow {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.turnPanel {
-  flex: 1;
-  min-width: 0;
-}
-
-.leaveCompact {
-  flex: none;
-  width: 40px;
-  height: 46px;
-  border: 1px solid var(--outline-strong);
-  border-radius: var(--radius-card);
-  background: var(--surface-container);
-}
-
 .status[hidden] {
   display: none;
 }
@@ -306,10 +284,6 @@
 
 @media (max-width: 420px) {
   .brand {
-    display: none;
-  }
-
-  .topBare {
     display: none;
   }
 }

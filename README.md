@@ -147,8 +147,7 @@ invariants.
   - **Laptops** get a side rail with the hand and the move log.
   - **Phones and tablets** get a collapsible hand strip docked at the bottom; collapsing it gives the board more room.
   - **Phones** also fold the turn panel and scoreboard into one line (your countdown on your turn, else whose turn
-    it is); tap it to see the full panel and the scores. The leave button sits, compact, on the left of that line
-    instead of in the header, and the header is dropped when it would be empty.
+    it is); tap it to see the full panel and the scores.
   - **Phones in landscape** use the side rail, so the board stays usable.
   - The move log is the one region that scrolls, and only inside its own box. On small screens it opens in a dialog.
 - **The scoreboard is centred over the board.** The game header uses the same columns as the screen (board | rail on
