@@ -5,6 +5,7 @@ import { AppHeader } from '../components/AppHeader';
 import { devToolsEnabled } from '../components/game/DevAdapterToggle';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
+import { tipProps } from '../components/ui/TooltipLayer';
 import styles from './Forms.module.css';
 import { JoinTableDialog } from './JoinTableDialog';
 import own from './Lobby.module.css';
@@ -29,22 +30,24 @@ export function Lobby() {
               <p>Start a new game and invite friends with its code, or join a table someone shared with you.</p>
             </header>
             <div className={own.primaryActions}>
-              <Button variant="primary" onClick={() => setDialog('new')}>
+              <Button variant="primary" onClick={() => setDialog('new')} tip="Open a new table, pick its teams and settings, then share its code">
                 <Icon name="plus" size={18} />
                 New Game
               </Button>
-              <Button onClick={() => setDialog('join')}>
+              <Button onClick={() => setDialog('join')} tip="Enter the code or link a friend shared to take a seat at their table">
                 <Icon name="users" size={18} />
                 Join a table
               </Button>
             </div>
             <div className={own.secondaryActions}>
-              <Button variant="ghost" onClick={() => setDialog('tables')}>
+              <Button variant="ghost" onClick={() => setDialog('tables')} tip="Tables you opened or sat at, to go back to any game">
                 <Icon name="log" size={18} />
                 Your tables
               </Button>
               <p className={own.local}>
-                No server, one screen? <Link to="/local">Play on this device</Link>
+                No server, one screen? <Link to="/local" {...tipProps('Hot-seat game: everyone shares this screen and passes it round')}>
+                  Play on this device
+                </Link>
               </p>
             </div>
           </section>
@@ -55,7 +58,7 @@ export function Lobby() {
                 <h2>Server test game</h2>
                 <p>Developer tool. Opens the server's built-in test game: one shared board with four fixed players.</p>
               </header>
-              <Link to="/server-game" className={own.linkButton}>
+              <Link to="/server-game" className={own.linkButton} {...tipProps("Developer tool: open the server's built-in test game")}>
                 Open server game
               </Link>
             </section>

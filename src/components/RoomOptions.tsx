@@ -11,6 +11,7 @@ import {
   type GameMode,
   type RoomSettings,
 } from '../api/rooms';
+import { tipProps } from './ui/TooltipLayer';
 import styles from './RoomOptions.module.css';
 
 const MODES: { mode: GameMode; label: string; description: string }[] = [
@@ -80,7 +81,7 @@ export function RoomOptions({ value, onChange, disabled }: RoomOptionsProps) {
         {MODES.map(({ mode, label, description }) => {
           const active = value.mode === mode;
           return onChange ? (
-            <label key={mode} className={styles.mode}>
+            <label key={mode} className={styles.mode} {...tipProps(`${label} mode: ${description}`, 'top')}>
               <input
                 type="radio"
                 name={`${id}-mode`}
@@ -108,7 +109,7 @@ export function RoomOptions({ value, onChange, disabled }: RoomOptionsProps) {
       <ul className={styles.options}>
       {OPTIONS.filter(({ key }) => key !== 'autoDrawDead' || value.deadCards === 'indicator').map(({ key, label, on, off }) => (
         <li key={key}>
-          <label className={styles.row}>
+          <label className={styles.row} {...(onChange ? tipProps(`Turn ${value[key] ? 'off' : 'on'}: ${value[key] ? off : on}`, 'top', 'end') : {})}>
             <span className={styles.text}>
               <span className={styles.label} id={`${id}-${key}-label`}>
                 {label}
@@ -180,7 +181,7 @@ function DeadCards({ id, value, onChange, disabled }: { id: string; value: RoomS
         <legend className={styles.label}>Dead cards</legend>
         <div className={styles.pills}>
           {DEAD_CARD_MODES.map((m) => (
-            <label key={m.mode} className={styles.pill}>
+            <label key={m.mode} className={styles.pill} {...tipProps(m.description, 'top')}>
               <input type="radio" name={`${id}-dead`} checked={value.deadCards === m.mode} onChange={() => onChange({ ...value, deadCards: m.mode })} />
               <span>{m.label}</span>
             </label>
@@ -191,7 +192,7 @@ function DeadCards({ id, value, onChange, disabled }: { id: string; value: RoomS
       <fieldset className={styles.timer} disabled={disabled}>
         <legend className={styles.label}>Dead card exchanges per turn</legend>
         <div className={styles.pills}>
-          <label className={styles.pill}>
+          <label className={styles.pill} {...tipProps('Each player may exchange one dead card per turn', 'top')}>
             <input
               type="radio"
               name={`${id}-exchanges`}
@@ -203,7 +204,7 @@ function DeadCards({ id, value, onChange, disabled }: { id: string; value: RoomS
             />
             <span>1</span>
           </label>
-          <label className={styles.pill}>
+          <label className={styles.pill} {...tipProps('Players may exchange every dead card they hold, each turn', 'top')}>
             <input
               type="radio"
               name={`${id}-exchanges`}
@@ -215,7 +216,7 @@ function DeadCards({ id, value, onChange, disabled }: { id: string; value: RoomS
             />
             <span>Unlimited</span>
           </label>
-          <label className={styles.pill}>
+          <label className={styles.pill} {...tipProps(`Set your own limit, from ${EXCHANGES_PER_TURN_MIN} to ${EXCHANGES_PER_TURN_MAX} per turn`, 'top')}>
             <input
               type="radio"
               name={`${id}-exchanges`}
@@ -291,7 +292,7 @@ function TurnTimer({ id, value, onChange, disabled }: { id: string; value: numbe
       <legend className={styles.label}>Turn timer</legend>
       <div className={styles.pills}>
         {TURN_TIMER_PRESETS.map((preset) => (
-          <label key={preset} className={styles.pill}>
+          <label key={preset} className={styles.pill} {...tipProps(`${describeTurnSeconds(preset)} per turn`, 'top')}>
             <input
               type="radio"
               name={`${id}-timer`}
@@ -304,7 +305,7 @@ function TurnTimer({ id, value, onChange, disabled }: { id: string; value: numbe
             <span>{describeTurnSeconds(preset)}</span>
           </label>
         ))}
-        <label className={styles.pill}>
+        <label className={styles.pill} {...tipProps(`Set your own length, from ${describeTurnSeconds(TURN_SECONDS_MIN)} to ${describeTurnSeconds(TURN_SECONDS_MAX)}`, 'top')}>
           <input type="radio" name={`${id}-timer`} checked={custom} onChange={() => setCustom(true)} />
           <span>Custom</span>
         </label>

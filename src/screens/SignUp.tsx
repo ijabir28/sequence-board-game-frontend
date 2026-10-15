@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Chip } from '../components/Chip';
 import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
+import { tipProps } from '../components/ui/TooltipLayer';
 import styles from './Forms.module.css';
 import own from './SignIn.module.css';
 
@@ -129,12 +130,12 @@ export function SignUp() {
           <span className={styles.help}>At least {PASSWORD_MIN} characters.</span>
         </label>
 
-        <Button type="submit" variant="primary" busy={busy}>
+        <Button type="submit" variant="primary" busy={busy} tip="Create the account and sign you in">
           Create account
         </Button>
 
         <p className={styles.divider}>or</p>
-        <Link to="/signin" state={fromState} className={own.altLink}>
+        <Link to="/signin" state={fromState} className={own.altLink} {...tipProps('Go to sign in instead')}>
           I already have an account
         </Link>
       </form>

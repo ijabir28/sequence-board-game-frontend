@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Chip } from './Chip';
 import { Tooltip } from './ui/Tooltip';
+import { tipProps } from './ui/TooltipLayer';
 import styles from './AppHeader.module.css';
 
 /** Top bar for the lobby and room pages. */
@@ -10,7 +11,7 @@ export function AppHeader() {
   const navigate = useNavigate();
   return (
     <header className={styles.header}>
-      <Link to="/lobby" className={styles.brand}>
+      <Link to="/lobby" className={styles.brand} {...tipProps('Go to the dashboard', 'bottom', 'start')}>
         <span className={styles.logo} aria-hidden="true">
           <Chip team={0} />
         </span>
