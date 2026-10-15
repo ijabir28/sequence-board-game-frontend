@@ -1,56 +1,59 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { signIn as apiSignIn, type Profile } from '../api/user';
+import { getProfile, signIn as apiSignIn, signOut as apiSignOut, signUp as apiSignUp, type Profile } from '../api/user';
+import styles from '../screens/Forms.module.css';
 
-// The backend has no sign-out and the session cookie is HttpOnly, so the app can't ask
-// "am I signed in?" without risking GET /user/profile (which crashes the server with no
-// session). The profile from the last successful sign-in is remembered locally instead.
-
-const STORAGE_KEY = 'sequence.profile';
+// The session cookie is HttpOnly, so the app asks the server who is signed in (GET /user/profile)
+// when it loads, and keeps the answer here.
 
 interface AuthValue {
-  profile: Profile | null;
+  /** undefined while the first check is running, null when signed out. */
+  profile: Profile | null | undefined;
   signIn: (handle: string, password: string) => Promise<Profile>;
-  /** Forgets the profile on this device. The server session simply expires (1 hour). */
-  signOut: () => void;
+  signUp: (handle: string, name: string, password: string) => Promise<Profile>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
 
-function loadProfile(): Profile | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? (JSON.parse(raw) as Profile) : null;
-    return parsed?.handle ? { handle: parsed.handle, name: parsed.name } : null;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState<Profile | null>(loadProfile);
+  const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    getProfile()
+      // Server unreachable: show the sign-in page, which explains that when the user tries.
+      .catch(() => null)
+      .then((current) => {
+        if (!cancelled) setProfile(current);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const signIn = useCallback(async (handle: string, password: string) => {
     const next = await apiSignIn(handle, password);
     setProfile(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Storage can be unavailable (private mode); the session still works for this tab.
-    }
     return next;
   }, []);
 
-  const signOut = useCallback(() => {
-    setProfile(null);
+  const signUp = useCallback(async (handle: string, name: string, password: string) => {
+    const next = await apiSignUp(handle, name, password);
+    setProfile(next);
+    return next;
+  }, []);
+
+  const signOut = useCallback(async () => {
     try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
+      await apiSignOut();
+    } finally {
+      // Even if the server can't be reached, this device stops acting as the user.
+      setProfile(null);
     }
   }, []);
 
-  const value = useMemo(() => ({ profile, signIn, signOut }), [profile, signIn, signOut]);
+  const value = useMemo(() => ({ profile, signIn, signUp, signOut }), [profile, signIn, signUp, signOut]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
@@ -60,10 +63,22 @@ export function useAuth(): AuthValue {
   return value;
 }
 
+/** Shown while the app asks the server whether there is a session. */
+export function SessionCheck() {
+  return (
+    <div className={styles.page}>
+      <p className={styles.help} role="status">
+        Checking your session…
+      </p>
+    </div>
+  );
+}
+
 /** Sends signed-out visitors to /signin and brings them back afterwards. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
   const location = useLocation();
+  if (profile === undefined) return <SessionCheck />;
   if (!profile) return <Navigate to="/signin" replace state={{ from: location.pathname + location.search }} />;
   return <>{children}</>;
 }

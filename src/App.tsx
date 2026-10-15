@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider, RequireAuth, useAuth } from './auth/AuthContext';
+import { AuthProvider, RequireAuth, SessionCheck, useAuth } from './auth/AuthContext';
 import { LocalGamePage } from './screens/LocalGamePage';
 import { Lobby } from './screens/Lobby';
 import { RoomGamePage } from './screens/RoomGamePage';
@@ -54,5 +54,6 @@ export function App() {
 
 function Home() {
   const { profile } = useAuth();
+  if (profile === undefined) return <SessionCheck />;
   return <Navigate to={profile ? '/lobby' : '/signin'} replace />;
 }

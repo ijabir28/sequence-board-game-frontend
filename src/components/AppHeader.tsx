@@ -24,11 +24,10 @@ export function AppHeader() {
             type="button"
             className={styles.switch}
             onClick={() => {
-              signOut();
-              navigate('/signin');
+              void signOut().finally(() => navigate('/signin'));
             }}
           >
-            Switch user
+            Sign out
           </button>
         </div>
       )}

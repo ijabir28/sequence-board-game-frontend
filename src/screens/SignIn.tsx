@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import { AccountError } from '../api/user';
 import { useAuth } from '../auth/AuthContext';
@@ -10,7 +10,7 @@ import styles from './Forms.module.css';
 import own from './SignIn.module.css';
 
 export function SignIn() {
-  const { signIn } = useAuth();
+  const { profile, signIn } = useAuth();
   const navigate = useNavigate();
   const from = (useLocation().state as { from?: string } | null)?.from ?? '/lobby';
   const [handle, setHandle] = useState('');
@@ -38,6 +38,9 @@ export function SignIn() {
   };
 
   const invalid = error?.field === 'credentials';
+
+  // Already signed in (for example a bookmarked /signin): skip the form.
+  if (profile) return <Navigate to={from} replace />;
 
   return (
     <div className={styles.page}>
