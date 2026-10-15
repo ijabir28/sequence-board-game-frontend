@@ -113,26 +113,92 @@
   padding: var(--space-2) var(--gutter) 0;
 }
 
-/* Phones: the leave button, compact, on the left of the turn panel. */
-.turnRow {
+/* Phones: a pull tab on the right edge, level with the turn panel, opens the drawer with the header's options. */
+.drawerHandle {
+  position: fixed;
+  top: calc(max(var(--space-2), env(safe-area-inset-top)));
+  right: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid var(--outline-strong);
+  border-right: 0;
+  border-radius: var(--radius-card) 0 0 var(--radius-card);
+  background: var(--surface-high);
+  color: var(--on-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.drawerHandle:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.drawerTitle {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2);
   min-width: 0;
+  color: var(--primary);
+  font-family: var(--font-display);
 }
 
-.turnPanel {
-  flex: 1;
+.drawerItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--outline-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-low);
+  color: var(--on-surface);
+  text-align: left;
+}
+
+.drawerItem:hover {
+  background: var(--surface-high);
+}
+
+.drawerItem:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.drawerItem > svg {
+  flex: none;
+  color: var(--on-surface-muted);
+}
+
+.drawerItem > span {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
-.leaveCompact {
-  flex: none;
-  width: 40px;
-  height: 46px;
-  border: 1px solid var(--outline-strong);
-  border-radius: var(--radius-card);
-  background: var(--surface-container);
+.drawerItem small {
+  color: var(--on-surface-muted);
+  font-size: var(--text-xs);
+}
+
+/* Leaving goes last, set apart from the rest. */
+.drawerLeave {
+  margin-top: var(--space-2);
+}
+
+.drawerLeave:first-child {
+  margin-top: 0;
+}
+
+.drawerLeave > svg {
+  color: var(--error);
+}
+
+.drawerExtra {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .status[hidden] {
@@ -304,12 +370,16 @@
   }
 }
 
+/* Phones (same query as GameScreen's `phone`): no header; the status row leaves room for the drawer's pull tab. */
+@media (max-width: 600px) {
+  .status {
+    padding-top: max(var(--space-2), env(safe-area-inset-top));
+    padding-right: calc(28px + var(--space-2));
+  }
+}
+
 @media (max-width: 420px) {
   .brand {
-    display: none;
-  }
-
-  .topBare {
     display: none;
   }
 }
