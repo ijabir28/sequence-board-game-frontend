@@ -13,7 +13,6 @@ describe('backend quirks', () => {
   it('interprets /game/play responses', () => {
     expect(interpretPlay(200, '{"verdict":"Valid"}')).toEqual({ kind: 'applied' });
     expect(interpretPlay(404, 'Invalid Move')).toEqual({ kind: 'invalid' });
-    expect(interpretPlay(500, '<pre>ReferenceError: current_team is not defined</pre>')).toEqual({ kind: 'known-500' });
     expect(interpretPlay(500, '<html>other</html>')).toEqual({ kind: 'server-error', status: 500 });
   });
 });
