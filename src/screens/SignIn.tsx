@@ -4,8 +4,8 @@ import { errorMessage } from '../api/http';
 import { AccountError } from '../api/user';
 import { useAuth } from '../auth/AuthContext';
 import { Chip } from '../components/Chip';
+import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
-import { Icon } from '../components/ui/Icon';
 import styles from './Forms.module.css';
 import own from './SignIn.module.css';
 
@@ -16,7 +16,14 @@ export function SignIn() {
   const from = fromState?.from ?? '/lobby';
   const [handle, setHandle] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<{ text: string; field: 'credentials' | 'server' } | null>(null);
+  const [error, setFormError] = useState<{ text: string; field: 'credentials' | 'server' } | null>(null);
+  const toast = useToast();
+  // The message floats as a toast; the fields stay marked until the next try.
+  const setError = (next: { text: string; field: 'credentials' | 'server' } | null) => {
+    setFormError(next);
+    if (next) toast.error(next.text, { id: 'signin' });
+    else toast.dismiss('signin');
+  };
   const [busy, setBusy] = useState(false);
 
   const submit = async (event: FormEvent) => {
@@ -56,13 +63,6 @@ export function SignIn() {
           <p>Five chips in a row makes a sequence. Sign in to open a table and play with friends.</p>
         </header>
 
-        {error && (
-          <p className={styles.error} role="alert" id="signin-error">
-            <Icon name="alert" size={18} />
-            <span>{error.text}</span>
-          </p>
-        )}
-
         <label className={styles.field}>
           <span className={styles.label}>Handle</span>
           <input
@@ -73,7 +73,6 @@ export function SignIn() {
             autoCapitalize="none"
             spellCheck={false}
             aria-invalid={invalid || undefined}
-            aria-describedby={error ? 'signin-error' : undefined}
             autoFocus
           />
         </label>
@@ -86,7 +85,6 @@ export function SignIn() {
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
             aria-invalid={invalid || undefined}
-            aria-describedby={error ? 'signin-error' : undefined}
           />
         </label>
         {import.meta.env.DEV && (

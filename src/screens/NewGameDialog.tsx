@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import { createRoom, DEFAULT_ROOM_SETTINGS, isValidTurnSeconds, type RoomSettings } from '../api/rooms';
 import { RoomOptions } from '../components/RoomOptions';
+import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
 import { Icon } from '../components/ui/Icon';
@@ -18,18 +19,18 @@ export function NewGameDialog({ open, onClose }: { open: boolean; onClose: () =>
   const [name, setName] = useState('');
   const [settings, setSettings] = useState<RoomSettings>(DEFAULT_ROOM_SETTINGS);
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const create = async (event: FormEvent) => {
     event.preventDefault();
     if (!isValidTurnSeconds(settings.turnSeconds)) return;
     setCreating(true);
-    setError(null);
+    toast.dismiss('new-game');
     try {
       const id = await createRoom(teamCount, perTeam, { name, settings });
       navigate(`/table/${id}`);
     } catch (e) {
-      setError(errorMessage(e));
+      toast.error(errorMessage(e), { id: 'new-game' });
     } finally {
       setCreating(false);
     }
@@ -109,12 +110,6 @@ export function NewGameDialog({ open, onClose }: { open: boolean; onClose: () =>
           <RoomOptions value={settings} onChange={setSettings} />
           <p className={styles.help}>You can change these until the game starts.</p>
         </fieldset>
-        {error && (
-          <p className={styles.error} role="alert">
-            <Icon name="alert" size={18} />
-            <span>{error}</span>
-          </p>
-        )}
       </form>
     </Dialog>
   );

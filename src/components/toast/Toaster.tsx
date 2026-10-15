@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '../ui/Icon';
 import { DEFAULT_DURATION_MS, toastReducer, type Toast, type ToastAction, type ToastTone } from './toastQueue';
 import styles from './Toaster.module.css';
@@ -25,6 +26,40 @@ let nextId = 0;
 /** Floating messages (success, error, info) over the page, so they never push the layout around. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, dispatch] = useReducer(toastReducer, []);
+  const viewport = useRef<HTMLElement>(null);
+
+  const latest = toasts.map((t) => `${t.id}:${t.version}`).join(',');
+  // A modal dialog makes the rest of the page inert, so while one is open the toasts live inside it (until it closes),
+  // where their buttons still work.
+  const [dialog, setDialog] = useState<HTMLDialogElement | null>(null);
+  useLayoutEffect(() => {
+    if (!latest) return;
+    const open = document.querySelectorAll<HTMLDialogElement>('dialog[open]');
+    const top = open[open.length - 1] ?? null;
+    setDialog(top);
+    if (!top) return;
+    const onClose = () => setDialog(null);
+    top.addEventListener('close', onClose);
+    return () => top.removeEventListener('close', onClose);
+  }, [latest]);
+
+  // Modal dialogs sit in the browser's top layer, above any z-index. As a manual popover the toasts join that layer,
+  // and showing it again whenever a toast appears puts them above a dialog opened since.
+  useLayoutEffect(() => {
+    const el = viewport.current;
+    if (!el || typeof el.showPopover !== 'function') return;
+    el.setAttribute('popover', 'manual');
+    if (el.matches(':popover-open')) el.hidePopover();
+    if (latest) el.showPopover();
+  }, [latest, dialog]);
+
+  const list = (
+    <section ref={viewport} className={styles.viewport} aria-label="Notifications">
+      {toasts.map((toast) => (
+        <ToastItem key={toast.id} toast={toast} onDismiss={() => dismiss(toast.id)} />
+      ))}
+    </section>
+  );
 
   const dismiss = useCallback((id: string) => dispatch({ type: 'dismiss', id }), []);
   const api = useMemo<ToastApi>(() => {
@@ -46,11 +81,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <section className={styles.viewport} aria-label="Notifications">
-        {toasts.map((toast) => (
-          <ToastItem key={toast.id} toast={toast} onDismiss={() => dismiss(toast.id)} />
-        ))}
-      </section>
+      {dialog ? createPortal(list, dialog) : list}
     </ToastContext.Provider>
   );
 }

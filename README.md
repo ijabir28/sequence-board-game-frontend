@@ -160,6 +160,11 @@ invariants.
   move log says so. When it becomes your turn it flashes,
   phones buzz, and the tab title starts with "● Your turn". Table games take the turn's start time from the server
   (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
+- **Messages float.** Success and error messages (moves, joining or leaving a seat, saving options, signing in,
+  dialogs) appear as toasts at the top of the screen (`src/components/toast/`), so they never push the layout around.
+  Errors stay 7 s, other messages 4 s; hovering or focusing one holds it. While a modal dialog is open the toasts
+  render inside it, above its backdrop, so their buttons still work. Page states with a retry button (a table that
+  can't load) stay in the page.
 - **Nobody plays for a player who left.** While a table's game is open, the page tells the server the player is at
   the table (`announcePresence` in `src/api/socket.ts`, sent again after every reconnect). If the current player
   closes the game, their turn **pauses**: the timer stops, nothing is played for them, and everyone sees

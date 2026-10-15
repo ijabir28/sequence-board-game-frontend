@@ -1,8 +1,16 @@
 /* Toasts float at the top centre, over everything, and never move the page. */
 .viewport {
   position: fixed;
+  inset: auto;
   top: max(var(--space-3), env(safe-area-inset-top));
   left: 50%;
+  /* It is a popover (see Toaster.tsx): drop the browser's popover box. */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
   z-index: 1000;
   display: flex;
   flex-direction: column;
