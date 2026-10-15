@@ -56,7 +56,7 @@ export function RoomPage() {
       } else if (result === 'signed-out') {
         setNotice({
           tone: 'error',
-          text: 'Your session has expired (sessions last an hour and end when the server restarts). Sign in again, then join.',
+          text: 'Your session has ended (sessions expire after a week without play, or when you sign out elsewhere). Sign in again, then join.',
           action: 'signin',
         });
       } else if (result === 'not-found') {
@@ -111,8 +111,8 @@ export function RoomPage() {
             notice={notice}
             onJoin={join}
             onSignInAgain={() => {
-              signOut();
-              navigate('/signin', { state: { from: `/table/${id}` } });
+              // Navigate only once signed out, or /signin would send the stale profile straight back.
+              void signOut().finally(() => navigate('/signin', { state: { from: `/table/${id}` } }));
             }}
             starting={starting}
             onStart={start}
