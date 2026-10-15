@@ -66,8 +66,18 @@
   letter-spacing: -0.03em;
 }
 
-/* The suit sits in the bottom-right corner, mirroring the rank, so a chip in the middle never hides it. */
 .suit {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-top: 1.4cqw;
+  font-size: max(11px, 3.6cqw);
+  line-height: 1;
+}
+
+/* The suit again in the bottom-right corner, mirroring the rank, so it still shows when a chip covers the middle. */
+.cornerSuit {
   position: absolute;
   right: 0.6cqw;
   bottom: 0.35cqw;

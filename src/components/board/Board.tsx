@@ -171,6 +171,10 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, onFocus,
           <span className={styles.suit} aria-hidden="true">
             {SUIT_SYMBOL[parsed.suit]}
           </span>
+          {/* A second, small suit in the corner stays visible when a chip covers the middle one. */}
+          <span className={styles.cornerSuit} aria-hidden="true">
+            {SUIT_SYMBOL[parsed.suit]}
+          </span>
         </>
       ) : (
         <span className={styles.cornerMark} aria-hidden="true">
