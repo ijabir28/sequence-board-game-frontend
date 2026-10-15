@@ -6,6 +6,7 @@ import { RoomGamePage } from './screens/RoomGamePage';
 import { RoomPage } from './screens/RoomPage';
 import { ServerGamePage } from './screens/ServerGamePage';
 import { SignIn } from './screens/SignIn';
+import { SignUp } from './screens/SignUp';
 
 // SPA routes must not start with a proxied backend prefix (/user, /room, /game, /board, /images).
 export function App() {
@@ -13,6 +14,7 @@ export function App() {
     <AuthProvider>
       <Routes>
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
         <Route
           path="/lobby"
           element={

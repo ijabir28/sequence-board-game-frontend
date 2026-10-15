@@ -12,7 +12,8 @@ import own from './SignIn.module.css';
 export function SignIn() {
   const { profile, signIn } = useAuth();
   const navigate = useNavigate();
-  const from = (useLocation().state as { from?: string } | null)?.from ?? '/lobby';
+  const fromState = useLocation().state as { from?: string } | null;
+  const from = fromState?.from ?? '/lobby';
   const [handle, setHandle] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<{ text: string; field: 'credentials' | 'server' } | null>(null);
@@ -88,13 +89,22 @@ export function SignIn() {
             aria-describedby={error ? 'signin-error' : undefined}
           />
         </label>
-        <p className={styles.help}>
-          This server has two test accounts: <strong>jabir</strong> / 1 and <strong>sakib</strong> / 123. Accounts can't be created yet.
-        </p>
+        {import.meta.env.DEV && (
+          <p className={styles.help}>
+            Development accounts: <strong>jabir</strong> / 1 and <strong>sakib</strong> / 123.
+          </p>
+        )}
 
         <Button type="submit" variant="primary" busy={busy}>
           Sign in
         </Button>
+
+        <p className={styles.help}>
+          New here?{' '}
+          <Link to="/signup" state={fromState}>
+            Create an account
+          </Link>
+        </p>
 
         <p className={styles.divider}>or</p>
         <Link to="/local" className={own.altLink}>
