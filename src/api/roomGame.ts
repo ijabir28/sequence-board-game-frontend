@@ -34,6 +34,8 @@ export interface RoomGameView {
   viewer: string | null;
   hand: string[];
   can_exchange: boolean;
+  /** Current player only: dead card exchanges left this turn; null when unlimited (missing from older backends). */
+  exchanges_left?: number | null;
   can_pass: boolean;
   deck_count: number;
   sequences: Sequence[];

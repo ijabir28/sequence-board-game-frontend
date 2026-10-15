@@ -18,9 +18,18 @@ export function LocalGamePage() {
       config
         ? new LocalGameAdapter({
             ...config,
-            rules: { autoDrawDead: config.settings.autoDrawDead },
+            rules: {
+              autoDrawDead: config.settings.autoDrawDead,
+              deadCards: config.settings.deadCards,
+              exchangesPerTurn: config.settings.exchangesPerTurn,
+            },
             turnSeconds: config.settings.turnSeconds,
-            settings: { mode: config.settings.mode, highlights: config.settings.highlights, history: config.settings.history },
+            settings: {
+              mode: config.settings.mode,
+              highlights: config.settings.highlights,
+              history: config.settings.history,
+              deadCards: config.settings.deadCards,
+            },
           })
         : null,
     [config, round],

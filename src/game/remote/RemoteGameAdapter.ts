@@ -32,6 +32,7 @@ const EMPTY_VIEW: GameView = {
   viewer: null,
   hand: [],
   canExchange: false,
+  exchangesLeft: null,
   canPass: false,
   deckCount: null,
   sequences: [],

@@ -1,3 +1,4 @@
+import type { DeadCardMode } from '../engine/game';
 import type { TeamIndex } from '../engine/setup';
 import { ApiError, postJson, readJson, request } from './http';
 
@@ -23,10 +24,24 @@ export interface RoomSettings {
   history: boolean;
   /** Legal cells light up when a card is picked. */
   highlights: boolean;
-  /** A dead card is exchanged automatically when its owner's turn starts. */
+  /** A dead card is exchanged automatically when its owner's turn starts (only when dead cards are marked). */
   autoDrawDead: boolean;
   /** Seconds each player has for a turn. */
   turnSeconds: number;
+  /** 'manual': players spot dead cards and ask to exchange them. 'indicator': dead cards are marked in the hand. */
+  deadCards: DeadCardMode;
+  /** Dead card exchanges allowed per turn; null is unlimited. */
+  exchangesPerTurn: number | null;
+}
+
+export type { DeadCardMode };
+
+/** Custom exchange limits a host may pick (the backend's 1 to EXCHANGES_PER_TURN_MAX). */
+export const EXCHANGES_PER_TURN_MIN = 1;
+export const EXCHANGES_PER_TURN_MAX = 10;
+
+export function isValidExchangesPerTurn(count: number): boolean {
+  return Number.isInteger(count) && count >= EXCHANGES_PER_TURN_MIN && count <= EXCHANGES_PER_TURN_MAX;
 }
 
 /** Turn timer choices offered to hosts (the backend's TURN_TIMER_PRESETS); any whole number in range works too. */
@@ -34,8 +49,19 @@ export const TURN_TIMER_PRESETS = [30, 60, 90, 120, 180] as const;
 export const TURN_SECONDS_MIN = 15;
 export const TURN_SECONDS_MAX = 600;
 
-/** Highlights and history are off unless the host turns them on; 90 seconds a turn. Matches the backend. */
-export const DEFAULT_ROOM_SETTINGS: RoomSettings = { mode: 'standard', history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 };
+/**
+ * Highlights and history are off unless the host turns them on; 90 seconds a turn; players find dead cards
+ * themselves and may exchange as many as they like. Matches the backend.
+ */
+export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
+  mode: 'standard',
+  history: false,
+  highlights: false,
+  autoDrawDead: false,
+  turnSeconds: 90,
+  deadCards: 'manual',
+  exchangesPerTurn: null,
+};
 
 export function isValidTurnSeconds(seconds: number): boolean {
   return Number.isInteger(seconds) && seconds >= TURN_SECONDS_MIN && seconds <= TURN_SECONDS_MAX;
@@ -47,9 +73,14 @@ export interface RawRoomSettings {
   highlights?: boolean;
   auto_draw_dead?: boolean;
   turn_seconds?: number;
+  dead_cards?: string;
+  exchanges_per_turn?: number | null;
 }
 
-/** Missing settings (an older backend) fall back to the defaults. */
+/**
+ * Missing settings (an older backend) fall back to the defaults, except the dead card ones: a backend without them
+ * marks dead cards and allows one exchange per turn.
+ */
 export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings {
   return {
     mode: raw?.mode === 'training' ? 'training' : 'standard',
@@ -57,11 +88,22 @@ export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings
     highlights: raw?.highlights ?? DEFAULT_ROOM_SETTINGS.highlights,
     autoDrawDead: raw?.auto_draw_dead ?? DEFAULT_ROOM_SETTINGS.autoDrawDead,
     turnSeconds: typeof raw?.turn_seconds === 'number' ? raw.turn_seconds : DEFAULT_ROOM_SETTINGS.turnSeconds,
+    deadCards: raw?.dead_cards === 'manual' ? 'manual' : 'indicator',
+    exchangesPerTurn:
+      raw?.exchanges_per_turn === null ? null : typeof raw?.exchanges_per_turn === 'number' ? raw.exchanges_per_turn : 1,
   };
 }
 
 function rawSettings(settings: Partial<RoomSettings>): RawRoomSettings {
-  return { mode: settings.mode, history: settings.history, highlights: settings.highlights, auto_draw_dead: settings.autoDrawDead, turn_seconds: settings.turnSeconds };
+  return {
+    mode: settings.mode,
+    history: settings.history,
+    highlights: settings.highlights,
+    auto_draw_dead: settings.autoDrawDead,
+    turn_seconds: settings.turnSeconds,
+    dead_cards: settings.deadCards,
+    exchanges_per_turn: settings.exchangesPerTurn,
+  };
 }
 
 export interface Room {

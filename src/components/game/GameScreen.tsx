@@ -157,13 +157,38 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (played && adapter.hotSeat) setRevealedFor(null);
   };
 
-  const onExchange = () => selected !== null && run(() => adapter.exchangeDeadCard(selected));
+  const manualDead = view.settings.deadCards === 'manual';
+  // With manual dead cards any normal card may be offered for exchange (jacks are never dead); the rules check it.
+  const exchangeable =
+    selected !== null &&
+    selectedCard !== undefined &&
+    handVisible &&
+    !gameOver &&
+    view.canExchange &&
+    (manualDead ? cardKind(selectedCard) === 'normal' : !!view.hand[selected]?.dead);
+  const exchangesNote =
+    view.exchangesLeft === null ? 'You may exchange any number this turn.' : `${view.exchangesLeft} exchange${view.exchangesLeft === 1 ? '' : 's'} left this turn.`;
+  const onExchange = async () => {
+    if (selected === null || !selectedCard) return;
+    const card = selectedCard;
+    if (await run(() => adapter.exchangeDeadCard(selected))) {
+      setFeedback({ tone: 'info', text: `${cardShort(card)} was dead: you drew a new card.` });
+    }
+  };
   const onPass = async () => {
     const passed = await run(() => adapter.pass());
     if (passed && adapter.hotSeat) setRevealedFor(null);
   };
 
-  const prompt = handHint({ selectedCard, dead: selected !== null && !!view.hand[selected]?.dead, targets, canExchange: view.canExchange, highlights, tips: training });
+  const prompt = handHint({
+    selectedCard,
+    dead: selected !== null && !!view.hand[selected]?.dead,
+    targets,
+    canExchange: view.canExchange,
+    highlights,
+    tips: training,
+    manualDead,
+  });
 
   const footer = (
     <div className={styles.actions}>
@@ -184,11 +209,19 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             </Button>
           </Tooltip>
         )}
-        {selected !== null && view.hand[selected]?.dead && view.canExchange && (
-          <Tooltip text="Discard it and draw a new card. One exchange per turn, before you play." side="top" align="end">
-            <Button size="sm" variant="primary" onClick={onExchange} busy={busy}>
+        {exchangeable && (
+          <Tooltip
+            text={
+              manualDead
+                ? `If both of ${cardShort(selectedCard!)}'s cells are taken, swap it for a new card. ${exchangesNote}`
+                : `Discard it and draw a new card, before you play. ${exchangesNote}`
+            }
+            side="top"
+            align="end"
+          >
+            <Button size="sm" variant={manualDead ? 'secondary' : 'primary'} onClick={onExchange} busy={busy}>
               <Icon name="swap" size={16} />
-              Exchange dead card
+              {manualDead ? 'Exchange as dead' : 'Exchange dead card'}
             </Button>
           </Tooltip>
         )}
@@ -442,6 +475,7 @@ function handHint({
   canExchange,
   highlights,
   tips,
+  manualDead,
 }: {
   selectedCard: CardName | undefined;
   dead: boolean;
@@ -450,9 +484,18 @@ function handHint({
   highlights: boolean;
   /** Explain what the selected card does (training games). */
   tips: boolean;
+  /** Players spot dead cards themselves and may offer any card for exchange. */
+  manualDead: boolean;
 }): string {
-  if (!selectedCard) return `Pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}. Keys 1–7 pick cards.`;
+  if (!selectedCard) {
+    return manualDead && canExchange
+      ? `Pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}. Spotted a dead card? Pick it and exchange it.`
+      : `Pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}. Keys 1–7 pick cards.`;
+  }
   const card = selectedCard;
+  if (manualDead && canExchange && cardKind(card) === 'normal' && !tips) {
+    return `${cardShort(card)} selected. If both its cells are taken, it's dead: exchange it.`;
+  }
   if (!tips) {
     if (dead) return canExchange ? `${cardShort(card)} is dead. You can exchange it.` : `${cardShort(card)} is dead.`;
     return `${cardShort(card)} selected.`;
