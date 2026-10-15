@@ -37,7 +37,7 @@ export function RoomPage() {
         setNotice({ tone: 'error', text: 'The server no longer has this table (it forgets tables when it restarts). Go back to the lobby and open a new one.' });
       } else {
         const room = await reload();
-        if (room && !isSeated(room, profile.name)) {
+        if (room && !isSeated(room, profile.handle)) {
           // The backend answers "success" without seating anyone when the session is gone.
           setNotice({
             tone: 'error',
@@ -88,7 +88,7 @@ export function RoomPage() {
         {state.status === 'ready' && (
           <RoomView
             room={state.room}
-            you={profile?.name ?? null}
+            you={profile?.handle ?? null}
             connection={connection}
             joining={joining}
             notice={notice}
@@ -186,7 +186,7 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
                     {seat ? (
                       <>
                         {seat.name}
-                        {seat.name === you && <span className={own.you}>you</span>}
+                        {seat.handle === you && <span className={own.you}>you</span>}
                       </>
                     ) : (
                       'Open seat'
