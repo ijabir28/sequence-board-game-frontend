@@ -7,7 +7,7 @@ It has two ways to play:
 
 - **On one device (hot-seat).** A complete rules engine runs in the browser, so you can play a full game without the
   server.
-- **With the server.** Sign in, open a table, share its code and take seats live. Once every seat is taken, any player
+- **With the server.** Create an account or sign in, open a table, share its code and take seats live. Once every seat is taken, any player
   starts the game and everyone plays from their own device; the server deals, enforces turn order and detects
   sequences. A developer page also shows the server's older built-in test game.
 
@@ -52,7 +52,8 @@ Then open http://localhost:5173. Code changes in either repo reload live.
    npm run dev          # http://localhost:5173
    ```
 
-3. Open http://localhost:5173 and sign in with a test account: `jabir` / `1` or `sakib` / `123`.
+3. Open http://localhost:5173 and create an account, or sign in with a development account: `jabir` / `1` or
+   `sakib` / `123`. Docker creates these itself; for a host-run backend, run `npm run db:seed` there once.
 
 Hot-seat play (`/local`) works without the backend. Card faces then fall back to drawn cards, because the card images
 come from the backend.
@@ -82,7 +83,7 @@ pins `socket.io-client@2.3.0`. The two majors must match. If your backend instal
 
 The backend has no CORS, so the Vite dev server proxies `/user`, `/room`, `/game`, `/board`, `/images` and `/socket.io`
 (websockets included) to `http://localhost:3000`. The session cookie `connect.sid` stays same-origin. App routes are
-chosen so they never start with a proxied prefix: `/signin`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
+chosen so they never start with a proxied prefix: `/signin`, `/signup`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
 
 ### Code map
 
@@ -93,10 +94,10 @@ src/
     types.ts       GameAdapter interface and the GameView the UI renders
     local/         LocalGameAdapter: hot-seat game on the engine
     remote/        RemoteGameAdapter + backendQuirks.ts (every backend workaround)
-  api/             fetch wrapper, sign-in, rooms, legacy game, socket.io client
-  auth/            Remembered profile and route guard
+  api/             fetch wrapper, accounts (sign up / in / out, profile), rooms, legacy game, socket.io client
+  auth/            Who is signed in (asked from the server on load), route guard
   components/      Board, hand, chips, game screen, UI primitives
-  screens/         Sign in, lobby, table, hot-seat setup, server game
+  screens/         Sign in, sign up, lobby, table, hot-seat setup, server game
   styles/          Design tokens and global CSS
 ```
 
@@ -154,6 +155,13 @@ invariants.
   - Focus is always visible, and `prefers-reduced-motion` is respected.
   - No page scrolls horizontally at 360px.
 
+## Accounts
+
+Anyone can create an account at `/signup` (handle, display name, password). The server keeps accounts and
+sessions in PostgreSQL, so a session survives backend restarts and lasts a week without use. On load the app asks
+`GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the session
+on the server.
+
 ## Backend limitations
 
 These are workarounds for the current backend. Details are in `../sequence-board-game/docs/known-issues.md`, and the
@@ -161,8 +169,5 @@ game-related ones are all in `src/game/remote/backendQuirks.ts`.
 
 | Backend behaviour | What the frontend does |
 |---|---|
-| `GET /user/profile` without a session crashes the server | Called only right after a successful sign-in. The profile is remembered locally. |
-| No sign-out | "Switch user" forgets the profile on this device. The server session expires after an hour. |
-| Wrong password returns a `302` redirect | Sign-in uses `redirect: 'manual'` and treats any redirect as wrong credentials. |
 | `room_updated` and `game_updated` go to every client | Pages ignore other rooms' `game_updated` and re-fetch their own room or game. |
 | The legacy test game (`/game/*`) has no turn order, sequences, dead cards or win | `/server-game` is a developer tool, labelled as such. Real games run at a table (`/table/:id/game`). |
