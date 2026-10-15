@@ -13,7 +13,10 @@ interface DialogProps {
   size?: 'normal' | 'wide';
 }
 
-/** Native modal <dialog>: focus trapping, Escape to close and inert background come for free. */
+/**
+ * Native modal <dialog>: focus trapping, Escape to close and inert background come for free. Mark the field to
+ * start in with data-autofocus.
+ */
 export function Dialog({ open, title, onClose, children, actions, size = 'normal' }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -21,7 +24,12 @@ export function Dialog({ open, title, onClose, children, actions, size = 'normal
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      // The content is mounted while closed, so autoFocus can't work; a field marked data-autofocus gets focus
+      // instead of the close button.
+      dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus();
+    }
     if (!open && dialog.open) dialog.close();
   }, [open]);
 

@@ -7,6 +7,8 @@
   background: var(--surface-container);
   color: var(--on-surface);
   box-shadow: var(--shadow-raised);
+  /* Only the body scrolls; the header and buttons stay put. */
+  overflow: hidden;
 }
 
 /* Blur what's behind every modal, so the dialog is the only thing in focus. */
