@@ -9,10 +9,11 @@ import { Icon } from '../components/ui/Icon';
 import { HAND_SIZE_BY_PLAYER_COUNT, playersPerTeamOptions, type TeamCount } from '../engine/setup';
 import styles from './Forms.module.css';
 import own from './Lobby.module.css';
-import { YourTables } from './YourTables';
+import { ResumeBanner, useMyRooms, YourTables } from './YourTables';
 
 export function Lobby() {
   const navigate = useNavigate();
+  const myRooms = useMyRooms();
 
   const [teamCount, setTeamCount] = useState<TeamCount>(2);
   const [perTeam, setPerTeam] = useState(1);
@@ -64,6 +65,7 @@ export function Lobby() {
       <AppHeader />
       <div className={styles.page}>
         <div className={own.grid}>
+          <ResumeBanner state={myRooms.state} />
           <form className={styles.card} onSubmit={create}>
             <header className={styles.header}>
               <h1>Open a table</h1>
@@ -167,7 +169,7 @@ export function Lobby() {
             )}
           </div>
 
-          <YourTables />
+          <YourTables state={myRooms.state} reload={myRooms.reload} />
         </div>
       </div>
     </>
