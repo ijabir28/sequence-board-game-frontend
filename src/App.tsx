@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, RequireAuth, SessionCheck, useAuth } from './auth/AuthContext';
 import { ToastProvider } from './components/toast/Toaster';
+import { TooltipLayer } from './components/ui/TooltipLayer';
 import { LocalGamePage } from './screens/LocalGamePage';
 import { Lobby } from './screens/Lobby';
 import { RoomGamePage } from './screens/RoomGamePage';
@@ -53,6 +54,7 @@ export function App() {
           <Route path="*" element={<Home />} />
         </Routes>
       </AuthProvider>
+      <TooltipLayer />
     </ToastProvider>
   );
 }
