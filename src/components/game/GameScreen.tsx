@@ -6,6 +6,7 @@ import { describeLog } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter } from '../../game/types';
 import { useHandOrder } from '../../game/useHandOrder';
+import { useMediaQuery } from '../../game/useMediaQuery';
 import { useGame } from '../../game/useGame';
 import { Board } from '../board/Board';
 import { Chip } from '../Chip';
@@ -44,6 +45,9 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const [logOpen, setLogOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Phones: the turn panel and the scoreboard fold into one line until the player opens them.
+  const phone = useMediaQuery('(max-width: 600px)');
+  const [statusOpen, setStatusOpen] = useState(false);
 
   const viewer = view.viewer;
   const handVisible = !adapter.hotSeat || (viewer !== null && revealedFor === viewer.id);
@@ -240,7 +244,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             <span className={styles.mode}>{view.title ?? modeLabel}</span>
           </div>
           <div className={styles.scores}>
-            <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
+            {!phone && <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />}
           </div>
         </div>
         <div className={styles.topActions}>
@@ -273,6 +277,19 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           turn={view.turn}
           turnStartedAt={view.turnStartedAt}
           turnDeadline={view.turnDeadline}
+          collapsible={
+            phone
+              ? {
+                  open: statusOpen,
+                  onToggle: () => setStatusOpen((open) => !open),
+                  children: (
+                    <div className={styles.foldedScores}>
+                      <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
+                    </div>
+                  ),
+                }
+              : undefined
+          }
         />
         {/* Feedback takes the ticker's line, so messages never push the board around. */}
         {feedback ? (

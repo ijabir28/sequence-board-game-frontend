@@ -198,3 +198,70 @@
     transition: none;
   }
 }
+
+/* Phones: the panel folded into one tappable line. */
+.folded {
+  padding: 0;
+  gap: 0;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: var(--on-surface);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 700;
+  text-align: left;
+}
+
+.summary:focus-visible,
+.fold:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.summaryChip {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.summaryText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yours .summaryText {
+  color: var(--turn-team);
+}
+
+.summary > svg:last-of-type {
+  flex: none;
+  color: var(--on-surface-muted);
+}
+
+.fold {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--on-surface-muted);
+}
+
+.fold:hover {
+  background: var(--surface-high);
+}

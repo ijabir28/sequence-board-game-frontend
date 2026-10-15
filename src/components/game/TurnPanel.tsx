@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { TeamIndex } from '../../engine/setup';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import { formatElapsed, useNow } from '../../game/turnClock';
 import type { PlayerView } from '../../game/types';
 import { Chip } from '../Chip';
+import { Icon } from '../ui/Icon';
 import styles from './TurnPanel.module.css';
 
 interface TurnPanelProps {
@@ -18,6 +19,11 @@ interface TurnPanelProps {
   turnStartedAt: number | null;
   /** When the turn's timer runs out; null when the game has no timer. */
   turnDeadline: number | null;
+  /**
+   * Phones: the panel folds into one line (your countdown on your turn, else whose turn it is) and expands on
+   * request, showing `children` (the scoreboard) too.
+   */
+  collapsible?: { open: boolean; onToggle: () => void; children?: ReactNode };
 }
 
 /** Without a turn timer, a turn this long gets the clock's warning colour. */
@@ -30,7 +36,8 @@ const URGENT_MS = 10_000;
  * Whose turn it is, in its own box so it can't be missed: the player and team, the timer on your own turn, and the turn
  * order with the current player marked. When it becomes your turn, the box flashes and the tab title says so.
  */
-export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, turn, turnStartedAt, turnDeadline }: TurnPanelProps) {
+export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, turn, turnStartedAt, turnDeadline, collapsible }: TurnPanelProps) {
+  const detailsId = useId();
   const current = players.find((p) => p.id === currentPlayerId) ?? null;
   const yours = !hotSeat && current !== null && viewer !== null && current.id === viewer.id;
   // The clock is for the player who has to beat it: only on your own turn (in hot-seat play, the person at the
@@ -48,14 +55,47 @@ export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, t
   const total = counting ? Math.max(1, turnDeadline! - turnStartedAt!) : 1;
   const urgency = !counting ? (elapsed >= SLOW_TURN_MS ? 'warn' : null) : left <= URGENT_MS ? 'urgent' : left <= WARN_MS ? 'warn' : null;
 
-  return (
-    <section
-      className={[styles.panel, yours && styles.yours, alerting && styles.alert, yours && urgency === 'urgent' && styles.hurry]
-        .filter(Boolean)
-        .join(' ')}
-      style={style ? ({ '--turn-team': style.color, '--turn-glow': style.glow } as React.CSSProperties) : undefined}
-      aria-label="Turn"
+  const className = [styles.panel, yours && styles.yours, alerting && styles.alert, yours && urgency === 'urgent' && styles.hurry]
+    .filter(Boolean)
+    .join(' ');
+  const teamStyle = style ? ({ '--turn-team': style.color, '--turn-glow': style.glow } as React.CSSProperties) : undefined;
+  const timer = running && (
+    <span
+      className={[styles.timer, urgency === 'warn' && styles.slow, urgency === 'urgent' && styles.urgent].filter(Boolean).join(' ')}
+      role="timer"
+      aria-label={counting ? 'Time left this turn' : 'Time on this turn'}
     >
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+        <circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path d="M12 9v4l2.5 2M10 2h4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+      {counting ? (left > 0 ? formatElapsed(left + 999) : "Time's up") : formatElapsed(elapsed)}
+    </span>
+  );
+
+  // Folded (phones): one line. Your turn shows your countdown; otherwise just whose turn it is.
+  if (collapsible && !collapsible.open) {
+    return (
+      <section className={[className, styles.folded].join(' ')} style={teamStyle} aria-label="Turn">
+        <button type="button" className={styles.summary} aria-expanded={false} aria-controls={detailsId} onClick={collapsible.onToggle}>
+          {team !== null && (
+            <span className={styles.summaryChip} aria-hidden="true">
+              <Chip team={team} />
+            </span>
+          )}
+          <span className={styles.summaryText}>
+            {winner !== null ? `${teamName(winner)} wins` : current ? (yours ? 'Your turn' : `${current.name}'s turn`) : 'Waiting for the game to start'}
+          </span>
+          {timer}
+          <Icon name="chevronDown" size={18} />
+          <span className="visually-hidden">Show turn details and scores</span>
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className={className} style={teamStyle} aria-label="Turn" id={detailsId}>
       <div className={styles.main}>
         {team !== null && (
           <span className={styles.chip} aria-hidden="true">
@@ -84,18 +124,12 @@ export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, t
             )}
           </p>
         </div>
-        {running && (
-          <span
-            className={[styles.timer, urgency === 'warn' && styles.slow, urgency === 'urgent' && styles.urgent].filter(Boolean).join(' ')}
-            role="timer"
-            aria-label={counting ? 'Time left this turn' : 'Time on this turn'}
-          >
-            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-              <circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
-              <path d="M12 9v4l2.5 2M10 2h4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            {counting ? (left > 0 ? formatElapsed(left + 999) : "Time's up") : formatElapsed(elapsed)}
-          </span>
+        {timer}
+        {collapsible && (
+          <button type="button" className={styles.fold} aria-expanded={true} aria-controls={detailsId} onClick={collapsible.onToggle}>
+            <Icon name="chevronUp" size={18} />
+            <span className="visually-hidden">Hide turn details and scores</span>
+          </button>
         )}
       </div>
       {counting && (
@@ -133,6 +167,7 @@ export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, t
           })}
         </ol>
       )}
+      {collapsible?.children}
     </section>
   );
 }
