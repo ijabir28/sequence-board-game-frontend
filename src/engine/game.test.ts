@@ -189,9 +189,32 @@ describe('dead cards', () => {
     const next = applyMove(g, { type: 'exchange', handIndex: 0 });
     expect(next.hands[0]).toEqual([top, '7-Heart']);
     expect(next.current).toBe(g.current);
-    expect(next.exchangedThisTurn).toBe(true);
+    expect(next.exchangesThisTurn).toBe(1);
     expect(canExchange(next)).toBe(false);
     expectRuleError(() => applyMove(next, { type: 'exchange', handIndex: 1 }), 'ALREADY_EXCHANGED');
+  });
+
+  it('allows any number of exchanges per turn when unlimited, or up to a custom limit', () => {
+    const withLimit = (exchangesPerTurn: number | null) =>
+      withChips(withHand(createGame({ teamCount: 2, playersPerTeam: 1, rules: { exchangesPerTurn }, random: seededRandom(42) }), ['7-Heart', '7-Heart', '7-Heart']), [
+        [a, 1],
+        [b, 0],
+      ]);
+    // Keep the deck from handing back another 7-Heart, so each draw is live.
+    const noSevens = (g: GameState): GameState => ({ ...g, deck: g.deck.filter((c) => c !== '7-Heart') });
+    let g = noSevens(withLimit(null));
+    for (const i of [0, 1, 2]) g = applyMove(g, { type: 'exchange', handIndex: i });
+    expect(g.exchangesThisTurn).toBe(3);
+    expect(g.hands[0]).not.toContain('7-Heart');
+
+    let two = applyMove(noSevens(withLimit(2)), { type: 'exchange', handIndex: 0 });
+    two = applyMove(two, { type: 'exchange', handIndex: 1 });
+    expectRuleError(() => applyMove(two, { type: 'exchange', handIndex: 2 }), 'ALREADY_EXCHANGED');
+  });
+
+  it('never auto-draws when players find dead cards themselves', () => {
+    const g = createGame({ teamCount: 2, playersPerTeam: 1, rules: { autoDrawDead: true, deadCards: 'manual' } });
+    expect(g.rules?.autoDrawDead).toBe(false);
   });
 
   it('rejects exchanging a live card', () => {
@@ -203,7 +226,7 @@ describe('dead cards', () => {
     let g = withChips(withHand(newGame(), ['7-Heart', 'J-Club']), [[a, 1], [b, 0]]);
     g = applyMove(g, { type: 'exchange', handIndex: 0 });
     g = applyMove(g, { type: 'play', handIndex: 1, target: p(5, 5) });
-    expect(g.exchangedThisTurn).toBe(false);
+    expect(g.exchangesThisTurn).toBe(0);
   });
 });
 
@@ -240,7 +263,7 @@ describe('autoDrawDead rule', () => {
     expect(next.current).toBe(1);
     expect(next.hands[1]).not.toContain('7-Heart');
     expect(next.hands[1]).toHaveLength(7);
-    expect(next.exchangedThisTurn).toBe(true);
+    expect(next.exchangesThisTurn).toBe(1);
     expect(canExchange(next)).toBe(false);
     expect(next.log.at(-1)).toEqual({ kind: 'exchange', turn: 2, player: 'Player 2', team: 1, card: '7-Heart', auto: true });
   });
@@ -251,7 +274,7 @@ describe('autoDrawDead rule', () => {
     for (const state of [off, legacy]) {
       const next = applyMove(state, { type: 'play', handIndex: 0, target: p(5, 5) }, seededRandom(1));
       expect(next.hands[1][0]).toBe('7-Heart');
-      expect(next.exchangedThisTurn).toBe(false);
+      expect(next.exchangesThisTurn).toBe(0);
     }
   });
 });
@@ -269,7 +292,7 @@ describe('timed-out turns', () => {
   it('randomMove exchanges a dead card when nothing is playable, then passes', () => {
     const dead = withChips(withHand(newGame(), ['7-Heart']), positionsOf('7-Heart').map((pos) => [pos, 1] as [Pos, TeamIndex]));
     expect(randomMove(dead)).toEqual({ type: 'exchange', handIndex: 0 });
-    expect(randomMove({ ...dead, exchangedThisTurn: true })).toEqual({ type: 'pass' });
+    expect(randomMove({ ...dead, exchangesThisTurn: 1 })).toEqual({ type: 'pass' });
   });
 
   it('playTimedOutTurn ends the turn and marks only the late player\'s entries', () => {

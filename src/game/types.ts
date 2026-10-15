@@ -1,7 +1,7 @@
 import type { Pos } from '../engine/board';
 import type { BoardCardName, CardName } from '../engine/cards';
 import type { GameMode } from '../api/rooms';
-import type { LogEntry } from '../engine/game';
+import type { DeadCardMode, LogEntry } from '../engine/game';
 import type { Hint } from '../engine/hints';
 import type { Sequence } from '../engine/sequences';
 import type { TeamIndex } from '../engine/setup';
@@ -26,7 +26,7 @@ export interface PlayerView {
 
 export interface HandCardView {
   card: CardName;
-  /** Both board cells for this card are taken; it can be exchanged. */
+  /** Both board cells for this card are taken; it can be exchanged. Always false when players spot dead cards themselves. */
   dead: boolean;
 }
 
@@ -45,9 +45,11 @@ export interface PlaySettings {
   highlights: boolean;
   /** Show the move log. Off: only the latest move is known. */
   history: boolean;
+  /** 'manual': dead cards aren't marked; players ask to exchange a card they think is dead. 'indicator': they're marked. */
+  deadCards: DeadCardMode;
 }
 
-export const DEFAULT_PLAY_SETTINGS: PlaySettings = { mode: 'standard', highlights: true, history: true };
+export const DEFAULT_PLAY_SETTINGS: PlaySettings = { mode: 'standard', highlights: true, history: true, deadCards: 'indicator' };
 
 export interface GameView {
   status: GameStatus;
@@ -64,7 +66,10 @@ export interface GameView {
   /** The player whose hand is shown. */
   viewer: PlayerView | null;
   hand: HandCardView[];
+  /** The viewer may exchange a dead card now (with manual dead cards: they have exchanges left, dead card or not). */
   canExchange: boolean;
+  /** Exchanges the viewer has left this turn; null when unlimited or unknown. */
+  exchangesLeft: number | null;
   /** No legal play and no exchange left; the player may pass. */
   canPass: boolean;
   deckCount: number | null;

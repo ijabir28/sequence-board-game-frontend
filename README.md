@@ -133,8 +133,8 @@ The engine implements the official rules:
 - **Sequences** are 5 in a row in any direction. A new sequence may share at most one chip with the team's earlier
   sequences.
 - **Winning** takes 2 sequences with 2 teams, or 1 with 3 teams.
-- **Dead cards:** a card whose two cells are both covered can be exchanged once per turn, before playing. If no move is
-  possible, the player may pass.
+- **Dead cards:** a card whose two cells are both covered can be exchanged, before playing, as many times per turn as
+  the table allows (unlimited by default). If no move is possible, the player may pass.
 
 Tests in `src/engine/*.test.ts` cover sequence detection (every direction, corners, 9-long lines, crossing sequences,
 the shared-chip limit), both jack types, dead cards and deck reshuffling. They also play random full games and check
@@ -204,7 +204,9 @@ Whoever opens a table (the host) picks its options, shown by `src/components/Roo
 | Highlight legal cells | off | Off: picking a card doesn't light up its cells, and wrong cells are explained by the rules |
 | Move history | off | Off: no move log; the server sends only the latest move |
 | Turn timer | 90 s | 30 s, 1 min, 1 min 30 s, 2 min, 3 min, or a custom number of seconds (15–600) |
-| Auto-draw dead cards | off | On: a dead card is swapped automatically when its owner's turn starts |
+| Dead cards | Players spot them | Players spot them: nothing marks dead cards; pick a card you think is dead and press **Exchange as dead**, and the rules check it ("That card still has an open cell…" if not). Mark them: dead cards are marked in the hand, as before |
+| Dead card exchanges per turn | Unlimited | 1, Unlimited, or a custom number (1–10) |
+| Auto-draw dead cards | off | Only when dead cards are marked. On: dead cards are swapped automatically when their owner's turn starts (up to the exchange limit) |
 
 Hints come from the server for tables (only to the player whose turn it is, only in training games) and from
 `src/engine/hints.ts` for hot-seat games; `src/game/describeHint.ts` words them.

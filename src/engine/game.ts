@@ -21,10 +21,15 @@ export type LogEntry =
   | { kind: 'sequence'; turn: number; team: TeamIndex; cells: Pos[] }
   | { kind: 'win'; turn: number; team: TeamIndex };
 
+/** How players find dead cards: spotted by hand ('manual'), or marked in the hand ('indicator'). */
+export type DeadCardMode = 'manual' | 'indicator';
+
 /** Optional rules a table is played with. */
 export interface GameRules {
-  /** A dead card is exchanged automatically when its owner's turn starts. */
+  /** Dead cards are exchanged automatically when their owner's turn starts (only when they are marked). */
   autoDrawDead: boolean;
+  /** Dead card exchanges allowed per turn; null is unlimited. Missing in older states, which allowed one. */
+  exchangesPerTurn?: number | null;
 }
 
 export interface GameState {
@@ -41,8 +46,8 @@ export interface GameState {
   current: number;
   /** Turn counter, starting at 1. */
   turn: number;
-  /** A dead card may be exchanged once per turn, before playing. */
-  exchangedThisTurn: boolean;
+  /** Dead cards exchanged this turn (up to the rules' exchangesPerTurn), before playing. */
+  exchangesThisTurn: number;
   sequences: Sequence[];
   winner: TeamIndex | null;
   log: LogEntry[];
@@ -81,7 +86,7 @@ export interface NewGameOptions {
   playersPerTeam: number;
   /** Optional names in seat order; missing names default to "Player n". */
   playerNames?: string[];
-  rules?: Partial<GameRules>;
+  rules?: Partial<GameRules> & { deadCards?: DeadCardMode };
   random?: () => number;
 }
 
@@ -101,7 +106,10 @@ export function createGame({ teamCount, playersPerTeam, playerNames = [], rules 
   return startTurn(
     {
       teamCount,
-      rules: { autoDrawDead: rules.autoDrawDead === true },
+      rules: {
+        autoDrawDead: rules.autoDrawDead === true && rules.deadCards !== 'manual',
+        exchangesPerTurn: rules.exchangesPerTurn === undefined ? 1 : rules.exchangesPerTurn,
+      },
       players,
       hands,
       chips: emptyChipGrid(),
@@ -109,7 +117,7 @@ export function createGame({ teamCount, playersPerTeam, playerNames = [], rules 
       discard: [],
       current: 0,
       turn: 1,
-      exchangedThisTurn: false,
+      exchangesThisTurn: 0,
       sequences: [],
       winner: null,
       log: [],
@@ -183,8 +191,27 @@ export function hasLegalPlay(state: GameState): boolean {
   return state.hands[state.current].some((_, i) => legalTargets(state, i).length > 0);
 }
 
+/** Dead card exchanges allowed per turn: a number, or null for unlimited. Matches the backend's exchange_limit(). */
+export function exchangeLimit(state: GameState): number | null {
+  const limit = state.rules?.exchangesPerTurn;
+  if (limit === null) return null;
+  return typeof limit === 'number' && Number.isInteger(limit) && limit > 0 ? limit : 1;
+}
+
+/** How many more dead cards the current player may exchange this turn; null for unlimited. */
+export function exchangesLeft(state: GameState): number | null {
+  const limit = exchangeLimit(state);
+  return limit === null ? null : Math.max(0, limit - state.exchangesThisTurn);
+}
+
+/** The current player may still exchange a card this turn (whether or not they hold a dead one). */
+export function mayExchangeMore(state: GameState): boolean {
+  const left = exchangesLeft(state);
+  return state.winner === null && (left === null || left > 0);
+}
+
 export function canExchange(state: GameState): boolean {
-  return state.winner === null && !state.exchangedThisTurn && state.hands[state.current].some((c) => isDeadCard(state, c));
+  return mayExchangeMore(state) && state.hands[state.current].some((c) => isDeadCard(state, c));
 }
 
 /**
@@ -276,13 +303,16 @@ function play(state: GameState, handIndex: number, target: Pos, random: () => nu
 function exchange(state: GameState, handIndex: number, random: () => number): GameState {
   const card = state.hands[state.current][handIndex];
   if (!card) throw new RuleError('NO_SUCH_CARD', 'That card is not in your hand.');
-  if (state.exchangedThisTurn) throw new RuleError('ALREADY_EXCHANGED', 'You can exchange one dead card per turn. Play a card instead.');
+  if (!mayExchangeMore(state)) {
+    const limit = exchangeLimit(state);
+    throw new RuleError('ALREADY_EXCHANGED', `You can exchange ${limit === 1 ? 'one dead card' : `${limit} dead cards`} per turn. Play a card instead.`);
+  }
   if (!isDeadCard(state, card)) throw new RuleError('NOT_DEAD', `${cardShort(card)} still has an open cell, so it isn't dead.`);
   const player = currentPlayer(state);
   const next = replaceCard(state, handIndex, random);
   return {
     ...next,
-    exchangedThisTurn: true,
+    exchangesThisTurn: state.exchangesThisTurn + 1,
     log: [...next.log, { kind: 'exchange', turn: state.turn, player: player.name, team: player.team, card }],
   };
 }
@@ -305,25 +335,27 @@ function replaceCard(state: GameState, handIndex: number, random: () => number):
 }
 
 function endTurn(state: GameState, random: () => number): GameState {
-  return startTurn({ ...state, current: (state.current + 1) % state.players.length, turn: state.turn + 1, exchangedThisTurn: false }, random);
+  return startTurn({ ...state, current: (state.current + 1) % state.players.length, turn: state.turn + 1, exchangesThisTurn: 0 }, random);
 }
 
 /**
- * With the autoDrawDead rule, a dead card in the new current player's hand is exchanged for them: their one
- * exchange for the turn, logged with `auto: true`. Matches the backend's start_turn().
+ * With the autoDrawDead rule, the dead cards in the new current player's hand are exchanged for them, as many as
+ * the exchange limit allows, counted as theirs and logged with `auto: true`. Matches the backend's start_turn().
  */
 function startTurn(state: GameState, random: () => number): GameState {
-  if (!state.rules?.autoDrawDead || state.winner !== null || state.exchangedThisTurn) return state;
-  const handIndex = state.hands[state.current].findIndex((card) => isDeadCard(state, card));
-  if (handIndex === -1) return state;
-  const card = state.hands[state.current][handIndex];
+  if (!state.rules?.autoDrawDead || state.winner !== null) return state;
+  const dead = state.hands[state.current].flatMap((card, handIndex) => (isDeadCard(state, card) ? [handIndex] : []));
   const player = currentPlayer(state);
-  const next = replaceCard(state, handIndex, random);
-  return {
-    ...next,
-    exchangedThisTurn: true,
-    log: [...next.log, { kind: 'exchange', turn: state.turn, player: player.name, team: player.team, card, auto: true }],
-  };
+  return dead.reduce((next, handIndex) => {
+    if (!mayExchangeMore(next)) return next;
+    const card = next.hands[next.current][handIndex];
+    const drawn = replaceCard(next, handIndex, random);
+    return {
+      ...drawn,
+      exchangesThisTurn: next.exchangesThisTurn + 1,
+      log: [...drawn.log, { kind: 'exchange' as const, turn: next.turn, player: player.name, team: player.team, card, auto: true }],
+    };
+  }, state);
 }
 
 export function sequenceCount(state: GameState, team: TeamIndex): number {

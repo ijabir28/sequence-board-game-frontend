@@ -66,14 +66,33 @@ describe('RoomGameAdapter', () => {
     const a = adapter();
     await a.refresh();
     expect(a.getState().title).toBe('Friday');
-    expect(a.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false });
+    expect(a.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false, deadCards: 'indicator' });
     a.dispose();
 
     stubFetch(() => ({ status: 200, body: serverView() }));
     const old = adapter();
     await old.refresh();
-    expect(old.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false });
+    expect(old.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false, deadCards: 'indicator' });
     old.dispose();
+  });
+
+  it('marks dead cards only when the table marks them, and passes the exchanges left on', async () => {
+    // Both 6-Diamond cells are covered, so the 6-Diamond in the hand is dead.
+    const board = serverView().board.map((row) => row.map((cell) => ({ ...cell, team: cell.name === '6-Diamond' ? (1 as const) : null })));
+    stubFetch(() => ({ status: 200, body: serverView({ board, settings: { dead_cards: 'indicator' }, can_exchange: true, exchanges_left: 2 }) }));
+    const marked = adapter();
+    await marked.refresh();
+    expect(marked.getState().hand[0]).toEqual({ card: '6-Diamond', dead: true });
+    expect(marked.getState().exchangesLeft).toBe(2);
+    marked.dispose();
+
+    stubFetch(() => ({ status: 200, body: serverView({ board, settings: { dead_cards: 'manual' }, can_exchange: true, exchanges_left: null }) }));
+    const manual = adapter();
+    await manual.refresh();
+    expect(manual.getState().hand[0]).toEqual({ card: '6-Diamond', dead: false });
+    expect(manual.getState().settings.deadCards).toBe('manual');
+    expect(manual.getState().exchangesLeft).toBeNull();
+    manual.dispose();
   });
 
   it("maps a training game's hint, and ignores a hint outside training", async () => {

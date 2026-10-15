@@ -41,6 +41,7 @@ const EMPTY_VIEW: GameView = {
   viewer: null,
   hand: [],
   canExchange: false,
+  exchangesLeft: null,
   canPass: false,
   deckCount: null,
   sequences: [],
@@ -194,7 +195,7 @@ export class RoomGameAdapter implements GameAdapter {
       discard: [],
       current: 0,
       turn: server.turn,
-      exchangedThisTurn: false,
+      exchangesThisTurn: 0,
       sequences: server.sequences,
       winner: server.winner,
       log: [],
@@ -217,11 +218,11 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
   const teamIndexes = Array.from({ length: server.team_count }, (_, i) => i as TeamIndex);
   const hand = server.hand.filter(isCardName) as CardName[];
   const chips = server.board.map((row) => row.map((cell) => cell.team));
-  const { mode, highlights, history } = sanitizeSettings(server.settings);
+  const { mode, highlights, history, deadCards } = sanitizeSettings(server.settings);
   return {
     status: 'ready',
     title: server.name,
-    settings: { mode, highlights, history },
+    settings: { mode, highlights, history, deadCards },
     // The server only sends hints in training games; never show one elsewhere.
     hint: mode === 'training' ? toHint(server.hint) : null,
     turnStartedAt: server.winner === null && server.turn_started_at ? Date.parse(server.turn_started_at) + clockSkew : null,
@@ -241,8 +242,10 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     players,
     currentPlayerId: server.current_player,
     viewer,
-    hand: hand.map((card) => ({ card, dead: isDead(card, chips) })),
+    // With manual dead cards, players find them themselves: nothing is marked.
+    hand: hand.map((card) => ({ card, dead: deadCards === 'indicator' && isDead(card, chips) })),
     canExchange: server.can_exchange,
+    exchangesLeft: server.exchanges_left ?? null,
     canPass: server.can_pass,
     deckCount: server.deck_count,
     sequences: server.sequences,
