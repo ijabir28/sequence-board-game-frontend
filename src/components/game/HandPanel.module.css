@@ -182,3 +182,17 @@
     max-width: 13dvh;
   }
 }
+
+/* Large screens (same query as GameScreen's fixed rail): two rows of cards are always reserved, so a smaller hand
+   doesn't pull the footer and log up. The panel is the size container the card rows are measured against. */
+@media (min-aspect-ratio: 1/1) and (min-width: 1100px) and (min-height: 760px) {
+  .panel {
+    container-type: inline-size;
+  }
+
+  .cards {
+    align-content: flex-start;
+    /* Top padding, then two rows of 5:7 cards four to a row, with the gap between the rows. */
+    min-height: calc(var(--space-2) + 2 * ((100cqw - 3 * var(--space-2)) / 4 * 7 / 5) + var(--space-2));
+  }
+}

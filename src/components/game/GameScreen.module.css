@@ -513,3 +513,76 @@
   padding-top: var(--space-1);
   border-top: 1px solid var(--outline-subtle);
 }
+
+/* Only large screens fix the turn panel's height; elsewhere the slot is invisible to layout. */
+.turnSlot {
+  display: contents;
+}
+
+/*
+ * Large screens (wide, and tall enough to spare the room): every block in the right rail has a fixed height, sized
+ * for its largest content, so nothing moves when a turn passes, a timer warning appears, a name wraps or a hint
+ * shows. Above all, the hand stays in exactly the same place. Only the move log takes the height that is left.
+ */
+@media (min-aspect-ratio: 1/1) and (min-width: 1100px) and (min-height: 760px) {
+  .screen {
+    /* Fits the tallest turn panel: a two-line "whose turn" plus the paused notice (or the timer bar and the hurry
+       warning) and the turn order. */
+    --turn-slot-height: 13rem;
+  }
+
+  .turnSlot {
+    display: flex;
+    flex-direction: column;
+    height: var(--turn-slot-height);
+  }
+
+  /* The panel's box fills the slot, so its border doesn't jump either. */
+  .turnSlot > * {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* The last move is always one line; the log has the full text. */
+  .ticker {
+    flex: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rail > * {
+    flex: none;
+  }
+
+  .rail > .logPanel {
+    flex: 1;
+  }
+
+  /* The hand's footer: three lines for the prompt or hint and room for two rows of buttons. Either scrolls inside
+     its own box rather than growing. */
+  .actions {
+    --hint-line: 1.45;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .hint {
+    flex: none;
+    height: calc(3 * var(--hint-line) * var(--text-sm));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    line-height: var(--hint-line);
+  }
+
+  .actionButtons {
+    flex: none;
+    align-content: flex-start;
+    justify-content: flex-end;
+    height: calc(2 * 36px + var(--space-2));
+    overflow-y: auto;
+  }
+}
