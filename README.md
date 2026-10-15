@@ -24,10 +24,23 @@ sequence-board-game/
 
 The two repos only need to be siblings: the steps below and the docs refer to the backend as `../sequence-board-game`.
 
-1. **Start the backend first**, on port 3000:
+**With Docker** (only Docker needed), from the backend repo:
+
+```bash
+cd ../sequence-board-game
+docker compose up      # PostgreSQL, backend on :3000, this frontend on :5173
+```
+
+Then open http://localhost:5173. Code changes in either repo reload live.
+
+**Without Docker for the apps:**
+
+1. **Start the backend first**, on port 3000. It needs PostgreSQL; the simplest way is the backend's compose
+   database:
 
    ```bash
    cd ../sequence-board-game
+   docker compose up -d db   # or point DATABASE_URL at your own PostgreSQL
    npm install
    npm start            # listens on http://localhost:3000
    ```
