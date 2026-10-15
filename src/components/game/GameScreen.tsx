@@ -17,6 +17,7 @@ import { Dialog } from '../ui/Dialog';
 import { Drawer } from '../ui/Drawer';
 import { Icon } from '../ui/Icon';
 import { Tooltip } from '../ui/Tooltip';
+import { tipProps } from '../ui/TooltipLayer';
 import { HandPanel } from './HandPanel';
 import { MoveLog } from './MoveLog';
 import { Scoreboard } from './Scoreboard';
@@ -213,6 +214,14 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (passed && adapter.hotSeat) setRevealedFor(null);
   };
 
+  const exchangeTip = !exchangeable
+    ? manualDead
+      ? `Pick a card whose two cells are both taken, then exchange it for a new one. ${exchangesNote}`
+      : `Pick the dead card in your hand, then exchange it for a new one. ${exchangesNote}`
+    : manualDead
+      ? `If both of ${cardShort(selectedCard!)}'s cells are taken, swap it for a new card. ${exchangesNote}`
+      : `Discard it and draw a new card, before you play. ${exchangesNote}`;
+
   const barExchange = offerExchange ? (
     <Button
       size="sm"
@@ -220,6 +229,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       onClick={onExchange}
       busy={busy}
       disabled={!exchangeable}
+      tip={exchangeTip}
+      tipAlign="end"
     >
       <Icon name="swap" size={16} />
       Exchange dead
@@ -258,15 +269,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         {exchangeable && (
           // Wide screens only: phones and tablets have it in the hand strip's heading row (barExchange).
           <span className={styles.footerExchange}>
-            <Tooltip
-              text={
-                manualDead
-                  ? `If both of ${cardShort(selectedCard!)}'s cells are taken, swap it for a new card. ${exchangesNote}`
-                  : `Discard it and draw a new card, before you play. ${exchangesNote}`
-              }
-              side="top"
-              align="end"
-            >
+            <Tooltip text={exchangeTip} side="top" align="end">
               <Button size="sm" variant={manualDead ? 'secondary' : 'primary'} onClick={onExchange} busy={busy}>
                 <Icon name="swap" size={16} />
                 Exchange dead
@@ -298,12 +301,18 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       </p>
       <div className={styles.actionButtons}>
         {onNewGame && (
-          <Button variant="primary" onClick={onNewGame}>
+          <Button variant="primary" onClick={onNewGame} tip="Deal a new game with the same players and settings">
             Play again
           </Button>
         )}
-        <Button onClick={onExit}>Leave game</Button>
-        {onDashboard && <Button onClick={onDashboard}>Back to dashboard</Button>}
+        <Button onClick={onExit} tip="Close the finished game">
+          Leave game
+        </Button>
+        {onDashboard && (
+          <Button onClick={onDashboard} tip="Go back to the dashboard to start or join another game">
+            Back to dashboard
+          </Button>
+        )}
       </div>
     </div>
   ) : null;
@@ -323,6 +332,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             className={styles.drawerHandle}
             onClick={() => setMenuOpen(true)}
             aria-label="Game menu"
+            {...tipProps('Open the game menu: move log and leave game', 'bottom', 'end')}
             aria-expanded={menuOpen}
             aria-haspopup="dialog"
           >
@@ -345,6 +355,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
               <button
                 type="button"
                 className={styles.drawerItem}
+                {...tipProps('See every move made so far in this game')}
                 onClick={() => {
                   setMenuOpen(false);
                   setLogOpen(true);
@@ -361,6 +372,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             <button
               type="button"
               className={[styles.drawerItem, styles.drawerLeave].join(' ')}
+              {...tipProps(gameOver ? 'Close the finished game' : 'Leave this game. You are asked to confirm first.')}
               onClick={() => {
                 setMenuOpen(false);
                 if (gameOver) onExit();
@@ -477,11 +489,13 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             <Icon name="wifiOff" size={28} />
             <p>{view.error}</p>
             <div className={styles.actionButtons}>
-              <Button variant="primary" onClick={() => adapter.refresh()}>
+              <Button variant="primary" onClick={() => adapter.refresh()} tip="Try to load the game again">
                 <Icon name="refresh" size={16} />
                 Try again
               </Button>
-              <Button onClick={onExit}>Leave game</Button>
+              <Button onClick={onExit} tip="Give up loading and leave this game">
+                Leave game
+              </Button>
             </div>
           </div>
         )}
@@ -540,9 +554,19 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         onClose={() => setExitOpen(false)}
         actions={
           <>
-            <Button onClick={() => setExitOpen(false)}>Keep playing</Button>
-            {onDashboard && <Button onClick={onDashboard}>Back to dashboard</Button>}
-            <Button variant="danger" onClick={onExit}>
+            <Button onClick={() => setExitOpen(false)} tip="Close this and go back to the board">
+              Keep playing
+            </Button>
+            {onDashboard && (
+              <Button onClick={onDashboard} tip="Leave the game for the dashboard. It stays saved.">
+                Back to dashboard
+              </Button>
+            )}
+            <Button
+              variant="danger"
+              onClick={onExit}
+              tip={adapter.mode === 'local' ? 'Leave and end this game. It is not saved.' : 'Leave the game for the table page. It stays saved.'}
+            >
               Leave game
             </Button>
           </>

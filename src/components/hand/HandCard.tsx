@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cardImageUrl, cardKind, cardLabel, isRedSuit, parseCard, SUIT_SYMBOL, type CardName } from '../../engine/cards';
+import { tipProps } from '../ui/TooltipLayer';
 import styles from './HandCard.module.css';
 
 interface HandCardProps {
@@ -17,6 +18,11 @@ const JACK_HINT = {
   'one-eyed-jack': "one-eyed jack, remove an opponent's chip",
 } as const;
 
+const JACK_TIP = {
+  'two-eyed-jack': 'Wild: place a chip on any empty cell.',
+  'one-eyed-jack': "Remove an opponent's chip that isn't in a sequence.",
+} as const;
+
 // Remember failures for the whole session so a missing backend doesn't cause a burst of 404s.
 let imagesUnavailable = false;
 
@@ -25,6 +31,13 @@ export function HandCard({ card, index, selected, dead, disabled = false, onSele
   const kind = cardKind(card);
   const { rank, suit } = parseCard(card);
   const hint = kind === 'normal' ? (dead ? 'dead card, both cells taken' : null) : JACK_HINT[kind];
+  const tip = `${cardLabel(card)}. ${
+    kind !== 'normal'
+      ? JACK_TIP[kind]
+      : dead
+        ? 'Dead: both of its cells are taken. Pick it, then Exchange dead.'
+        : 'Pick it, then place a chip on one of its two cells.'
+  } Key ${index + 1}.`;
 
   return (
     <button
@@ -34,6 +47,7 @@ export function HandCard({ card, index, selected, dead, disabled = false, onSele
       aria-label={[`${cardLabel(card)}`, hint, `key ${index + 1}`].filter(Boolean).join(', ')}
       disabled={disabled}
       onClick={onSelect}
+      {...tipProps(tip, 'top')}
     >
       {imageFailed ? (
         <span className={[styles.face, isRedSuit(suit) && styles.red].filter(Boolean).join(' ')} aria-hidden="true">

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Icon } from './Icon';
+import { tipProps } from './TooltipLayer';
 import styles from './Dialog.module.css';
 
 interface DialogProps {
@@ -44,7 +45,7 @@ export function Dialog({ open, title, onClose, children, actions, size = 'normal
       <div className={styles.inner}>
         <header className={styles.header}>
           <h2 id={titleId}>{title}</h2>
-          <button type="button" className={styles.close} onClick={onClose} aria-label="Close">
+          <button type="button" className={styles.close} onClick={onClose} aria-label="Close" {...tipProps('Close (Esc)', 'bottom', 'end')}>
             <Icon name="close" />
           </button>
         </header>

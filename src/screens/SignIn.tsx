@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Chip } from '../components/Chip';
 import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
+import { tipProps } from '../components/ui/TooltipLayer';
 import styles from './Forms.module.css';
 import own from './SignIn.module.css';
 
@@ -93,19 +94,19 @@ export function SignIn() {
           </p>
         )}
 
-        <Button type="submit" variant="primary" busy={busy}>
+        <Button type="submit" variant="primary" busy={busy} tip="Sign in with your handle and password">
           Sign in
         </Button>
 
         <p className={styles.help}>
           New here?{' '}
-          <Link to="/signup" state={fromState}>
+          <Link to="/signup" state={fromState} {...tipProps('Make a new account with a handle and display name')}>
             Create an account
           </Link>
         </p>
 
         <p className={styles.divider}>or</p>
-        <Link to="/local" className={own.altLink}>
+        <Link to="/local" className={own.altLink} {...tipProps('Hot-seat game: everyone shares this screen. No account needed.')}>
           Play on this device without signing in
         </Link>
       </form>

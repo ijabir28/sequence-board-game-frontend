@@ -49,8 +49,10 @@ export function JoinTableDialog({ open, onClose }: { open: boolean; onClose: () 
       onClose={onClose}
       actions={
         <>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" form={formId} variant="primary" busy={joining}>
+          <Button onClick={onClose} tip="Close without joining">
+            Cancel
+          </Button>
+          <Button type="submit" form={formId} variant="primary" busy={joining} tip="Look up the table and take you to it, to pick a seat">
             Find table
           </Button>
         </>

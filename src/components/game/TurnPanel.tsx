@@ -5,6 +5,7 @@ import { formatElapsed, useNow } from '../../game/turnClock';
 import type { PlayerView } from '../../game/types';
 import { Chip } from '../Chip';
 import { Icon } from '../ui/Icon';
+import { tipProps } from '../ui/TooltipLayer';
 import styles from './TurnPanel.module.css';
 
 interface TurnPanelProps {
@@ -116,7 +117,14 @@ export function TurnPanel({
   if (collapsible && !collapsible.open) {
     return (
       <section className={[className, styles.folded].join(' ')} style={teamStyle} aria-label="Turn">
-        <button type="button" className={styles.summary} aria-expanded={false} aria-controls={detailsId} onClick={collapsible.onToggle}>
+        <button
+          type="button"
+          className={styles.summary}
+          aria-expanded={false}
+          aria-controls={detailsId}
+          onClick={collapsible.onToggle}
+          {...tipProps('Show the turn details, turn order and scores')}
+        >
           {team !== null && (
             <span className={styles.summaryChip} aria-hidden="true">
               <Chip team={team} />
@@ -176,7 +184,14 @@ export function TurnPanel({
         {timer}
         {pausedTimer}
         {collapsible && (
-          <button type="button" className={styles.fold} aria-expanded={true} aria-controls={detailsId} onClick={collapsible.onToggle}>
+          <button
+            type="button"
+            className={styles.fold}
+            aria-expanded={true}
+            aria-controls={detailsId}
+            onClick={collapsible.onToggle}
+            {...tipProps('Fold the turn details back to one line', 'bottom', 'end')}
+          >
             <Icon name="chevronUp" size={18} />
             <span className="visually-hidden">Hide turn details and scores</span>
           </button>

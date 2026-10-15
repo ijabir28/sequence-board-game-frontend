@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../ui/Icon';
+import { tipProps } from '../ui/TooltipLayer';
 import { DEFAULT_DURATION_MS, toastReducer, type Toast, type ToastAction, type ToastTone } from './toastQueue';
 import styles from './Toaster.module.css';
 
@@ -123,6 +124,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
         <button
           type="button"
           className={styles.action}
+          {...tipProps(`${toast.action.label}, and close this message`, 'top')}
           onClick={() => {
             toast.action!.onClick();
             onDismiss();
@@ -131,7 +133,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
           {toast.action.label}
         </button>
       )}
-      <button type="button" className={styles.close} onClick={onDismiss} aria-label="Dismiss">
+      <button type="button" className={styles.close} onClick={onDismiss} aria-label="Dismiss" {...tipProps('Dismiss this message', 'top', 'end')}>
         <Icon name="close" size={16} />
       </button>
     </div>

@@ -12,6 +12,7 @@ import { RoomOptions } from '../components/RoomOptions';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { Tooltip } from '../components/ui/Tooltip';
+import { tipProps } from '../components/ui/TooltipLayer';
 import { isSupportedTable, sequencesToWin } from '../engine/setup';
 import { describeShuffle } from '../game/teamNotice';
 import { TEAM_STYLES } from '../game/teams';
@@ -149,7 +150,7 @@ export function RoomPage() {
       <AppHeader />
       <div className={styles.page}>
         <nav className={own.back} aria-label="Back">
-          <Link to="/lobby" className={own.backLink}>
+          <Link to="/lobby" className={own.backLink} {...tipProps('Go back to the dashboard. Your seat here is kept.', 'bottom', 'start')}>
             <Icon name="chevronLeft" size={18} />
             Back to dashboard
           </Link>
@@ -164,7 +165,7 @@ export function RoomPage() {
           <div className={[styles.card, own.state].join(' ')}>
             <h1>Table not found</h1>
             <p>There is no table with code {id}. Check that the code is typed correctly.</p>
-            <Link to="/lobby" className={own.linkButton}>
+            <Link to="/lobby" className={own.linkButton} {...tipProps('Go back to the dashboard to try another code')}>
               Back to the lobby
             </Link>
           </div>
@@ -174,7 +175,7 @@ export function RoomPage() {
             <Icon name="wifiOff" size={28} />
             <h1>Can't load this table</h1>
             <p>{state.message}</p>
-            <Button variant="primary" onClick={() => reload()}>
+            <Button variant="primary" onClick={() => reload()} tip="Load this table again">
               <Icon name="refresh" size={16} />
               Try again
             </Button>
@@ -340,6 +341,15 @@ function RoomView({
                 busy={joining === team.handle}
                 onClick={() => onJoin(team)}
                 aria-label={teamFull ? `Team ${name} is full` : seated ? `Join Team ${name} (you already have a seat)` : `Join Team ${name}`}
+                tip={
+                  room.gameStarted
+                    ? 'The game has started, so seats are fixed'
+                    : teamFull
+                      ? `Every seat on Team ${name} is taken`
+                      : seated
+                        ? 'You already have a seat. Stand up first to change teams.'
+                        : `Take an open seat on Team ${name}`
+                }
               >
                 {teamFull ? 'Team full' : `Join Team ${name}`}
               </Button>
@@ -360,7 +370,7 @@ function RoomView({
         {room.gameStarted ? (
           <>
             <p className={styles.help}>{seated ? 'The game has started. Your hand is waiting.' : 'The game has started. You can watch it.'}</p>
-            <Button variant="primary" onClick={onOpenGame}>
+            <Button variant="primary" onClick={onOpenGame} tip={seated ? 'Go to the board and your hand' : 'Watch the board. You can’t see anyone’s hand.'}>
               {seated ? 'Open the game' : 'Watch the game'}
             </Button>
           </>
@@ -376,7 +386,19 @@ function RoomView({
                     : `Every seat is taken. Waiting for ${hostName ?? 'the host'} to start the game.`}
             </p>
             {host ? (
-              <Button variant="primary" disabled={!canStart || starting} busy={starting} onClick={onStart}>
+              <Button
+                variant="primary"
+                disabled={!canStart || starting}
+                busy={starting}
+                onClick={onStart}
+                tip={
+                  !supported
+                    ? "This table's size can't be dealt for, so it can't start"
+                    : !full
+                      ? 'Every seat must be taken before the game can start'
+                      : 'Deal the cards and take everyone to the board'
+                }
+              >
                 Start the game
               </Button>
             ) : (
@@ -408,7 +430,7 @@ function RenameTable({ name, saving, onSave }: { name: string; saving: boolean; 
         <span className={styles.label}>Table name</span>
         <input className={styles.input} value={draft} maxLength={40} autoComplete="off" onChange={(e) => setDraft(e.target.value)} />
       </label>
-      <Button type="submit" size="sm" disabled={!changed} busy={saving && changed}>
+      <Button type="submit" size="sm" disabled={!changed} busy={saving && changed} tip={changed ? 'Save the new table name' : 'Type a new name first'}>
         Rename
       </Button>
     </form>

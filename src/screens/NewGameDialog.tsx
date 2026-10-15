@@ -7,7 +7,8 @@ import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
 import { Icon } from '../components/ui/Icon';
-import { HAND_SIZE_BY_PLAYER_COUNT, playersPerTeamOptions, type TeamCount } from '../engine/setup';
+import { HAND_SIZE_BY_PLAYER_COUNT, playersPerTeamOptions, sequencesToWin, type TeamCount } from '../engine/setup';
+import { tipProps } from '../components/ui/TooltipLayer';
 import styles from './Forms.module.css';
 
 /** "Start a new game": the host names a table, picks teams and settings, and opens it. */
@@ -46,8 +47,10 @@ export function NewGameDialog({ open, onClose }: { open: boolean; onClose: () =>
       size="wide"
       actions={
         <>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" form={formId} variant="primary" busy={creating}>
+          <Button onClick={onClose} tip="Close without opening a table">
+            Cancel
+          </Button>
+          <Button type="submit" form={formId} variant="primary" busy={creating} tip="Open the table and take you to it, ready to share its code">
             <Icon name="plus" size={18} />
             Create table
           </Button>
@@ -76,7 +79,7 @@ export function NewGameDialog({ open, onClose }: { open: boolean; onClose: () =>
           <legend>Teams</legend>
           <div className={styles.segmented}>
             {([2, 3] as const).map((n) => (
-              <label key={n} className={styles.segment}>
+              <label key={n} className={styles.segment} {...tipProps(`Play with ${n} teams, which need ${sequencesToWin(n)} sequence${sequencesToWin(n) > 1 ? 's' : ''} to win`, 'top')}>
                 <input
                   type="radio"
                   name="teams"
@@ -95,7 +98,7 @@ export function NewGameDialog({ open, onClose }: { open: boolean; onClose: () =>
           <legend>Players per team</legend>
           <div className={styles.segmented}>
             {playersPerTeamOptions(teamCount).map((n) => (
-              <label key={n} className={styles.segment}>
+              <label key={n} className={styles.segment} {...tipProps(`${n} player${n === 1 ? '' : 's'} on each team`, 'top')}>
                 <input type="radio" name="perTeam" checked={perTeam === n} onChange={() => setPerTeam(n)} />
                 <span>{n}</span>
               </label>

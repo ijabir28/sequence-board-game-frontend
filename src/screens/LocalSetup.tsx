@@ -4,6 +4,7 @@ import { DEFAULT_ROOM_SETTINGS, type RoomSettings } from '../api/rooms';
 import { Chip } from '../components/Chip';
 import { RoomOptions } from '../components/RoomOptions';
 import { Button } from '../components/ui/Button';
+import { tipProps } from '../components/ui/TooltipLayer';
 import { TEAM_STYLES } from '../game/teams';
 import styles from './Forms.module.css';
 
@@ -54,7 +55,7 @@ export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
           <legend>Teams</legend>
           <div className={styles.segmented}>
             {([2, 3] as const).map((count) => (
-              <label key={count} className={styles.segment}>
+              <label key={count} className={styles.segment} {...tipProps(`Play with ${count} teams, which need ${sequencesToWin(count)} sequence${sequencesToWin(count) > 1 ? 's' : ''} to win`, 'top')}>
                 <input type="radio" name="teams" value={count} checked={teamCount === count} onChange={() => changeTeams(count)} />
                 <span>{count} teams</span>
               </label>
@@ -69,7 +70,7 @@ export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
           <legend>Players per team</legend>
           <div className={styles.segmented}>
             {perTeamOptions.map((n) => (
-              <label key={n} className={styles.segment}>
+              <label key={n} className={styles.segment} {...tipProps(`${n} player${n === 1 ? '' : 's'} on each team`, 'top')}>
                 <input type="radio" name="perTeam" value={n} checked={playersPerTeam === n} onChange={() => setPlayersPerTeam(n)} />
                 <span>{n}</span>
               </label>
@@ -85,7 +86,7 @@ export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
           <ol className={styles.seats}>
             {seats.map((team, i) => (
               <li key={i} className={styles.seat}>
-                <span className={styles.seatChip} title={`Team ${TEAM_STYLES[team].name}`}>
+                <span className={styles.seatChip} {...tipProps(`Seat ${i + 1} plays for Team ${TEAM_STYLES[team].name}`, 'top', 'start')}>
                   <Chip team={team} />
                 </span>
                 <label className={styles.seatLabel}>
@@ -114,7 +115,7 @@ export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
 
         <div className={styles.footer}>
           {backAction}
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" tip="Deal the cards and start playing on this device">
             Start game
           </Button>
         </div>
