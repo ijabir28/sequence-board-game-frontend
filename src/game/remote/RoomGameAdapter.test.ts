@@ -164,4 +164,41 @@ describe('RoomGameAdapter', () => {
     expect(a.getState().notice).toMatch(/watching/);
     a.dispose();
   });
+
+  it('shows a paused turn and who is away', async () => {
+    stubFetch(() => ({
+      status: 200,
+      body: serverView({ current_player: 'sakib', turn_deadline: null, turn_paused: true, turn_time_left_ms: 42_000, away: ['sakib'] }),
+    }));
+    const a = adapter();
+    await a.refresh();
+    expect(a.getState()).toMatchObject({ turnPaused: true, turnTimeLeft: 42_000, turnDeadline: null, away: ['sakib'] });
+    a.dispose();
+  });
+
+  it('says the viewer is at the table while the game is open, and that they left when it closes', async () => {
+    stubFetch(() => ({ status: 200, body: serverView({ presence_token: 'tok' }) }));
+    const leave = vi.fn();
+    const announcePresence = vi.fn(() => leave);
+    const a = new RoomGameAdapter({ roomId: '42', subscribeUpdates: () => () => {}, pollIntervalMs: 60_000, announcePresence });
+    const unsubscribe = a.subscribe(() => {});
+    await a.refresh();
+    await a.refresh();
+    expect(announcePresence).toHaveBeenCalledTimes(1);
+    expect(announcePresence).toHaveBeenCalledWith('jabir', 'tok');
+    unsubscribe();
+    expect(leave).toHaveBeenCalledTimes(1);
+    a.dispose();
+  });
+
+  it('never announces a spectator', async () => {
+    stubFetch(() => ({ status: 200, body: serverView({ viewer: null, hand: [], presence_token: null }) }));
+    const announcePresence = vi.fn(() => () => {});
+    const a = new RoomGameAdapter({ roomId: '42', subscribeUpdates: () => () => {}, pollIntervalMs: 60_000, announcePresence });
+    const unsubscribe = a.subscribe(() => {});
+    await a.refresh();
+    expect(announcePresence).not.toHaveBeenCalled();
+    unsubscribe();
+    a.dispose();
+  });
 });

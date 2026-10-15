@@ -9,7 +9,7 @@ import {
   type RoomGameView,
 } from '../../api/roomGame';
 import { sanitizeSettings } from '../../api/rooms';
-import { onGameUpdated } from '../../api/socket';
+import { announcePresence, onGameUpdated } from '../../api/socket';
 import { positionsOf, type Pos } from '../../engine/board';
 import { BLANK, cardKind, isCardName, type BoardCardName, type CardName } from '../../engine/cards';
 import { legalTargets, type GameState } from '../../engine/game';
@@ -24,6 +24,11 @@ export interface RoomGameOptions {
   subscribeUpdates?: (listener: () => void) => () => void;
   /** Safety-net poll in case a socket event is missed. */
   pollIntervalMs?: number;
+  /**
+   * Tells the server the viewer is at the table while this game is open; returns a function that says they left.
+   * Defaults to the socket's `join_game` / `leave_game`.
+   */
+  announcePresence?: (handle: string, token: string) => () => void;
 }
 
 const EMPTY_VIEW: GameView = {
@@ -46,6 +51,9 @@ const EMPTY_VIEW: GameView = {
   hint: null,
   turnStartedAt: null,
   turnDeadline: null,
+  turnPaused: false,
+  turnTimeLeft: null,
+  away: [],
 };
 
 /** A table's game, run by the server. Each player sees only their own hand. */
@@ -61,6 +69,8 @@ export class RoomGameAdapter implements GameAdapter {
   private inFlight: Promise<void> | null = null;
   /** This device's clock minus the server's, measured once so the turn start stays put between refreshes. */
   private clockSkew: number | null = null;
+  /** The token we announced presence with, and how to take it back. */
+  private presence: { token: string; leave: () => void } | null = null;
 
   constructor(private readonly options: RoomGameOptions) {}
 
@@ -118,6 +128,8 @@ export class RoomGameAdapter implements GameAdapter {
   }
 
   private stop() {
+    this.presence?.leave();
+    this.presence = null;
     this.unsubscribeUpdates?.();
     this.unsubscribeUpdates = null;
     clearInterval(this.timer);
@@ -155,7 +167,17 @@ export class RoomGameAdapter implements GameAdapter {
       const serverNow = Date.parse(server.server_time);
       if (!Number.isNaN(serverNow)) this.clockSkew = Date.now() - serverNow;
     }
+    this.announce(server);
     this.publish(toView(server, this.clockSkew ?? 0));
+  }
+
+  /** Seated players are "at the table" while the game is open, so their turn doesn't pause. */
+  private announce(server: RoomGameView) {
+    const token = server.viewer && server.presence_token;
+    if (!token || this.presence?.token === token || this.listeners.size === 0 || this.disposed) return;
+    this.presence?.leave();
+    const announce = this.options.announcePresence ?? ((handle, t) => announcePresence(this.options.roomId, handle, t));
+    this.presence = { token, leave: announce(server.viewer!, token) };
   }
 
   /** The engine only needs the board, sequences and the viewer's hand to list legal cells. */
@@ -204,6 +226,9 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     hint: mode === 'training' ? toHint(server.hint) : null,
     turnStartedAt: server.winner === null && server.turn_started_at ? Date.parse(server.turn_started_at) + clockSkew : null,
     turnDeadline: server.winner === null && server.turn_deadline ? Date.parse(server.turn_deadline) + clockSkew : null,
+    turnPaused: server.winner === null && server.turn_paused === true,
+    turnTimeLeft: server.winner === null && server.turn_paused === true ? (server.turn_time_left_ms ?? null) : null,
+    away: server.away ?? [],
     notice: viewer ? undefined : "You don't have a seat in this game, so you're watching.",
     board: server.board.map((row, r) =>
       row.map((cell, c) => {

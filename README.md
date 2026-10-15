@@ -159,6 +159,11 @@ invariants.
   move log says so. When it becomes your turn it flashes,
   phones buzz, and the tab title starts with "● Your turn". Table games take the turn's start time from the server
   (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
+- **Nobody plays for a player who left.** While a table's game is open, the page tells the server the player is at
+  the table (`announcePresence` in `src/api/socket.ts`, sent again after every reconnect). If the current player
+  closes the game, their turn **pauses**: the timer stops, nothing is played for them, and everyone sees
+  "*Name* is not at the table. The game is paused until they come back." with a "Paused" clock showing the time they
+  have left. Players who are away are tagged "away" in the turn order. The turn resumes when they come back.
 - **Your hand, your order.** Drag a card to a new place with a finger, mouse or pen (the other cards slide out of the
   way; a tap still selects), or move the focused card with Alt+←/→ (`src/components/game/useCardDrag.ts`). Only your view changes (`src/game/handOrder.ts`): moves still use the
   real hand index, and a new card arrives where the played one was. Table games remember the order per table on this

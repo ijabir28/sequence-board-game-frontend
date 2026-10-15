@@ -77,8 +77,14 @@ export interface GameView {
   hint: Hint | null;
   /** When the current turn began, in this device's clock (ms since epoch); null when unknown. */
   turnStartedAt: number | null;
-  /** When the current turn's timer runs out, in this device's clock; null when there is no timer. */
+  /** When the current turn's timer runs out, in this device's clock; null when there is no timer or it is paused. */
   turnDeadline: number | null;
+  /** The current player has left the table, so the game waits on their turn (table games). */
+  turnPaused: boolean;
+  /** While paused: how long the current player will have when they're back (ms). */
+  turnTimeLeft: number | null;
+  /** Ids of the players who aren't at the table right now. */
+  away: string[];
   /** The table's name, when the game belongs to one. */
   title?: string;
 }

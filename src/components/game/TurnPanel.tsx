@@ -19,6 +19,12 @@ interface TurnPanelProps {
   turnStartedAt: number | null;
   /** When the turn's timer runs out; null when the game has no timer. */
   turnDeadline: number | null;
+  /** The current player left the table, so the game waits on their turn. */
+  turnPaused?: boolean;
+  /** While paused: the time the current player will have when they're back (ms). */
+  turnTimeLeft?: number | null;
+  /** Ids of the players who aren't at the table. */
+  away?: string[];
   /**
    * Phones: the panel folds into one line (your countdown on your turn, else whose turn it is) and expands on
    * request, showing `children` (the scoreboard) too.
@@ -36,14 +42,29 @@ const URGENT_MS = 10_000;
  * Whose turn it is, in its own box so it can't be missed: the player and team, the timer on your own turn, and the turn
  * order with the current player marked. When it becomes your turn, the box flashes and the tab title says so.
  */
-export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, turn, turnStartedAt, turnDeadline, collapsible }: TurnPanelProps) {
+export function TurnPanel({
+  players,
+  currentPlayerId,
+  viewer,
+  hotSeat,
+  winner,
+  turn,
+  turnStartedAt,
+  turnDeadline,
+  turnPaused = false,
+  turnTimeLeft = null,
+  away = [],
+  collapsible,
+}: TurnPanelProps) {
   const detailsId = useId();
   const current = players.find((p) => p.id === currentPlayerId) ?? null;
   const yours = !hotSeat && current !== null && viewer !== null && current.id === viewer.id;
   // The clock is for the player who has to beat it: only on your own turn (in hot-seat play, the person at the
   // device always has the turn). Everyone else just sees whose turn it is.
   const ownTurn = yours || (hotSeat && current !== null);
-  const running = winner === null && current !== null && turnStartedAt !== null && ownTurn;
+  // The current player left the table: everyone sees that the game waits for them, and nobody's clock runs.
+  const paused = winner === null && current !== null && turnPaused;
+  const running = winner === null && current !== null && turnStartedAt !== null && ownTurn && !paused;
   const now = useNow(running, 500);
   const alerting = useTurnAlert(yours, current?.id ?? null, hotSeat);
 
@@ -55,7 +76,7 @@ export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, t
   const total = counting ? Math.max(1, turnDeadline! - turnStartedAt!) : 1;
   const urgency = !counting ? (elapsed >= SLOW_TURN_MS ? 'warn' : null) : left <= URGENT_MS ? 'urgent' : left <= WARN_MS ? 'warn' : null;
 
-  const className = [styles.panel, yours && styles.yours, alerting && styles.alert, yours && urgency === 'urgent' && styles.hurry]
+  const className = [styles.panel, yours && styles.yours, paused && styles.paused, alerting && styles.alert, yours && urgency === 'urgent' && styles.hurry]
     .filter(Boolean)
     .join(' ');
   const teamStyle = style ? ({ '--turn-team': style.color, '--turn-glow': style.glow } as React.CSSProperties) : undefined;
@@ -72,6 +93,24 @@ export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, t
       {counting ? (left > 0 ? formatElapsed(left + 999) : "Time's up") : formatElapsed(elapsed)}
     </span>
   );
+  const pausedTimer = paused && (
+    <span className={[styles.timer, styles.pausedTimer].join(' ')} role="timer" aria-label="Turn paused">
+      <Icon name="pause" size={14} />
+      Paused{turnTimeLeft !== null && ` · ${formatElapsed(turnTimeLeft + 999)}`}
+    </span>
+  );
+  // Your own page announces you, so on your own turn a pause only lasts until it has reconnected.
+  const pausedText = !paused
+    ? null
+    : yours
+      ? 'Reconnecting you to the table…'
+      : `${current!.name} is not at the table. The game is paused until they come back.`;
+  const pausedNotice = pausedText && (
+    <p className={styles.awayNotice} role="status">
+      <Icon name="wifiOff" size={16} />
+      <span>{pausedText}</span>
+    </p>
+  );
 
   // Folded (phones): one line. Your turn shows your countdown; otherwise just whose turn it is.
   if (collapsible && !collapsible.open) {
@@ -84,12 +123,22 @@ export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, t
             </span>
           )}
           <span className={styles.summaryText}>
-            {winner !== null ? `${teamName(winner)} wins` : current ? (yours ? 'Your turn' : `${current.name}'s turn`) : 'Waiting for the game to start'}
+            {winner !== null
+              ? `${teamName(winner)} wins`
+              : current
+                ? paused && !yours
+                  ? `${current.name} is away`
+                  : yours
+                    ? 'Your turn'
+                    : `${current.name}'s turn`
+                : 'Waiting for the game to start'}
           </span>
           {timer}
+          {pausedTimer}
           <Icon name="chevronDown" size={18} />
           <span className="visually-hidden">Show turn details and scores</span>
         </button>
+        {pausedNotice && <div className={styles.foldedNotice}>{pausedNotice}</div>}
       </section>
     );
   }
@@ -125,6 +174,7 @@ export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, t
           </p>
         </div>
         {timer}
+        {pausedTimer}
         {collapsible && (
           <button type="button" className={styles.fold} aria-expanded={true} aria-controls={detailsId} onClick={collapsible.onToggle}>
             <Icon name="chevronUp" size={18} />
@@ -140,6 +190,7 @@ export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, t
           />
         </div>
       )}
+      {pausedNotice}
       {yours && counting && left <= URGENT_MS && (
         <p className={styles.warning} role="alert">
           {left > 0 ? 'Hurry: when time runs out, a random card is played for you.' : 'Time is up: a random card is being played for you.'}
@@ -162,6 +213,7 @@ export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, t
                   {p.name}
                   {!hotSeat && viewer?.id === p.id && <span className={styles.you}> (you)</span>}
                 </span>
+                {away.includes(p.id) && <span className={styles.awayTag}>away</span>}
               </li>
             );
           })}

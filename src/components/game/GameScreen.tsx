@@ -277,6 +277,9 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           turn={view.turn}
           turnStartedAt={view.turnStartedAt}
           turnDeadline={view.turnDeadline}
+          turnPaused={view.turnPaused}
+          turnTimeLeft={view.turnTimeLeft}
+          away={view.away}
           collapsible={
             phone
               ? {
