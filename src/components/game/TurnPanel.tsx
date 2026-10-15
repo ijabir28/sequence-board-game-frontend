@@ -211,7 +211,7 @@ export function TurnPanel({
                 </span>
                 <span className={styles.playerName}>
                   {p.name}
-                  {!hotSeat && viewer?.id === p.id && <span className={styles.you}> (you)</span>}
+                  {!hotSeat && viewer?.id === p.id && <span className={styles.you}> (You)</span>}
                 </span>
                 {away.includes(p.id) && <span className={styles.awayTag}>away</span>}
               </li>

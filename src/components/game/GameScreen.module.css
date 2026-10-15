@@ -541,9 +541,9 @@
  */
 @media (min-aspect-ratio: 1/1) and (min-width: 1100px) and (min-height: 760px) {
   .screen {
-    /* Fits the tallest turn panel: a two-line "whose turn" plus the paused notice (or the timer bar and the hurry
-       warning) and the turn order. */
-    --turn-slot-height: 13rem;
+    /* Fits the tallest turn panel: a two-line "whose turn" and the team line under it, plus the paused notice (or
+       the timer bar and the hurry warning) and the turn order. */
+    --turn-slot-height: 14rem;
   }
 
   .turnSlot {
