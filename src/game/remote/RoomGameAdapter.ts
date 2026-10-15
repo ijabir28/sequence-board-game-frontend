@@ -72,6 +72,8 @@ export class RoomGameAdapter implements GameAdapter {
   private clockSkew: number | null = null;
   /** The token we announced presence with, and how to take it back. */
   private presence: { token: string; leave: () => void } | null = null;
+  /** The viewer has a menu or the leave dialog open: they count as away from the table. */
+  private steppedAway = false;
 
   constructor(private readonly options: RoomGameOptions) {}
 
@@ -104,6 +106,17 @@ export class RoomGameAdapter implements GameAdapter {
 
   pass(): Promise<ActionResult> {
     return this.act(() => passRoomTurn(this.options.roomId));
+  }
+
+  stepAway(away: boolean): void {
+    if (away === this.steppedAway) return;
+    this.steppedAway = away;
+    if (away) {
+      this.presence?.leave();
+      this.presence = null;
+    } else if (this.server) {
+      this.announce(this.server);
+    }
   }
 
   /** Re-reads the game. Concurrent calls share one request. */
@@ -175,7 +188,7 @@ export class RoomGameAdapter implements GameAdapter {
   /** Seated players are "at the table" while the game is open, so their turn doesn't pause. */
   private announce(server: RoomGameView) {
     const token = server.viewer && server.presence_token;
-    if (!token || this.presence?.token === token || this.listeners.size === 0 || this.disposed) return;
+    if (!token || this.steppedAway || this.presence?.token === token || this.listeners.size === 0 || this.disposed) return;
     this.presence?.leave();
     const announce = this.options.announcePresence ?? ((handle, t) => announcePresence(this.options.roomId, handle, t));
     this.presence = { token, leave: announce(server.viewer!, token) };

@@ -220,4 +220,25 @@ describe('RoomGameAdapter', () => {
     unsubscribe();
     a.dispose();
   });
+
+  it('counts the viewer as away while they step away, and back when they return', async () => {
+    stubFetch(() => ({ status: 200, body: serverView({ presence_token: 'tok' }) }));
+    const leave = vi.fn();
+    const announcePresence = vi.fn(() => leave);
+    const a = new RoomGameAdapter({ roomId: '42', subscribeUpdates: () => () => {}, pollIntervalMs: 60_000, announcePresence });
+    const unsubscribe = a.subscribe(() => {});
+    await a.refresh();
+    expect(announcePresence).toHaveBeenCalledTimes(1);
+
+    a.stepAway(true);
+    expect(leave).toHaveBeenCalledTimes(1);
+    // A refresh while away must not announce the viewer again.
+    await a.refresh();
+    expect(announcePresence).toHaveBeenCalledTimes(1);
+
+    a.stepAway(false);
+    expect(announcePresence).toHaveBeenCalledTimes(2);
+    unsubscribe();
+    a.dispose();
+  });
 });

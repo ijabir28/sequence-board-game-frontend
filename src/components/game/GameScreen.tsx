@@ -57,6 +57,12 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const [logOpen, setLogOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Opening the menu drawer or the leave dialog counts as stepping away from the table, as if the player had already
+  // left: their turn pauses until they close it.
+  const steppedAway = menuOpen || exitOpen;
+  useEffect(() => {
+    adapter.stepAway?.(steppedAway);
+  }, [adapter, steppedAway]);
   const [busy, setBusy] = useState(false);
   // Phones: the turn panel and the scoreboard fold into one line until the player opens them.
   const phone = useMediaQuery('(max-width: 600px)');
