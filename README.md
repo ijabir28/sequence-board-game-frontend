@@ -151,7 +151,10 @@ invariants.
 - **The scoreboard is centred over the board.** The game header uses the same columns as the screen (board | rail on
   laptops), so the scoreboard sits over the board's centre at every size.
 - **Whose turn it is is never in doubt.** A Turn panel (`src/components/game/TurnPanel.tsx`) shows the player and
-  team in the team's colour, a timer for the current turn, and the turn order. When it becomes your turn it flashes,
+  team in the team's colour, a countdown for the current turn (the table's turn timer, 90 s by default), and the turn
+  order. The countdown turns amber at 20 s and red at 10 s. When it runs out, a random playable card from the
+  player's hand is played for them: by the server for tables, by `LocalGameAdapter` for hot-seat games, and the
+  move log says so. When it becomes your turn it flashes,
   phones buzz, and the tab title starts with "● Your turn". Table games take the turn's start time from the server
   (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
 - **Your hand, your order.** Sort (by suit and rank, jacks last), Shuffle, drag a card with a mouse or pen, or select
