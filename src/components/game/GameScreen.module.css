@@ -87,36 +87,13 @@
   grid-area: status;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   min-width: 0;
   padding: var(--space-2) var(--gutter) 0;
 }
 
 .status[hidden] {
   display: none;
-}
-
-.turn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-family: var(--font-display);
-  font-size: var(--text-md);
-}
-
-.turn strong {
-  font-weight: 700;
-}
-
-.turnChip {
-  width: 20px;
-  height: 20px;
-  flex: none;
-}
-
-.turnTeam {
-  color: var(--on-surface-muted);
-  font-size: var(--text-sm);
 }
 
 .line {

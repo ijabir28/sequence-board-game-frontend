@@ -15,6 +15,7 @@ import { Icon } from '../ui/Icon';
 import { HandPanel } from './HandPanel';
 import { MoveLog } from './MoveLog';
 import { Scoreboard } from './Scoreboard';
+import { TurnPanel } from './TurnPanel';
 import styles from './GameScreen.module.css';
 
 interface GameScreenProps {
@@ -241,11 +242,14 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra,
       </header>
 
       <div className={styles.status} hidden={view.status !== 'ready'}>
-        <TurnIndicator
-          name={gameOver ? null : currentPlayer?.name ?? null}
-          viewerName={viewer?.name ?? null}
-          team={gameOver ? view.winner : activeTeam}
-          winner={gameOver}
+        <TurnPanel
+          players={view.players}
+          currentPlayerId={view.currentPlayerId}
+          viewer={viewer}
+          hotSeat={adapter.hotSeat}
+          winner={view.winner}
+          turn={view.turn}
+          turnStartedAt={view.turnStartedAt}
         />
         {/* Feedback takes the ticker's line, so messages never push the board around. */}
         {feedback ? (
@@ -338,7 +342,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra,
 
       <div className="visually-hidden" aria-live="polite">
         {lastEntry ? describeLog(lastEntry) : ''}
-        {!gameOver && currentPlayer ? `. ${currentPlayer.name}'s turn.` : ''}
+        {!gameOver && currentPlayer
+          ? !adapter.hotSeat && currentPlayer.id === viewer?.id
+            ? '. Your turn.'
+            : `. ${currentPlayer.name}'s turn.`
+          : ''}
       </div>
 
       <Dialog open={logOpen && history} title="Move log" onClose={() => setLogOpen(false)}>
@@ -361,37 +369,6 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra,
         <p>{adapter.mode === 'local' ? 'This game is only stored on this device, so leaving ends it.' : 'You can come back to the server game later.'}</p>
       </Dialog>
     </div>
-  );
-}
-
-function TurnIndicator({ name, viewerName, team, winner }: { name: string | null; viewerName: string | null; team: number | null; winner: boolean }) {
-  if (team === null) return <p className={styles.turn}>Waiting for the game to start</p>;
-  const t = team as 0 | 1 | 2;
-  return (
-    <p className={styles.turn}>
-      <span className={styles.turnChip}>
-        <Chip team={t} />
-      </span>
-      {winner ? (
-        <span>
-          <strong>{teamName(t)}</strong> wins
-        </span>
-      ) : (
-        <span>
-          {name ? (
-            <>
-              <strong>{name}</strong>'s turn
-            </>
-          ) : (
-            // The source has no turn order (server game): say who is playing instead.
-            <>
-              Playing as <strong>{viewerName ?? 'you'}</strong>
-            </>
-          )}
-          <span className={styles.turnTeam}> {teamName(t)}</span>
-        </span>
-      )}
-    </p>
   );
 }
 
