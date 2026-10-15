@@ -25,15 +25,28 @@ export interface RoomSettings {
   highlights: boolean;
   /** A dead card is exchanged automatically when its owner's turn starts. */
   autoDrawDead: boolean;
+  /** Seconds each player has for a turn. */
+  turnSeconds: number;
 }
 
-export const DEFAULT_ROOM_SETTINGS: RoomSettings = { mode: 'standard', history: true, highlights: true, autoDrawDead: false };
+/** Turn timer choices offered to hosts (the backend's TURN_TIMER_PRESETS); any whole number in range works too. */
+export const TURN_TIMER_PRESETS = [30, 60, 90, 120, 180] as const;
+export const TURN_SECONDS_MIN = 15;
+export const TURN_SECONDS_MAX = 600;
+
+/** Highlights and history are off unless the host turns them on; 90 seconds a turn. Matches the backend. */
+export const DEFAULT_ROOM_SETTINGS: RoomSettings = { mode: 'standard', history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 };
+
+export function isValidTurnSeconds(seconds: number): boolean {
+  return Number.isInteger(seconds) && seconds >= TURN_SECONDS_MIN && seconds <= TURN_SECONDS_MAX;
+}
 
 export interface RawRoomSettings {
   mode?: string;
   history?: boolean;
   highlights?: boolean;
   auto_draw_dead?: boolean;
+  turn_seconds?: number;
 }
 
 /** Missing settings (an older backend) fall back to the defaults. */
@@ -43,11 +56,12 @@ export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings
     history: raw?.history ?? DEFAULT_ROOM_SETTINGS.history,
     highlights: raw?.highlights ?? DEFAULT_ROOM_SETTINGS.highlights,
     autoDrawDead: raw?.auto_draw_dead ?? DEFAULT_ROOM_SETTINGS.autoDrawDead,
+    turnSeconds: typeof raw?.turn_seconds === 'number' ? raw.turn_seconds : DEFAULT_ROOM_SETTINGS.turnSeconds,
   };
 }
 
 function rawSettings(settings: Partial<RoomSettings>): RawRoomSettings {
-  return { mode: settings.mode, history: settings.history, highlights: settings.highlights, auto_draw_dead: settings.autoDrawDead };
+  return { mode: settings.mode, history: settings.history, highlights: settings.highlights, auto_draw_dead: settings.autoDrawDead, turn_seconds: settings.turnSeconds };
 }
 
 export interface Room {

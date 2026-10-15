@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRoom, isSeated, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
+import { createRoom, isSeated, isValidTurnSeconds, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
 
 describe('sanitizeRoom', () => {
   const raw = {
@@ -31,10 +31,11 @@ describe('sanitizeRoom', () => {
   it('reads the name and settings, with defaults for an older backend', () => {
     const room = sanitizeRoom('friday-k3m9', { ...raw, name: 'Friday', settings: { history: false, highlights: true, auto_draw_dead: true } });
     expect(room.name).toBe('Friday');
-    expect(room.settings).toEqual({ mode: 'standard', history: false, highlights: true, autoDrawDead: true });
+    expect(room.settings).toEqual({ mode: 'standard', history: false, highlights: true, autoDrawDead: true, turnSeconds: 90 });
     const old = sanitizeRoom('42', raw);
     expect(old.name).toBe('Table 42');
-    expect(old.settings).toEqual({ mode: 'standard', history: true, highlights: true, autoDrawDead: false });
+    expect(old.settings).toEqual({ mode: 'standard', history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 });
+    expect(sanitizeRoom('x', { ...raw, settings: { turn_seconds: 45 } }).settings.turnSeconds).toBe(45);
     expect(sanitizeRoom('x', { ...raw, settings: { mode: 'training' } }).settings.mode).toBe('training');
     expect(sanitizeRoom('x', { ...raw, settings: { mode: 'chaos' } }).settings.mode).toBe('standard');
   });
@@ -137,3 +138,11 @@ describe('parseTableCode', () => {
     for (const bad of ['', 'friday night!', '-x', 'a--b']) expect(parseTableCode(bad)).toBeNull();
   });
 });
+
+describe('turn timer', () => {
+  it('accepts whole seconds from 15 to 600', () => {
+    expect([15, 90, 600].every(isValidTurnSeconds)).toBe(true);
+    expect([14, 601, 30.5, NaN].some(isValidTurnSeconds)).toBe(false);
+  });
+});
+
