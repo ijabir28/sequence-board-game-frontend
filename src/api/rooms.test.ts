@@ -68,6 +68,7 @@ describe('sanitizeMyRoom', () => {
       status: 'finished',
       winnerTeam: 0,
       moveCount: 31,
+      lastMoveAt: null,
     });
   });
 

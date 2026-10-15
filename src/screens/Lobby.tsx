@@ -9,20 +9,19 @@ import styles from './Forms.module.css';
 import { JoinTableDialog } from './JoinTableDialog';
 import own from './Lobby.module.css';
 import { NewGameDialog } from './NewGameDialog';
-import { ResumeBanner, useMyRooms, YourTables } from './YourTables';
+import { CurrentGame, YourTablesDialog } from './YourTables';
 
 /** The dashboard: start or join a game. Each flow opens in its own dialog, so the page stays uncluttered. */
 export function Lobby() {
   const { profile } = useAuth();
-  const myRooms = useMyRooms();
-  const [dialog, setDialog] = useState<'new' | 'join' | null>(null);
+  const [dialog, setDialog] = useState<'new' | 'join' | 'tables' | null>(null);
 
   return (
     <>
       <AppHeader />
       <div className={styles.page}>
         <div className={own.grid}>
-          <ResumeBanner state={myRooms.state} />
+          <CurrentGame />
 
           <section className={[styles.card, own.hero].join(' ')} aria-labelledby="lobby-title">
             <header className={styles.header}>
@@ -39,9 +38,15 @@ export function Lobby() {
                 Join a table
               </Button>
             </div>
-            <p className={own.local}>
-              No server, one screen? <Link to="/local">Play on this device</Link>
-            </p>
+            <div className={own.secondaryActions}>
+              <Button variant="ghost" onClick={() => setDialog('tables')}>
+                <Icon name="log" size={18} />
+                Your tables
+              </Button>
+              <p className={own.local}>
+                No server, one screen? <Link to="/local">Play on this device</Link>
+              </p>
+            </div>
           </section>
 
           {devToolsEnabled() && (
@@ -55,13 +60,12 @@ export function Lobby() {
               </Link>
             </section>
           )}
-
-          <YourTables state={myRooms.state} reload={myRooms.reload} onPage={myRooms.setPage} />
         </div>
       </div>
 
       <NewGameDialog open={dialog === 'new'} onClose={() => setDialog(null)} />
       <JoinTableDialog open={dialog === 'join'} onClose={() => setDialog(null)} />
+      <YourTablesDialog open={dialog === 'tables'} onClose={() => setDialog(null)} />
     </>
   );
 }

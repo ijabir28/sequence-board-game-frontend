@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MyRoom } from '../api/rooms';
-import { describeTable, resumableTables } from './YourTables';
+import { describeTable } from './YourTables';
 
 const base: MyRoom = {
   id: '1',
@@ -14,6 +14,7 @@ const base: MyRoom = {
   status: 'open',
   winnerTeam: null,
   moveCount: 0,
+  lastMoveAt: null,
 };
 
 describe('describeTable', () => {
@@ -33,14 +34,3 @@ describe('describeTable', () => {
   });
 });
 
-describe('resumableTables', () => {
-  it('keeps games in progress where you have a seat', () => {
-    const rooms: MyRoom[] = [
-      { ...base, id: 'a', status: 'playing' },
-      { ...base, id: 'b', status: 'playing', yourTeam: null },
-      { ...base, id: 'c', status: 'finished', winnerTeam: 0 },
-      { ...base, id: 'd', status: 'open' },
-    ];
-    expect(resumableTables(rooms).map((r) => r.id)).toEqual(['a']);
-  });
-});
