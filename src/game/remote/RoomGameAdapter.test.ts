@@ -61,6 +61,21 @@ describe('RoomGameAdapter', () => {
     a.dispose();
   });
 
+  it("takes the table's name and display settings from the server, defaulting for older backends", async () => {
+    stubFetch(() => ({ status: 200, body: serverView({ name: 'Friday', settings: { history: false, highlights: false, auto_draw_dead: true } }) }));
+    const a = adapter();
+    await a.refresh();
+    expect(a.getState().title).toBe('Friday');
+    expect(a.getState().settings).toEqual({ highlights: false, history: false });
+    a.dispose();
+
+    stubFetch(() => ({ status: 200, body: serverView() }));
+    const old = adapter();
+    await old.refresh();
+    expect(old.getState().settings).toEqual({ highlights: true, history: true });
+    old.dispose();
+  });
+
   it('posts a move and shows the board the server sends back', async () => {
     const board = serverView().board;
     board[0][1] = { name: board[0][1].name, team: 0 };

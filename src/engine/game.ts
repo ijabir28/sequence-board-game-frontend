@@ -170,7 +170,7 @@ function targetMessage(code: RuleErrorCode, card: CardName): string {
     case 'LOCKED_CHIP':
       return "That chip is part of a completed sequence and can't be removed. Pick another chip.";
     case 'CELL_MISMATCH':
-      return `${cardShort(card)} can only go on a ${cardShort(card)} cell. Pick one of the highlighted cells.`;
+      return `${cardShort(card)} can only go on a ${cardShort(card)} cell.`;
     case 'CELL_OCCUPIED':
       return 'That cell already has a chip. Pick an empty cell.';
     default:

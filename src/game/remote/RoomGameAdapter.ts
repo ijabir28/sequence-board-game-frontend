@@ -7,13 +7,14 @@ import {
   playRoomCard,
   type RoomGameView,
 } from '../../api/roomGame';
+import { sanitizeSettings } from '../../api/rooms';
 import { onGameUpdated } from '../../api/socket';
 import { positionsOf, type Pos } from '../../engine/board';
 import { BLANK, cardKind, isCardName, type BoardCardName, type CardName } from '../../engine/cards';
 import { legalTargets, type GameState } from '../../engine/game';
 import { isLocked } from '../../engine/sequences';
 import type { TeamIndex } from '../../engine/setup';
-import type { ActionResult, GameAdapter, GameView, PlayerView } from '../types';
+import { DEFAULT_PLAY_SETTINGS, type ActionResult, type GameAdapter, type GameView, type PlayerView } from '../types';
 
 export interface RoomGameOptions {
   roomId: string;
@@ -39,6 +40,7 @@ const EMPTY_VIEW: GameView = {
   log: [],
   winner: null,
   turn: null,
+  settings: DEFAULT_PLAY_SETTINGS,
 };
 
 /** A table's game, run by the server. Each player sees only their own hand. */
@@ -181,8 +183,11 @@ export function toView(server: RoomGameView): GameView {
   const teamIndexes = Array.from({ length: server.team_count }, (_, i) => i as TeamIndex);
   const hand = server.hand.filter(isCardName) as CardName[];
   const chips = server.board.map((row) => row.map((cell) => cell.team));
+  const { highlights, history } = sanitizeSettings(server.settings);
   return {
     status: 'ready',
+    title: server.name,
+    settings: { highlights, history },
     notice: viewer ? undefined : "You don't have a seat in this game, so you're watching.",
     board: server.board.map((row, r) =>
       row.map((cell, c) => {

@@ -13,7 +13,11 @@ import {
 } from '../../engine/game';
 import { isLocked } from '../../engine/sequences';
 import { sequencesToWin, type TeamIndex } from '../../engine/setup';
-import type { ActionResult, GameAdapter, GameView } from '../types';
+import { DEFAULT_PLAY_SETTINGS, type ActionResult, type GameAdapter, type GameView, type PlaySettings } from '../types';
+
+export interface LocalGameOptions extends NewGameOptions {
+  settings?: Partial<PlaySettings>;
+}
 
 /** Hot-seat game: the full rules engine running on this device. */
 export class LocalGameAdapter implements GameAdapter {
@@ -23,12 +27,14 @@ export class LocalGameAdapter implements GameAdapter {
   private view: GameView;
   private listeners = new Set<() => void>();
   private random: () => number;
+  private settings: PlaySettings;
 
-  constructor(options: NewGameOptions) {
+  constructor(options: LocalGameOptions) {
     this.random = options.random ?? Math.random;
+    this.settings = { ...DEFAULT_PLAY_SETTINGS, ...options.settings };
     this.state = createGame(options);
     this.hotSeat = this.state.players.length > 1;
-    this.view = toView(this.state);
+    this.view = toView(this.state, this.settings);
   }
 
   getState(): GameView {
@@ -69,13 +75,13 @@ export class LocalGameAdapter implements GameAdapter {
       if (error instanceof RuleError) return Promise.resolve({ ok: false, message: error.message });
       throw error;
     }
-    this.view = toView(this.state);
+    this.view = toView(this.state, this.settings);
     this.listeners.forEach((listener) => listener());
     return Promise.resolve({ ok: true });
   }
 }
 
-function toView(state: GameState): GameView {
+function toView(state: GameState, settings: PlaySettings): GameView {
   const player = state.players[state.current];
   const teamIndexes = Array.from({ length: state.teamCount }, (_, i) => i as TeamIndex);
   return {
@@ -102,5 +108,6 @@ function toView(state: GameState): GameView {
     log: state.log,
     winner: state.winner,
     turn: state.turn,
+    settings,
   };
 }
