@@ -8,6 +8,14 @@ function adapter() {
 }
 
 describe('LocalGameAdapter', () => {
+  it('hints only in training mode, with a legal move', () => {
+    expect(adapter().getState().hint).toBeNull();
+    const training = new LocalGameAdapter({ teamCount: 2, playersPerTeam: 1, random: seededRandom(3), settings: { mode: 'training' } });
+    const hint = training.getState().hint;
+    expect(hint?.type).toBe('play');
+    if (hint?.type === 'play') expect(training.legalTargets(hint.handIndex)).toContainEqual(hint.target);
+  });
+
   it('exposes the current player as the viewer, hot-seat', () => {
     const a = adapter();
     const view = a.getState();
