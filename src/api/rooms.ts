@@ -195,6 +195,8 @@ export interface MyRoom {
   status: RoomStatus;
   winnerTeam: TeamIndex | null;
   moveCount: number;
+  /** When the last move was made (or the game started); null before the game starts. */
+  lastMoveAt: string | null;
 }
 
 interface RawMyRoom {
@@ -209,6 +211,7 @@ interface RawMyRoom {
   status: string;
   winner_team: number | null;
   move_count: number;
+  last_move_at?: string | null;
 }
 
 export function sanitizeMyRoom(raw: RawMyRoom): MyRoom {
@@ -225,6 +228,7 @@ export function sanitizeMyRoom(raw: RawMyRoom): MyRoom {
     status,
     winnerTeam: raw.winner_team === null ? null : (raw.winner_team as TeamIndex),
     moveCount: Number(raw.move_count),
+    lastMoveAt: raw.last_move_at ? String(raw.last_move_at) : null,
   };
 }
 
@@ -256,4 +260,10 @@ export async function listMyRooms(page = 1, perPage = 10): Promise<MyRoomsPage> 
     total: raw?.total ?? rooms.length,
     pages: Math.max(1, raw?.pages ?? 1),
   };
+}
+
+/** The game in progress you sat at that moved last, to offer for resuming (GET /user/current-game). */
+export async function getCurrentGame(): Promise<MyRoom | null> {
+  const raw = await readJson<{ room?: RawMyRoom | null }>(await request('/user/current-game'));
+  return raw?.room ? sanitizeMyRoom(raw.room) : null;
 }

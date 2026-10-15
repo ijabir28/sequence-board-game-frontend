@@ -24,6 +24,7 @@ export function RoomGamePage() {
       modeLabel={`Table ${id}`}
       handOrderKey={`sequence:hand-order:${id}`}
       onExit={() => navigate(`/table/${id}`)}
+      onDashboard={() => navigate('/lobby')}
     />
   );
 }

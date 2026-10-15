@@ -105,6 +105,12 @@ export function RoomPage() {
     <>
       <AppHeader />
       <div className={styles.page}>
+        <nav className={own.back} aria-label="Back">
+          <Link to="/lobby" className={own.backLink}>
+            <Icon name="chevronLeft" size={18} />
+            Back to dashboard
+          </Link>
+        </nav>
         {state.status === 'loading' && (
           <div className={own.state} role="status">
             <span className={own.spinner} aria-hidden="true" />

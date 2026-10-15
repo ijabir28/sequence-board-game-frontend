@@ -24,6 +24,8 @@ interface GameScreenProps {
   /** Short label for the kind of game, e.g. "Hot-seat". */
   modeLabel: string;
   onExit: () => void;
+  /** Leave straight to the dashboard (table games); offered next to onExit. */
+  onDashboard?: () => void;
   onNewGame?: () => void;
   /** Extra controls for the top bar (for example the dev adapter toggle). */
   headerExtra?: ReactNode;
@@ -33,7 +35,7 @@ interface GameScreenProps {
 
 type Feedback = { tone: 'error' | 'info'; text: string } | null;
 
-export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra, handOrderKey }: GameScreenProps) {
+export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, handOrderKey }: GameScreenProps) {
   const view = useGame(adapter);
   const [selected, setSelected] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -215,6 +217,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra,
           </Button>
         )}
         <Button onClick={onExit}>Leave game</Button>
+        {onDashboard && <Button onClick={onDashboard}>Back to dashboard</Button>}
       </div>
     </div>
   ) : null;
@@ -379,13 +382,16 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra,
         actions={
           <>
             <Button onClick={() => setExitOpen(false)}>Keep playing</Button>
+            {onDashboard && <Button onClick={onDashboard}>Back to dashboard</Button>}
             <Button variant="danger" onClick={onExit}>
               Leave game
             </Button>
           </>
         }
       >
-        <p>{adapter.mode === 'local' ? 'This game is only stored on this device, so leaving ends it.' : 'You can come back to the server game later.'}</p>
+        <p>{adapter.mode === 'local' ? 'This game is only stored on this device, so leaving ends it.' : onDashboard
+              ? 'The game is saved, so you can come back to it from the dashboard. Leave game opens the table page.'
+              : 'You can come back to the server game later.'}</p>
       </Dialog>
     </div>
   );

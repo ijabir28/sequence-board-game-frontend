@@ -202,10 +202,11 @@ Only the host can start the game; other players see who they are waiting for. Th
 change options on the table page until the game starts. Hot-seat games offer the
 same options. When the game starts, every seated player on the table page is taken into it.
 
-The server stores tables, seats, options, games and every move in PostgreSQL. The lobby's **Your tables** card
+The server stores tables, seats, options, games and every move in PostgreSQL. The **Your tables** list
 (`src/screens/YourTables.tsx`, from `GET /user/rooms`) lists the tables you opened or sat at, ten to a page, with their status
-(waiting, in progress with the move count, or who won) and links to resume or view them; games in progress where
-you have a seat are also offered at the top of the lobby. The full move history of a table is available from
+(waiting, in progress with the move count, or who won) and links to resume or view them. It opens in a dialog from
+the **Your tables** button; the dashboard itself shows only the game in progress you sat at that moved last
+(`GET /user/current-game`). The table page and the game's leave dialog have a **Back to dashboard** button. The full move history of a table is available from
 `GET /room/:id/turns` (unless the table plays without history); the game screen's move log comes from the game view
 itself.
 
