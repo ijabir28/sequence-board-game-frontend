@@ -235,3 +235,18 @@
   flex-direction: column;
   min-width: 0;
 }
+
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+}
+
+.waiting .spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}

@@ -177,7 +177,8 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
   const open = room.teams.reduce((n, t) => n + t.seats.filter((s) => s === null).length, 0);
   const full = isFull(room);
   const host = you !== null && room.administrator === you;
-  const canStart = supported && full && (seated || host);
+  // Only the host may start, and the server enforces it too.
+  const canStart = supported && full && host;
   const editable = host && !room.gameStarted;
 
   return (
@@ -288,12 +289,19 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
                 : !full
                   ? 'The game can start once every seat is taken.'
                   : canStart
-                    ? 'Every seat is taken. Anyone at the table can start the game.'
-                    : 'Every seat is taken. Waiting for a player to start the game.'}
+                    ? 'Every seat is taken. You opened this table, so start the game when everyone is ready.'
+                    : `Every seat is taken. Waiting for ${room.administrator ?? 'the host'} to start the game.`}
             </p>
-            <Button variant="primary" disabled={!canStart || starting} busy={starting} onClick={onStart}>
-              Start the game
-            </Button>
+            {host ? (
+              <Button variant="primary" disabled={!canStart || starting} busy={starting} onClick={onStart}>
+                Start the game
+              </Button>
+            ) : (
+              <p className={own.waiting} role="status">
+                <span className={own.spinner} aria-hidden="true" />
+                Only {room.administrator ?? 'the host'} can start the game. You'll be taken to it when it starts.
+              </p>
+            )}
           </>
         )}
       </section>
