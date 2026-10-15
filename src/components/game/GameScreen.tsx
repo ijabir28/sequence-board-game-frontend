@@ -329,7 +329,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra,
           </section>
         ) : (
           view.status === 'ready' && (
-            <p className={styles.deck}>
+            <p className={[styles.deck, styles.railNote].join(' ')}>
               {view.deckCount !== null && `${view.deckCount} cards left in the deck. `}This table plays without a move log.
             </p>
           )
