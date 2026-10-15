@@ -93,7 +93,7 @@ The game screen only talks to a `GameAdapter`: `getState`, `subscribe`, `legalTa
   `data/board_deck.json`, and card names match the backend (`10-Heart`, `J-Spade`, `Blank`).
 - **`RemoteGameAdapter`** implements the backend contract: it polls `GET /board/deck` and `GET /game/hand_cards` (there
   are no game socket events) and sends `GET /game/play` with `board_card_index` as URL-encoded JSON. A
-  `404 Invalid Move` and the current `500` HTML page both become readable messages.
+  `404 Invalid Move` becomes a readable message.
 
 **Dev toggle:** in dev builds, or in any build after opening a page with `?dev=1`, the game header has a dashed
 "dev" button that switches between the two adapters. The lobby also links to the server game.
@@ -149,5 +149,4 @@ game-related ones are all in `src/game/remote/backendQuirks.ts`.
 | `room_updated` goes to every client and has no room id | Each table page re-fetches its own room when the event arrives. |
 | Join says `success` with no session | After joining, the room is re-fetched. If you weren't seated, you're asked to sign in again. |
 | No way to start a game from a table | "Play this table on one device" opens a hot-seat game with the table's line-up. |
-| `/game/play` returns 500 on every valid move | The server game shows the move was valid but couldn't be saved, and the board is re-read. |
 | No turn order, sequences, dead cards or win in the server game | The server game is labelled a preview, and those controls are hidden. |
