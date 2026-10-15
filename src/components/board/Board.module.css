@@ -90,38 +90,12 @@
   font-size: max(12px, 3.6cqw);
 }
 
-/*
- * An occupied cell keeps its card readable: rank and suit together ("10♥") in the top-left corner, on a dark
- * backing, in the corner the round chip leaves free.
- */
-.label {
-  position: absolute;
-  top: 0.3cqw;
-  left: 0.3cqw;
-  z-index: 1;
-  display: flex;
-  align-items: baseline;
-  gap: 0.1cqw;
-  padding: 0.1cqw 0.35cqw;
-  border-radius: max(2px, 0.4cqw);
-  background: rgba(6, 14, 32, 0.78);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: max(8px, 2.1cqw);
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.labelSuit {
-  font-size: 1.1em;
-}
-
-/* Chip sits in the centre of its cell, where sequence lines pass, small enough to leave the corner label clear. */
+/* Chip sits in the centre of its cell, where sequence lines pass. */
 .chip {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 54%;
+  width: 66%;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   pointer-events: none;
