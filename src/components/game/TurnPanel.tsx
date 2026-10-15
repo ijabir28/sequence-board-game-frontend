@@ -27,13 +27,16 @@ const WARN_MS = 20_000;
 const URGENT_MS = 10_000;
 
 /**
- * Whose turn it is, in its own box so it can't be missed: the player and team, a running timer, and the turn
+ * Whose turn it is, in its own box so it can't be missed: the player and team, the timer on your own turn, and the turn
  * order with the current player marked. When it becomes your turn, the box flashes and the tab title says so.
  */
 export function TurnPanel({ players, currentPlayerId, viewer, hotSeat, winner, turn, turnStartedAt, turnDeadline }: TurnPanelProps) {
   const current = players.find((p) => p.id === currentPlayerId) ?? null;
   const yours = !hotSeat && current !== null && viewer !== null && current.id === viewer.id;
-  const running = winner === null && current !== null && turnStartedAt !== null;
+  // The clock is for the player who has to beat it: only on your own turn (in hot-seat play, the person at the
+  // device always has the turn). Everyone else just sees whose turn it is.
+  const ownTurn = yours || (hotSeat && current !== null);
+  const running = winner === null && current !== null && turnStartedAt !== null && ownTurn;
   const now = useNow(running, 500);
   const alerting = useTurnAlert(yours, current?.id ?? null, hotSeat);
 
