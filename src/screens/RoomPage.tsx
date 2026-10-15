@@ -7,6 +7,7 @@ import { onTeamsShuffled } from '../api/socket';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { Chip } from '../components/Chip';
+import { useToast, type ToastOptions } from '../components/toast/Toaster';
 import { RoomOptions } from '../components/RoomOptions';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
@@ -18,10 +19,9 @@ import styles from './Forms.module.css';
 import own from './RoomPage.module.css';
 import { useRoom } from './useRoom';
 
-type Notice = { tone: 'error' | 'success'; text: string; action?: 'signin' } | null;
-
-/** Good news (a seat taken, the teams reshuffled) clears itself after this long; errors stay until replaced. */
-const SUCCESS_NOTICE_MS = 4000;
+/** The table's messages share one toast, so the latest replaces the one before. */
+const NOTICE_TOAST = 'room-notice';
+/** A reshuffle tells you your new team, which takes a little longer to read. */
 const SHUFFLE_NOTICE_MS = 7000;
 
 export function RoomPage() {
@@ -30,18 +30,14 @@ export function RoomPage() {
   const navigate = useNavigate();
   const { state, connection, reload } = useRoom(id);
   const [joining, setJoining] = useState<string | null>(null);
-  const [notice, setNotice] = useState<Notice>(null);
-  const [noticeMs, setNoticeMs] = useState(SUCCESS_NOTICE_MS);
-  const showSuccess = (text: string, ms = SUCCESS_NOTICE_MS) => {
-    setNoticeMs(ms);
-    setNotice({ tone: 'success', text });
+  const toast = useToast();
+  const showSuccess = (text: string, durationMs?: number) => toast.success(text, { id: NOTICE_TOAST, durationMs });
+  const showError = (text: string, options: ToastOptions = {}) => toast.error(text, { id: NOTICE_TOAST, ...options });
+  const clearNotice = () => toast.dismiss(NOTICE_TOAST);
+  const signInAgain = () => {
+    // Navigate only once signed out, or /signin would send the stale profile straight back.
+    void signOut().finally(() => navigate('/signin', { state: { from: `/table/${id}` } }));
   };
-
-  useEffect(() => {
-    if (notice?.tone !== 'success') return;
-    const timer = setTimeout(() => setNotice(null), noticeMs);
-    return () => clearTimeout(timer);
-  }, [notice, noticeMs]);
 
   // When the host reshuffles, every player is told their new team, replacing whatever notice was showing.
   const you = profile?.handle ?? null;
@@ -61,7 +57,7 @@ export function RoomPage() {
   // Stand up, or (host) shuffle the teams. Both answer with the room, which the broadcast refreshes too.
   const changeSeats = async (action: 'leave' | 'shuffle') => {
     setSeatAction(action);
-    setNotice(null);
+    clearNotice();
     try {
       const updated = await (action === 'leave' ? leaveSeat(id) : shuffleSeats(id));
       await reload();
@@ -69,7 +65,7 @@ export function RoomPage() {
       if (action === 'leave') showSuccess('You stood up. Pick a team to sit down again.');
       else showSuccess(describeShuffle(updated, profile?.name ?? 'You', you), SHUFFLE_NOTICE_MS);
     } catch (e) {
-      setNotice({ tone: 'error', text: errorMessage(e) });
+      showError(errorMessage(e));
       void reload();
     } finally {
       setSeatAction(null);
@@ -88,13 +84,13 @@ export function RoomPage() {
 
   const save = async (changes: { name?: string; settings?: RoomSettings }) => {
     setSaving(true);
-    setNotice(null);
+    clearNotice();
     try {
       await updateRoom(id, changes);
       await reload();
       return true;
     } catch (e) {
-      setNotice({ tone: 'error', text: errorMessage(e) });
+      showError(errorMessage(e));
       void reload();
       return false;
     } finally {
@@ -104,12 +100,12 @@ export function RoomPage() {
 
   const start = async () => {
     setStarting(true);
-    setNotice(null);
+    clearNotice();
     try {
       await startRoomGame(id);
       navigate(`/table/${id}/game`);
     } catch (e) {
-      setNotice({ tone: 'error', text: e instanceof Error ? e.message : errorMessage(e) });
+      showError(e instanceof Error ? e.message : errorMessage(e));
       void reload();
     } finally {
       setStarting(false);
@@ -120,30 +116,29 @@ export function RoomPage() {
     if (!profile) return;
     const name = TEAM_STYLES[team.index]?.name ?? team.handle;
     setJoining(team.handle);
-    setNotice(null);
+    clearNotice();
     try {
       const result = await joinRoom(id, team.handle);
       if (result === 'seat-taken') {
-        setNotice({ tone: 'error', text: `Team ${name} is full. Pick a team with an open seat.` });
+        showError(`Team ${name} is full. Pick a team with an open seat.`);
       } else if (result === 'already-seated') {
-        setNotice({ tone: 'error', text: 'You already have a seat at this table. Each player takes one seat.' });
+        showError('You already have a seat at this table. Each player takes one seat.');
       } else if (result === 'game-started') {
-        setNotice({ tone: 'error', text: "This table's game has already started, so its seats are fixed." });
+        showError("This table's game has already started, so its seats are fixed.");
         void reload();
       } else if (result === 'signed-out') {
-        setNotice({
-          tone: 'error',
-          text: 'Your session has ended (sessions expire after a week without play, or when you sign out elsewhere). Sign in again, then join.',
-          action: 'signin',
+        showError('Your session has ended (sessions expire after a week without play, or when you sign out elsewhere). Sign in again, then join.', {
+          durationMs: null,
+          action: { label: 'Sign in again', onClick: signInAgain },
         });
       } else if (result === 'not-found') {
-        setNotice({ tone: 'error', text: 'The server has no table with this code. Go back to the lobby and open a new one.' });
+        showError('The server has no table with this code. Go back to the lobby and open a new one.');
       } else {
         await reload();
         showSuccess(`You joined Team ${name}.`);
       }
     } catch (e) {
-      setNotice({ tone: 'error', text: errorMessage(e) });
+      showError(errorMessage(e));
     } finally {
       setJoining(null);
     }
@@ -191,12 +186,7 @@ export function RoomPage() {
             you={profile?.handle ?? null}
             connection={connection}
             joining={joining}
-            notice={notice}
             onJoin={join}
-            onSignInAgain={() => {
-              // Navigate only once signed out, or /signin would send the stale profile straight back.
-              void signOut().finally(() => navigate('/signin', { state: { from: `/table/${id}` } }));
-            }}
             starting={starting}
             onStart={start}
             saving={saving}
@@ -216,9 +206,7 @@ interface RoomViewProps {
   you: string | null;
   connection: 'connecting' | 'live' | 'offline';
   joining: string | null;
-  notice: Notice;
   onJoin: (team: RoomTeam) => void;
-  onSignInAgain: () => void;
   starting: boolean;
   onStart: () => void;
   onOpenGame: () => void;
@@ -233,9 +221,7 @@ function RoomView({
   you,
   connection,
   joining,
-  notice,
   onJoin,
-  onSignInAgain,
   starting,
   onStart,
   onOpenGame,
@@ -289,18 +275,6 @@ function RoomView({
               : `Only ${hostName ?? 'the host'} can change these, until the game starts.`}
         </p>
       </section>
-
-      {notice && (
-        <div className={notice.tone === 'error' ? styles.error : own.success} role={notice.tone === 'error' ? 'alert' : 'status'}>
-          <Icon name={notice.tone === 'error' ? 'alert' : 'check'} size={18} />
-          <span>{notice.text}</span>
-          {notice.action === 'signin' && (
-            <Button size="sm" onClick={onSignInAgain}>
-              Sign in again
-            </Button>
-          )}
-        </div>
-      )}
 
       {host && !room.gameStarted && taken >= 2 && (
         <div className={own.teamTools}>
