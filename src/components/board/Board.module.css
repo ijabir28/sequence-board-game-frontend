@@ -20,6 +20,32 @@
     var(--shadow-raised);
 }
 
+/* Your turn: the board's edge takes your team's colour and breathes, alongside the turn panel. */
+.yourTurn {
+  box-shadow:
+    inset 0 0 0 1px var(--outline-subtle),
+    0 0 0 2px var(--active-team, var(--primary)),
+    0 0 22px 2px var(--active-glow, rgba(78, 222, 163, 0.4)),
+    var(--shadow-raised);
+  animation: your-turn-edge 2.4s ease-in-out infinite;
+}
+
+@keyframes your-turn-edge {
+  50% {
+    box-shadow:
+      inset 0 0 0 1px var(--outline-subtle),
+      0 0 0 3px var(--active-team, var(--primary)),
+      0 0 34px 6px var(--active-glow, rgba(78, 222, 163, 0.4)),
+      var(--shadow-raised);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yourTurn {
+    animation: none;
+  }
+}
+
 .grid {
   position: absolute;
   inset: 1.1cqw; /* cq units here resolve against the board itself */

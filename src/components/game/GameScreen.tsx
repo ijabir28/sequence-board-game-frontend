@@ -64,6 +64,9 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const currentPlayer = view.players.find((p) => p.id === view.currentPlayerId) ?? null;
   const activeTeam = currentPlayer?.team ?? viewer?.team ?? null;
   const selectedCard = selected !== null ? view.hand[selected]?.card : undefined;
+  // The viewer is the one to move (in hot-seat play, whoever has their hand showing).
+  const yourTurn =
+    !gameOver && currentPlayer !== null && (adapter.hotSeat ? handVisible : viewer !== null && currentPlayer.id === viewer.id);
   // How the viewer arranged their hand. Only the view changes; moves still use real hand indexes.
   const { order, setOrder } = useHandOrder(viewer?.id ?? null, view.hand.length, handOrderKey);
   const { highlights, history } = view.settings;
@@ -376,6 +379,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             lastMove={lastMove}
             hint={hint && hintShown && hint.type === 'play' ? hint.target : null}
             disabled={busy || gameOver}
+            yourTurn={yourTurn}
             onActivate={onCell}
           />
         ) : view.status === 'loading' ? (
