@@ -19,6 +19,7 @@ export function LocalGamePage() {
         ? new LocalGameAdapter({
             ...config,
             rules: { autoDrawDead: config.settings.autoDrawDead },
+            turnSeconds: config.settings.turnSeconds,
             settings: { mode: config.settings.mode, highlights: config.settings.highlights, history: config.settings.history },
           })
         : null,

@@ -97,11 +97,15 @@ describe('RoomGameAdapter', () => {
     const serverNow = now - 10_000;
     const iso = (ms: number) => new Date(ms).toISOString();
     let serverTime = serverNow;
-    stubFetch(() => ({ status: 200, body: serverView({ turn_started_at: iso(serverNow - 3000), server_time: iso(serverTime) }) }));
+    stubFetch(() => ({
+      status: 200,
+      body: serverView({ turn_started_at: iso(serverNow - 3000), turn_deadline: iso(serverNow + 87_000), server_time: iso(serverTime) }),
+    }));
     const a = adapter();
     await a.refresh();
     const started = a.getState().turnStartedAt!;
     expect(Math.abs(started - (now - 3000))).toBeLessThan(200);
+    expect(a.getState().turnDeadline! - started).toBe(90_000);
 
     // A later refresh with a later server reading must not move the start (that would re-render for nothing).
     serverTime += 5000;
