@@ -182,7 +182,7 @@ export class RemoteGameAdapter implements GameAdapter {
       discard: [],
       current: 0,
       turn: 1,
-      exchangedThisTurn: false,
+      exchangesThisTurn: 0,
       sequences: [],
       winner: null,
       log: [],

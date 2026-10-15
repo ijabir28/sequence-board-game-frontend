@@ -194,7 +194,7 @@ export class RoomGameAdapter implements GameAdapter {
       discard: [],
       current: 0,
       turn: server.turn,
-      exchangedThisTurn: false,
+      exchangesThisTurn: 0,
       sequences: server.sequences,
       winner: server.winner,
       log: [],
