@@ -6,7 +6,6 @@ const PATHS = {
   chevronDown: 'M6 9l6 6 6-6',
   chevronLeft: 'M15 6l-6 6 6 6',
   chevronRight: 'M9 6l6 6-6 6',
-  sort: 'M3 6h13M3 12h9M3 18h5M18 8V20M15 17l3 3 3-3',
   shuffle: 'M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5',
   copy: 'M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1',
   check: 'M5 12l5 5 9-10',
