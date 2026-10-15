@@ -279,3 +279,8 @@
 .backLink:focus-visible {
   box-shadow: var(--focus-ring);
 }
+
+.teamTools {
+  display: flex;
+  justify-content: flex-end;
+}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import { startRoomGame } from '../api/roomGame';
-import { isFull, isSeated, joinRoom, updateRoom, type Room, type RoomSettings, type RoomTeam } from '../api/rooms';
+import { isFull, isSeated, joinRoom, leaveSeat, shuffleSeats, updateRoom, type Room, type RoomSettings, type RoomTeam } from '../api/rooms';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { Chip } from '../components/Chip';
@@ -27,6 +27,26 @@ export function RoomPage() {
   const [notice, setNotice] = useState<Notice>(null);
   const [starting, setStarting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [seatAction, setSeatAction] = useState<'leave' | 'shuffle' | null>(null);
+
+  // Stand up, or (host) shuffle the teams. Both answer with the room, which the broadcast refreshes too.
+  const changeSeats = async (action: 'leave' | 'shuffle') => {
+    setSeatAction(action);
+    setNotice(null);
+    try {
+      await (action === 'leave' ? leaveSeat(id) : shuffleSeats(id));
+      await reload();
+      setNotice({
+        tone: 'success',
+        text: action === 'leave' ? 'You stood up. Pick a team to sit down again.' : 'The teams were shuffled.',
+      });
+    } catch (e) {
+      setNotice({ tone: 'error', text: errorMessage(e) });
+      void reload();
+    } finally {
+      setSeatAction(null);
+    }
+  };
 
   // Seated players go straight to the game when someone starts it, wherever they are on this page.
   const room = state.status === 'ready' ? state.room : null;
@@ -153,6 +173,8 @@ export function RoomPage() {
             onStart={start}
             saving={saving}
             onSave={save}
+            seatAction={seatAction}
+            onSeats={changeSeats}
             onOpenGame={() => navigate(`/table/${id}/game`)}
           />
         )}
@@ -174,16 +196,36 @@ interface RoomViewProps {
   onOpenGame: () => void;
   saving: boolean;
   onSave: (changes: { name?: string; settings?: RoomSettings }) => Promise<boolean>;
+  seatAction: 'leave' | 'shuffle' | null;
+  onSeats: (action: 'leave' | 'shuffle') => void;
 }
 
-function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgain, starting, onStart, onOpenGame, saving, onSave }: RoomViewProps) {
+function RoomView({
+  room,
+  you,
+  connection,
+  joining,
+  notice,
+  onJoin,
+  onSignInAgain,
+  starting,
+  onStart,
+  onOpenGame,
+  saving,
+  onSave,
+  seatAction,
+  onSeats,
+}: RoomViewProps) {
   const teamCount = room.teams.length;
   const perTeam = Math.max(0, ...room.teams.map((t) => t.seats.length));
   const supported = isSupportedTable(teamCount, perTeam);
   const seated = you !== null && isSeated(room, you);
   const open = room.teams.reduce((n, t) => n + t.seats.filter((s) => s === null).length, 0);
+  const taken = room.teams.reduce((n, t) => n + t.seats.filter(Boolean).length, 0);
   const full = isFull(room);
   const host = you !== null && room.administrator === you;
+  // Players are addressed by display name; handles are only for telling people apart.
+  const hostName = room.administratorName;
   // Only the host may start, and the server enforces it too.
   const canStart = supported && full && host;
   const editable = host && !room.gameStarted;
@@ -201,7 +243,7 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
         <p className={styles.help}>
           {teamCount} teams of {perTeam}
           {supported && `. First team to ${sequencesToWin(teamCount)} sequence${sequencesToWin(teamCount) > 1 ? 's' : ''} wins`}.{' '}
-          {room.administrator && <>Opened by {room.administrator}. </>}
+          {hostName && <>Opened by {hostName}. </>}
           {open === 0 ? 'Every seat is taken.' : `${open} open seat${open === 1 ? '' : 's'}.`}
         </p>
         <ShareCode id={room.id} />
@@ -216,7 +258,7 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
             ? 'The game has started, so these are fixed.'
             : editable
               ? 'You opened this table, so you can change these until the game starts.'
-              : `Only ${room.administrator ?? 'the host'} can change these, until the game starts.`}
+              : `Only ${hostName ?? 'the host'} can change these, until the game starts.`}
         </p>
       </section>
 
@@ -229,6 +271,17 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
               Sign in again
             </Button>
           )}
+        </div>
+      )}
+
+      {host && !room.gameStarted && taken >= 2 && (
+        <div className={own.teamTools}>
+          <Tooltip text="Deal everyone who is seated out to the teams at random" align="start">
+            <Button size="sm" variant="ghost" busy={seatAction === 'shuffle'} disabled={seatAction !== null} onClick={() => onSeats('shuffle')}>
+              <Icon name="shuffle" size={16} />
+              Shuffle teams
+            </Button>
+          </Tooltip>
         </div>
       )}
 
@@ -255,8 +308,23 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
                   <li key={i} className={[own.seat, !seat && own.empty].filter(Boolean).join(' ')}>
                     {seat ? (
                       <>
-                        {seat.name}
-                        {seat.handle === you && <span className={own.you}>you</span>}
+                        <span>
+                          {seat.name}
+                          {seat.handle === you && <span className={own.you}>you</span>}
+                        </span>
+                        {seat.handle === you && !room.gameStarted && (
+                          <Tooltip text="Free your seat, so you can take another or the host can reshuffle the teams" align="end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              busy={seatAction === 'leave'}
+                              disabled={seatAction !== null}
+                              onClick={() => onSeats('leave')}
+                            >
+                              Stand up
+                            </Button>
+                          </Tooltip>
+                        )}
                       </>
                     ) : (
                       'Open seat'
@@ -277,7 +345,13 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
           );
         })}
       </ul>
-      {seated && <p className={styles.help}>You have a seat at this table. Each player takes one seat.</p>}
+      {seated && (
+        <p className={styles.help}>
+          {room.gameStarted
+            ? 'You have a seat at this table.'
+            : 'You have a seat at this table. Stand up to change teams; each player takes one seat.'}
+        </p>
+      )}
 
       <section className={[styles.card, own.start].join(' ')}>
         <h2>{room.gameStarted ? 'Game in progress' : host ? 'Start the game' : 'Waiting for the host'}</h2>
@@ -297,7 +371,7 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
                   ? 'The game can start once every seat is taken.'
                   : canStart
                     ? 'Every seat is taken. You opened this table, so start the game when everyone is ready.'
-                    : `Every seat is taken. Waiting for ${room.administrator ?? 'the host'} to start the game.`}
+                    : `Every seat is taken. Waiting for ${hostName ?? 'the host'} to start the game.`}
             </p>
             {host ? (
               <Button variant="primary" disabled={!canStart || starting} busy={starting} onClick={onStart}>
@@ -306,7 +380,7 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
             ) : (
               <p className={own.waiting} role="status">
                 <span className={own.spinner} aria-hidden="true" />
-                Only {room.administrator ?? 'the host'} can start the game. You'll be taken to it when it starts.
+                Only {hostName ?? 'the host'} can start the game. You'll be taken to it when it starts.
               </p>
             )}
           </>
