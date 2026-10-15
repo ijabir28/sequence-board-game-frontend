@@ -9,10 +9,12 @@ interface DialogProps {
   children: ReactNode;
   /** Buttons shown at the bottom. */
   actions?: ReactNode;
+  /** `wide` gives forms more room. */
+  size?: 'normal' | 'wide';
 }
 
 /** Native modal <dialog>: focus trapping, Escape to close and inert background come for free. */
-export function Dialog({ open, title, onClose, children, actions }: DialogProps) {
+export function Dialog({ open, title, onClose, children, actions, size = 'normal' }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -26,7 +28,7 @@ export function Dialog({ open, title, onClose, children, actions }: DialogProps)
   return (
     <dialog
       ref={ref}
-      className={styles.dialog}
+      className={[styles.dialog, size === 'wide' && styles.wide].filter(Boolean).join(' ')}
       aria-labelledby={titleId}
       onClose={onClose}
       onClick={(event) => event.target === ref.current && onClose()}

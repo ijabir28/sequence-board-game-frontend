@@ -9,8 +9,17 @@
   box-shadow: var(--shadow-raised);
 }
 
+/* Blur what's behind every modal, so the dialog is the only thing in focus. */
 .dialog::backdrop {
-  background: rgba(2, 6, 23, 0.7);
+  background: rgba(2, 6, 23, 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Forms that need more room, such as a new game's settings. */
+.wide {
+  width: min(40rem, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 2 * var(--gutter));
 }
 
 .dialog[open] {
