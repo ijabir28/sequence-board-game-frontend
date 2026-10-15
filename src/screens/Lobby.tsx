@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { errorMessage } from '../api/http';
-import { createRoom, getRoom } from '../api/rooms';
+import { createRoom, DEFAULT_ROOM_SETTINGS, getRoom, parseTableCode, type RoomSettings } from '../api/rooms';
 import { AppHeader } from '../components/AppHeader';
+import { RoomOptions } from '../components/RoomOptions';
 import { devToolsEnabled } from '../components/game/DevAdapterToggle';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
@@ -17,6 +18,8 @@ export function Lobby() {
 
   const [teamCount, setTeamCount] = useState<TeamCount>(2);
   const [perTeam, setPerTeam] = useState(1);
+  const [name, setName] = useState('');
+  const [settings, setSettings] = useState<RoomSettings>(DEFAULT_ROOM_SETTINGS);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -29,7 +32,7 @@ export function Lobby() {
     setCreating(true);
     setCreateError(null);
     try {
-      const id = await createRoom(teamCount, perTeam);
+      const id = await createRoom(teamCount, perTeam, { name, settings });
       navigate(`/table/${id}`);
     } catch (e) {
       setCreateError(errorMessage(e));
@@ -40,9 +43,9 @@ export function Lobby() {
 
   const join = async (event: FormEvent) => {
     event.preventDefault();
-    const id = code.replace(/\s+/g, '');
-    if (!/^\d+$/.test(id)) {
-      setJoinError('Table codes are numbers only, like 331791756412570. Check the code and try again.');
+    const id = parseTableCode(code);
+    if (!id) {
+      setJoinError('Table codes are lower-case words and numbers joined by hyphens, like friday-night-k3m9. You can also paste a table link.');
       return;
     }
     setJoining(true);
@@ -69,8 +72,23 @@ export function Lobby() {
           <form className={styles.card} onSubmit={create}>
             <header className={styles.header}>
               <h1>Open a table</h1>
-              <p>Pick the teams, then share the table code so friends can take a seat.</p>
+              <p>Name the table and pick the teams, then share its code so friends can take a seat.</p>
             </header>
+            <label className={styles.field}>
+              <span className={styles.label}>Table name</span>
+              <input
+                className={styles.input}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={40}
+                autoComplete="off"
+                placeholder="Friday night"
+                aria-describedby="table-name-help"
+              />
+              <span className={styles.help} id="table-name-help">
+                Optional. The table's code is made from its name. Leave it blank for a random one.
+              </span>
+            </label>
             <fieldset className={styles.fieldset}>
               <legend>Teams</legend>
               <div className={styles.segmented}>
@@ -104,6 +122,11 @@ export function Lobby() {
                 {total} players, {HAND_SIZE_BY_PLAYER_COUNT[total]} cards each. Only table sizes the rules can deal for are offered.
               </p>
             </fieldset>
+            <fieldset className={styles.fieldset}>
+              <legend>Options</legend>
+              <RoomOptions value={settings} onChange={setSettings} />
+              <p className={styles.help}>You can change these until the game starts.</p>
+            </fieldset>
             {createError && (
               <p className={styles.error} role="alert">
                 <Icon name="alert" size={18} />
@@ -120,7 +143,7 @@ export function Lobby() {
             <form className={styles.card} onSubmit={join} noValidate>
               <header className={styles.header}>
                 <h2>Join a table</h2>
-                <p>Enter the code a friend shared with you.</p>
+                <p>Enter the code or link a friend shared with you.</p>
               </header>
               <label className={styles.field}>
                 <span className={styles.label}>Table code</span>
@@ -128,9 +151,10 @@ export function Lobby() {
                   className={styles.input}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  inputMode="numeric"
                   autoComplete="off"
-                  placeholder="331791756412570"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  placeholder="friday-night-k3m9"
                   aria-invalid={joinError ? true : undefined}
                   aria-describedby={joinError ? 'join-error' : undefined}
                 />
