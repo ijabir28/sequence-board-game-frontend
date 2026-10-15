@@ -33,20 +33,19 @@ export function RoomPage() {
       const result = await joinRoom(id, team.handle);
       if (result === 'seat-taken') {
         setNotice({ tone: 'error', text: `Team ${name} is full. Pick a team with an open seat.` });
+      } else if (result === 'already-seated') {
+        setNotice({ tone: 'error', text: 'You already have a seat at this table. Each player takes one seat.' });
+      } else if (result === 'signed-out') {
+        setNotice({
+          tone: 'error',
+          text: 'Your session has expired (sessions last an hour and end when the server restarts). Sign in again, then join.',
+          action: 'signin',
+        });
       } else if (result === 'not-found') {
         setNotice({ tone: 'error', text: 'The server no longer has this table (it forgets tables when it restarts). Go back to the lobby and open a new one.' });
       } else {
-        const room = await reload();
-        if (room && !isSeated(room, profile.handle)) {
-          // The backend answers "success" without seating anyone when the session is gone.
-          setNotice({
-            tone: 'error',
-            text: "The server didn't give you a seat, which means your session has expired (sessions last an hour and end when the server restarts). Sign in again, then join.",
-            action: 'signin',
-          });
-        } else {
-          setNotice({ tone: 'success', text: `You joined Team ${name}.` });
-        }
+        await reload();
+        setNotice({ tone: 'success', text: `You joined Team ${name}.` });
       }
     } catch (e) {
       setNotice({ tone: 'error', text: errorMessage(e) });

@@ -51,13 +51,15 @@ export async function getRoom(id: string): Promise<Room | null> {
   return raw ? sanitizeRoom(id, raw) : null;
 }
 
-export type JoinResult = 'success' | 'seat-taken' | 'not-found';
+export type JoinResult = 'success' | 'seat-taken' | 'already-seated' | 'signed-out' | 'not-found';
 
 /** POST /room/:id/join is always HTTP 200; the outcome is in `message`. */
 export async function joinRoom(id: string, teamHandle: string): Promise<JoinResult> {
   const body = await readJson<{ message: unknown }>(await postJson(`/room/${encodeURIComponent(id)}/join`, { team_handle: teamHandle }));
   if (body?.message === 'success') return 'success';
   if (body?.message === 'SEAT_TAKEN') return 'seat-taken';
+  if (body?.message === 'ALREADY_SEATED') return 'already-seated';
+  if (body?.message === 'NOT_SIGNED_IN') return 'signed-out';
   return 'not-found';
 }
 
