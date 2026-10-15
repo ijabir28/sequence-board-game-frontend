@@ -9,7 +9,8 @@ It has two ways to play:
   server.
 - **With the server.** Create an account or sign in, open a table, share its code and take seats live. Once every seat is taken, any player
   starts the game and everyone plays from their own device; the server deals, enforces turn order and detects
-  sequences. A developer page also shows the server's older built-in test game.
+  sequences. Tables and games are saved on the server, so the lobby's "Your tables" list lets you resume a game
+  later, even after the backend restarts. A developer page also shows the server's older built-in test game.
 
 ## Setup
 
@@ -161,6 +162,13 @@ Anyone can create an account at `/signup` (handle, display name, password). The 
 sessions in PostgreSQL, so a session survives backend restarts and lasts a week without use. On load the app asks
 `GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the session
 on the server.
+
+## Tables and history
+
+The server stores tables, seats, games and every move in PostgreSQL. The lobby's **Your tables** card
+(`src/screens/YourTables.tsx`, from `GET /user/rooms`) lists the tables you opened or sat at with their status
+(waiting, in progress with the move count, or who won) and links to resume or view them. The full move history of a
+table is available from `GET /room/:id/turns`; the game screen's move log comes from the game view itself.
 
 ## Backend limitations
 
