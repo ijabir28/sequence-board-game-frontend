@@ -6,6 +6,7 @@ import type { TeamIndex } from '../../engine/setup';
 import { TEAM_STYLES, teamChipLabel } from '../../game/teams';
 import type { CellView } from '../../game/types';
 import { Chip } from '../Chip';
+import { cellCentre } from './geometry';
 import styles from './Board.module.css';
 
 export type TargetMode = 'place' | 'remove';
@@ -188,7 +189,8 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, onFocus,
 /** Glowing lines through completed sequences, drawn over the grid. */
 function SequenceBeams({ sequences }: { sequences: Sequence[] }) {
   if (sequences.length === 0) return null;
-  const center = (p: Pos) => ({ x: (p.column + 0.5) * 10, y: (p.row + 0.5) * 10 });
+  // Through the real centres of the cells, allowing for the gaps between them.
+  const center = (p: Pos) => ({ x: cellCentre(p.column), y: cellCentre(p.row) });
   return (
     <svg className={styles.beams} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       {sequences.map((s, i) => {

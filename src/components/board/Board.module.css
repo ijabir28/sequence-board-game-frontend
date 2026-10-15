@@ -1,13 +1,16 @@
 /*
  * The board never scrolls. Its parent (the board area) is a size container; the board takes
- * whichever is smaller of the area's width and its height × the board's aspect ratio, so the
- * whole 10×10 grid is always visible however much room the hand or the rail leaves.
+ * whichever is smaller of the area's width and height, so the whole 10×10 grid is always visible
+ * however much room the hand or the rail leaves.
+ *
+ * The board, and so every cell, is square: rows and columns share one pitch, so chips and the
+ * sequence lines through their centres line up in every direction, diagonals included.
+ * BOARD_INSET and BOARD_GAP in Board.tsx must match the inset and gaps below.
  */
 .board {
-  --aspect: 0.86; /* width / height: slightly portrait cells, like cards */
   position: relative;
-  width: min(100cqw, 100cqh * var(--aspect));
-  aspect-ratio: var(--aspect);
+  width: min(100cqw, 100cqh);
+  aspect-ratio: 1;
   container-type: inline-size;
   border-radius: calc(var(--radius-card) + 2px);
   background: var(--surface-lowest);
@@ -87,11 +90,11 @@
   font-size: max(12px, 3.6cqw);
 }
 
-/* Chip sits on the card, leaving the rank readable in the top-left corner. */
+/* Chip sits in the centre of its cell, where sequence lines pass. */
 .chip {
   position: absolute;
   left: 50%;
-  top: 56%;
+  top: 50%;
   width: 66%;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
