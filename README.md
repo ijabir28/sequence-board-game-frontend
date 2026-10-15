@@ -178,6 +178,9 @@ on the server.
 
 ## Tables and history
 
+The dashboard (`/lobby`) has two buttons. **New Game** opens a dialog to name a table and choose its teams and
+settings; **Join a table** opens a dialog for a code or link. Dialogs blur the page behind them.
+
 A table has a name and a code. The code is the slug of the name plus a short suffix (`friday-night-k3m9`), and it
 is what goes in links (`/table/friday-night-k3m9`). "Join a table" also accepts older numeric codes and pasted
 links (`parseTableCode()` in `src/api/rooms.ts`).

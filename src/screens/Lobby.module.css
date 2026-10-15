@@ -2,20 +2,14 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
-  width: min(100%, 60rem);
+  width: min(100%, 44rem);
 }
 
 .grid > * {
   width: 100%;
 }
 
-.side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.side h2 {
+.dev h2 {
   font-size: var(--text-lg);
 }
 
@@ -36,11 +30,33 @@
   background: var(--surface-high);
 }
 
-@media (min-width: 860px) {
-  .grid {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-    align-items: start;
-  }
+/* The dashboard is one column: the actions, then your tables. */
+.hero {
+  gap: var(--space-4);
+}
+
+.hero h1 {
+  font-size: var(--text-xl);
+}
+
+.primaryActions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+
+.primaryActions > * {
+  min-height: 52px;
+  font-size: var(--text-md);
+}
+
+.local {
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+}
+
+.local a {
+  color: var(--primary);
 }
 
 .dev {
