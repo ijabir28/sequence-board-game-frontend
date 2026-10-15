@@ -11,6 +11,7 @@ import {
   type GameState,
   type NewGameOptions,
 } from '../../engine/game';
+import { suggestMove } from '../../engine/hints';
 import { isLocked } from '../../engine/sequences';
 import { sequencesToWin, type TeamIndex } from '../../engine/setup';
 import { DEFAULT_PLAY_SETTINGS, type ActionResult, type GameAdapter, type GameView, type PlaySettings } from '../types';
@@ -109,5 +110,6 @@ function toView(state: GameState, settings: PlaySettings): GameView {
     winner: state.winner,
     turn: state.turn,
     settings,
+    hint: settings.mode === 'training' ? suggestMove(state) : null,
   };
 }

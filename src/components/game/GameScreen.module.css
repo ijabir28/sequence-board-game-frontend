@@ -390,3 +390,16 @@
     display: none;
   }
 }
+
+/* A revealed training hint: gold, like the board's hint ring. */
+.hintShown {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--corner-ink);
+}
+
+.hintShown svg {
+  flex: none;
+  margin-top: 2px;
+}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Pos } from '../../engine/board';
 import { cardKind, cardShort, type CardName } from '../../engine/cards';
+import { describeHint } from '../../game/describeHint';
 import { describeLog } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter } from '../../game/types';
@@ -44,6 +45,22 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
   const activeTeam = currentPlayer?.team ?? viewer?.team ?? null;
   const selectedCard = selected !== null ? view.hand[selected]?.card : undefined;
   const { highlights, history } = view.settings;
+  // Hints and card tips are for training games only.
+  const training = view.settings.mode === 'training';
+  const [hintShown, setHintShown] = useState(false);
+  const hint = training && handVisible && !gameOver ? view.hint : null;
+
+  // A hint is for one position: hide it again once anything changes.
+  useEffect(() => {
+    setHintShown(false);
+  }, [view.hint, viewer?.id]);
+
+  const showHint = () => {
+    if (!hint) return;
+    setHintShown(true);
+    setFeedback(null);
+    if (hint.type !== 'pass') setSelected(hint.handIndex);
+  };
 
   // A new hand (after a move, or the next hot-seat player) starts with nothing selected.
   useEffect(() => {
@@ -129,12 +146,25 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
     if (passed && adapter.hotSeat) setRevealedFor(null);
   };
 
-  const hint = handHint({ selectedCard, dead: selected !== null && !!view.hand[selected]?.dead, targets, canExchange: view.canExchange, highlights });
+  const prompt = handHint({ selectedCard, dead: selected !== null && !!view.hand[selected]?.dead, targets, canExchange: view.canExchange, highlights, tips: training });
 
   const footer = (
     <div className={styles.actions}>
-      <p className={styles.hint}>{hint}</p>
+      {hint && hintShown ? (
+        <p className={[styles.hint, styles.hintShown].join(' ')} role="status">
+          <Icon name="bulb" size={16} />
+          <span>{describeHint(hint, view.hand.map((h) => h.card))}</span>
+        </p>
+      ) : (
+        <p className={styles.hint}>{prompt}</p>
+      )}
       <div className={styles.actionButtons}>
+        {hint && !hintShown && (
+          <Button size="sm" variant="ghost" onClick={showHint} title="Suggest a move for this turn (training mode)">
+            <Icon name="bulb" size={16} />
+            Hint
+          </Button>
+        )}
         {selected !== null && view.hand[selected]?.dead && view.canExchange && (
           <Button size="sm" variant="primary" onClick={onExchange} busy={busy}>
             <Icon name="swap" size={16} />
@@ -238,6 +268,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra 
             targetMode={selectedCard && cardKind(selectedCard) === 'one-eyed-jack' ? 'remove' : 'place'}
             activeTeam={activeTeam}
             lastMove={lastMove}
+            hint={hint && hintShown && hint.type === 'play' ? hint.target : null}
             disabled={busy || gameOver}
             onActivate={onCell}
           />
@@ -359,15 +390,22 @@ function handHint({
   targets,
   canExchange,
   highlights,
+  tips,
 }: {
   selectedCard: CardName | undefined;
   dead: boolean;
   targets: Pos[] | null;
   canExchange: boolean;
   highlights: boolean;
+  /** Explain what the selected card does (training games). */
+  tips: boolean;
 }): string {
   if (!selectedCard) return `Pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}. Keys 1–7 pick cards.`;
   const card = selectedCard;
+  if (!tips) {
+    if (dead) return canExchange ? `${cardShort(card)} is dead. You can exchange it.` : `${cardShort(card)} is dead.`;
+    return `${cardShort(card)} selected.`;
+  }
   if (dead) {
     return canExchange
       ? `${cardShort(card)} is dead: both of its cells are taken. Exchange it for a new card.`

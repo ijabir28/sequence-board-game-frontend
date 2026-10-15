@@ -1,8 +1,15 @@
 import { useId } from 'react';
-import type { RoomSettings } from '../api/rooms';
+import type { GameMode, RoomSettings } from '../api/rooms';
 import styles from './RoomOptions.module.css';
 
-const OPTIONS: { key: keyof RoomSettings; label: string; on: string; off: string }[] = [
+const MODES: { mode: GameMode; label: string; description: string }[] = [
+  { mode: 'standard', label: 'Standard', description: 'The real game: no hints.' },
+  { mode: 'training', label: 'Training', description: 'On your turn, get a suggested move and why.' },
+];
+
+type Flag = Exclude<keyof RoomSettings, 'mode'>;
+
+const OPTIONS: { key: Flag; label: string; on: string; off: string }[] = [
   {
     key: 'highlights',
     label: 'Highlight legal cells',
@@ -34,7 +41,35 @@ interface RoomOptionsProps {
 export function RoomOptions({ value, onChange, disabled }: RoomOptionsProps) {
   const id = useId();
   return (
-    <ul className={styles.options}>
+    <div className={styles.group}>
+      <div className={styles.modes} role="radiogroup" aria-label="Game mode">
+        {MODES.map(({ mode, label, description }) => {
+          const active = value.mode === mode;
+          return onChange ? (
+            <label key={mode} className={styles.mode}>
+              <input
+                type="radio"
+                name={`${id}-mode`}
+                checked={active}
+                disabled={disabled}
+                onChange={() => onChange({ ...value, mode })}
+              />
+              <span className={styles.modeCard}>
+                <span className={styles.label}>{label}</span>
+                <span className={styles.description}>{description}</span>
+              </span>
+            </label>
+          ) : (
+            active && (
+              <p key={mode} className={styles.modeCard} data-active="true">
+                <span className={styles.label}>{label} mode</span>
+                <span className={styles.description}>{description}</span>
+              </p>
+            )
+          );
+        })}
+      </div>
+      <ul className={styles.options}>
       {OPTIONS.map(({ key, label, on, off }) => (
         <li key={key}>
           <label className={styles.row}>
@@ -63,6 +98,7 @@ export function RoomOptions({ value, onChange, disabled }: RoomOptionsProps) {
           </label>
         </li>
       ))}
-    </ul>
+      </ul>
+    </div>
   );
 }

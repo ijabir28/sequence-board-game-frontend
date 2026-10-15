@@ -66,14 +66,29 @@ describe('RoomGameAdapter', () => {
     const a = adapter();
     await a.refresh();
     expect(a.getState().title).toBe('Friday');
-    expect(a.getState().settings).toEqual({ highlights: false, history: false });
+    expect(a.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false });
     a.dispose();
 
     stubFetch(() => ({ status: 200, body: serverView() }));
     const old = adapter();
     await old.refresh();
-    expect(old.getState().settings).toEqual({ highlights: true, history: true });
+    expect(old.getState().settings).toEqual({ mode: 'standard', highlights: true, history: true });
     old.dispose();
+  });
+
+  it("maps a training game's hint, and ignores a hint outside training", async () => {
+    const hint = { type: 'play' as const, hand_index: 0, target: { row: 0, column: 1 }, reason: { kind: 'extend' as const, length: 2 } };
+    stubFetch(() => ({ status: 200, body: serverView({ settings: { mode: 'training' }, hint }) }));
+    const a = adapter();
+    await a.refresh();
+    expect(a.getState().hint).toEqual({ type: 'play', handIndex: 0, target: { row: 0, column: 1 }, reason: { kind: 'extend', length: 2 } });
+    a.dispose();
+
+    stubFetch(() => ({ status: 200, body: serverView({ settings: { mode: 'standard' }, hint }) }));
+    const standard = adapter();
+    await standard.refresh();
+    expect(standard.getState().hint).toBeNull();
+    standard.dispose();
   });
 
   it('posts a move and shows the board the server sends back', async () => {

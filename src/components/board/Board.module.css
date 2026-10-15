@@ -208,3 +208,33 @@
     stroke-dashoffset: -20;
   }
 }
+
+/* The training hint's suggested cell: a pulsing gold ring, distinct from team colours and the last-move ring. */
+.hinted {
+  z-index: 1;
+  opacity: 1;
+}
+
+.hinted::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px dashed var(--corner-ink);
+  box-shadow: 0 0 12px rgba(245, 196, 81, 0.6);
+  pointer-events: none;
+  animation: hint-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes hint-pulse {
+  50% {
+    box-shadow: 0 0 4px rgba(245, 196, 81, 0.2);
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hinted::after {
+    animation: none;
+  }
+}

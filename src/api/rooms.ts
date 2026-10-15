@@ -13,8 +13,12 @@ export interface RoomTeam {
   seats: (Seat | null)[];
 }
 
+/** `training` gives the player whose turn it is hints; `standard` games never get any. */
+export type GameMode = 'standard' | 'training';
+
 /** Options the table's host picks. They can change until the game starts. */
 export interface RoomSettings {
+  mode: GameMode;
   /** Players can read back every move (the move log). */
   history: boolean;
   /** Legal cells light up when a card is picked. */
@@ -23,9 +27,10 @@ export interface RoomSettings {
   autoDrawDead: boolean;
 }
 
-export const DEFAULT_ROOM_SETTINGS: RoomSettings = { history: true, highlights: true, autoDrawDead: false };
+export const DEFAULT_ROOM_SETTINGS: RoomSettings = { mode: 'standard', history: true, highlights: true, autoDrawDead: false };
 
 export interface RawRoomSettings {
+  mode?: string;
   history?: boolean;
   highlights?: boolean;
   auto_draw_dead?: boolean;
@@ -34,6 +39,7 @@ export interface RawRoomSettings {
 /** Missing settings (an older backend) fall back to the defaults. */
 export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings {
   return {
+    mode: raw?.mode === 'training' ? 'training' : 'standard',
     history: raw?.history ?? DEFAULT_ROOM_SETTINGS.history,
     highlights: raw?.highlights ?? DEFAULT_ROOM_SETTINGS.highlights,
     autoDrawDead: raw?.auto_draw_dead ?? DEFAULT_ROOM_SETTINGS.autoDrawDead,
@@ -41,7 +47,7 @@ export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings
 }
 
 function rawSettings(settings: Partial<RoomSettings>): RawRoomSettings {
-  return { history: settings.history, highlights: settings.highlights, auto_draw_dead: settings.autoDrawDead };
+  return { mode: settings.mode, history: settings.history, highlights: settings.highlights, auto_draw_dead: settings.autoDrawDead };
 }
 
 export interface Room {
