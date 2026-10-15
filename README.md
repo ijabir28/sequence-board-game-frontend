@@ -159,8 +159,8 @@ invariants.
   move log says so. When it becomes your turn it flashes,
   phones buzz, and the tab title starts with "● Your turn". Table games take the turn's start time from the server
   (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
-- **Your hand, your order.** Sort (by suit and rank, jacks last), Shuffle, drag a card with a mouse or pen, or select
-  a card and use the arrow buttons or Alt+←/→. Only your view changes (`src/game/handOrder.ts`): moves still use the
+- **Your hand, your order.** Drag a card to a new place with a finger, mouse or pen (the other cards slide out of the
+  way; a tap still selects), or move the focused card with Alt+←/→ (`src/components/game/useCardDrag.ts`). Only your view changes (`src/game/handOrder.ts`): moves still use the
   real hand index, and a new card arrives where the played one was. Table games remember the order per table on this
   device; hot-seat players each keep their own.
 - **Teams differ by more than colour:** Green chips are circles, Blue are diamonds, Red are triangles, and each has its
