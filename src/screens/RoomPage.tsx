@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { errorMessage } from '../api/http';
-import { isSeated, joinRoom, type Room, type RoomTeam } from '../api/rooms';
+import { startRoomGame } from '../api/roomGame';
+import { isFull, isSeated, joinRoom, type Room, type RoomTeam } from '../api/rooms';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { Chip } from '../components/Chip';
@@ -9,7 +10,6 @@ import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { isSupportedTable, sequencesToWin } from '../engine/setup';
 import { TEAM_STYLES } from '../game/teams';
-import type { LocalConfig } from './LocalSetup';
 import styles from './Forms.module.css';
 import own from './RoomPage.module.css';
 import { useRoom } from './useRoom';
@@ -23,6 +23,21 @@ export function RoomPage() {
   const { state, connection, reload } = useRoom(id);
   const [joining, setJoining] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
+  const [starting, setStarting] = useState(false);
+
+  const start = async () => {
+    setStarting(true);
+    setNotice(null);
+    try {
+      await startRoomGame(id);
+      navigate(`/table/${id}/game`);
+    } catch (e) {
+      setNotice({ tone: 'error', text: e instanceof Error ? e.message : errorMessage(e) });
+      void reload();
+    } finally {
+      setStarting(false);
+    }
+  };
 
   const join = async (team: RoomTeam) => {
     if (!profile) return;
@@ -99,7 +114,9 @@ export function RoomPage() {
               signOut();
               navigate('/signin', { state: { from: `/table/${id}` } });
             }}
-            onPlayLocally={(preset) => navigate('/local', { state: { preset } })}
+            starting={starting}
+            onStart={start}
+            onOpenGame={() => navigate(`/table/${id}/game`)}
           />
         )}
       </div>
@@ -115,23 +132,19 @@ interface RoomViewProps {
   notice: Notice;
   onJoin: (team: RoomTeam) => void;
   onSignInAgain: () => void;
-  onPlayLocally: (preset: LocalConfig) => void;
+  starting: boolean;
+  onStart: () => void;
+  onOpenGame: () => void;
 }
 
-function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgain, onPlayLocally }: RoomViewProps) {
+function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgain, starting, onStart, onOpenGame }: RoomViewProps) {
   const teamCount = room.teams.length;
   const perTeam = Math.max(0, ...room.teams.map((t) => t.seats.length));
   const supported = isSupportedTable(teamCount, perTeam);
   const seated = you !== null && isSeated(room, you);
   const open = room.teams.reduce((n, t) => n + t.seats.filter((s) => s === null).length, 0);
-  const total = teamCount * perTeam;
-
-  const preset = (): LocalConfig | null => {
-    if (!isSupportedTable(teamCount, perTeam)) return null;
-    // Seats alternate teams (T1, T2, [T3,] T1, …), matching the engine's turn order.
-    const names = Array.from({ length: total }, (_, seat) => room.teams[seat % teamCount].seats[Math.floor(seat / teamCount)]?.name ?? '');
-    return { teamCount, playersPerTeam: perTeam, playerNames: names };
-  };
+  const full = isFull(room);
+  const canStart = supported && full && (seated || (you !== null && room.administrator === you));
 
   return (
     <div className={own.layout}>
@@ -167,7 +180,7 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
       <ul className={own.teams} aria-label="Teams">
         {room.teams.map((team) => {
           const style = TEAM_STYLES[team.index];
-          const full = team.seats.every((s) => s !== null);
+          const teamFull = team.seats.every((s) => s !== null);
           const name = style?.name ?? team.handle;
           return (
             <li key={team.handle} className={own.team} style={style ? ({ '--team': style.color } as React.CSSProperties) : undefined}>
@@ -197,13 +210,13 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
                 ))}
               </ol>
               <Button
-                variant={full || seated ? 'secondary' : 'primary'}
-                disabled={full || seated || joining !== null}
+                variant={teamFull || seated ? 'secondary' : 'primary'}
+                disabled={teamFull || seated || room.gameStarted || joining !== null}
                 busy={joining === team.handle}
                 onClick={() => onJoin(team)}
-                aria-label={full ? `Team ${name} is full` : seated ? `Join Team ${name} (you already have a seat)` : `Join Team ${name}`}
+                aria-label={teamFull ? `Team ${name} is full` : seated ? `Join Team ${name} (you already have a seat)` : `Join Team ${name}`}
               >
-                {full ? 'Team full' : `Join Team ${name}`}
+                {teamFull ? 'Team full' : `Join Team ${name}`}
               </Button>
             </li>
           );
@@ -212,22 +225,30 @@ function RoomView({ room, you, connection, joining, notice, onJoin, onSignInAgai
       {seated && <p className={styles.help}>You have a seat at this table. Each player takes one seat.</p>}
 
       <section className={[styles.card, own.start].join(' ')}>
-        <h2>Start the game</h2>
-        <p className={styles.help}>
-          The server can't start a game from a table yet. You can play this table's line-up now on one device, passing it
-          between players.
-        </p>
-        <Button
-          variant="primary"
-          disabled={!supported}
-          onClick={() => {
-            const p = preset();
-            if (p) onPlayLocally(p);
-          }}
-        >
-          Play this table on one device
-        </Button>
-        {!supported && <p className={styles.help}>This table's size isn't one the rules can deal for, so it can't be played.</p>}
+        <h2>{room.gameStarted ? 'Game in progress' : 'Start the game'}</h2>
+        {room.gameStarted ? (
+          <>
+            <p className={styles.help}>{seated ? 'The game has started. Your hand is waiting.' : 'The game has started. You can watch it.'}</p>
+            <Button variant="primary" onClick={onOpenGame}>
+              {seated ? 'Open the game' : 'Watch the game'}
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className={styles.help}>
+              {!supported
+                ? "This table's size isn't one the rules can deal for, so it can't be played."
+                : !full
+                  ? 'The game can start once every seat is taken.'
+                  : canStart
+                    ? 'Every seat is taken. Anyone at the table can start the game.'
+                    : 'Every seat is taken. Waiting for a player to start the game.'}
+            </p>
+            <Button variant="primary" disabled={!canStart || starting} busy={starting} onClick={onStart}>
+              Start the game
+            </Button>
+          </>
+        )}
       </section>
     </div>
   );
