@@ -53,7 +53,6 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     feedbackTone.current = feedback?.tone ?? feedbackTone.current;
   };
   const [revealedFor, setRevealedFor] = useState<string | null>(null);
-  const [handOpen, setHandOpen] = useState(true);
   const [logOpen, setLogOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -113,11 +112,6 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   useEffect(() => {
     setSelected(null);
   }, [view.hand, viewer?.id]);
-
-  // In hot-seat play the next person may not know the hand was collapsed, so reopen it.
-  useEffect(() => {
-    if (adapter.hotSeat) setHandOpen(true);
-  }, [adapter.hotSeat, viewer?.id]);
 
   const targets = useMemo(
     () => (selected !== null && handVisible && !gameOver ? adapter.legalTargets(selected) : null),
@@ -482,8 +476,6 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             selected={selected}
             onSelect={selectCard}
             cover={adapter.hotSeat && !handVisible && !gameOver && viewer ? { playerName: viewer.name, onReveal: () => setRevealedFor(viewer.id) } : null}
-            open={handOpen || gameOver}
-            onToggle={() => setHandOpen((o) => !o)}
             disabled={busy || gameOver || view.status !== 'ready'}
             footer={footer}
             replaceWith={winnerPanel}

@@ -6,7 +6,7 @@
  *   top                                      top    top
  *   status                                   board  status
  *   board                                    board  rail (hand + log)
- *   rail (collapsible hand strip)
+ *   rail (hand strip, always open)
  */
 .screen {
   display: grid;
