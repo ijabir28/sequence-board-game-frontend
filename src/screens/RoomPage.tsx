@@ -457,7 +457,7 @@ function ShareCode({ id }: { id: string }) {
     <div className={own.share}>
       <label className={own.codeField}>
         <span className="visually-hidden">Table code</span>
-        <input className={styles.input} value={id} readOnly onFocus={(e) => e.target.select()} />
+        <input className={styles.input} value={id} readOnly />
       </label>
       <Tooltip text="Copy the code. Friends enter it under Join a table." align="end">
         <Button size="sm" onClick={() => copy('code')}>
@@ -474,7 +474,7 @@ function ShareCode({ id }: { id: string }) {
       <span className="visually-hidden" aria-live="polite">
         {copied ? `${copied === 'code' ? 'Code' : 'Link'} copied` : ''}
       </span>
-      {failed && <p className={styles.help}>Your browser blocked copying. Select the code and copy it by hand.</p>}
+      {failed && <p className={styles.help}>Your browser blocked copying. Read the code out, or type it to your friends.</p>}
     </div>
   );
 }
