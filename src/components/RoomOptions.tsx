@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { RoomSettings } from '../api/rooms';
 import styles from './RoomOptions.module.css';
 
@@ -31,19 +32,26 @@ interface RoomOptionsProps {
 
 /** The table's options as switches, each saying what it does in its current state. */
 export function RoomOptions({ value, onChange, disabled }: RoomOptionsProps) {
+  const id = useId();
   return (
     <ul className={styles.options}>
       {OPTIONS.map(({ key, label, on, off }) => (
         <li key={key}>
           <label className={styles.row}>
             <span className={styles.text}>
-              <span className={styles.label}>{label}</span>
-              <span className={styles.description}>{value[key] ? on : off}</span>
+              <span className={styles.label} id={`${id}-${key}-label`}>
+                {label}
+              </span>
+              <span className={styles.description} id={`${id}-${key}-description`}>
+                {value[key] ? on : off}
+              </span>
             </span>
             {onChange ? (
               <input
                 type="checkbox"
                 role="switch"
+                aria-labelledby={`${id}-${key}-label`}
+                aria-describedby={`${id}-${key}-description`}
                 className={styles.switch}
                 checked={value[key]}
                 disabled={disabled}
