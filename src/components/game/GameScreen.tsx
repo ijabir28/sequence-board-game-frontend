@@ -220,14 +220,19 @@ export function GameScreen({ adapter, modeLabel, onExit, onNewGame, headerExtra,
       style={activeTeam !== null ? ({ '--active-team': TEAM_STYLES[activeTeam].color, '--active-glow': TEAM_STYLES[activeTeam].glow } as React.CSSProperties) : undefined}
     >
       <header className={styles.top}>
-        <div className={styles.brand}>
-          <span className={styles.logo} aria-hidden="true">
-            <Chip team={0} />
-          </span>
-          <span className={styles.brandText}>Sequence</span>
-          <span className={styles.mode}>{view.title ?? modeLabel}</span>
+        {/* Spans the board's column, so the scoreboard is centred over the board. */}
+        <div className={styles.topBoard}>
+          <div className={styles.brand}>
+            <span className={styles.logo} aria-hidden="true">
+              <Chip team={0} />
+            </span>
+            <span className={styles.brandText}>Sequence</span>
+            <span className={styles.mode}>{view.title ?? modeLabel}</span>
+          </div>
+          <div className={styles.scores}>
+            <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
+          </div>
         </div>
-        <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
         <div className={styles.topActions}>
           {headerExtra}
           {history && (

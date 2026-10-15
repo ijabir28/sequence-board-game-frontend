@@ -20,15 +20,28 @@
 
 .top {
   grid-area: top;
-  display: flex;
+  /* Brand | scoreboard | actions, with equal outer columns so the scoreboard sits in the middle, over the board. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-2);
   min-height: 52px;
   padding: var(--space-1) var(--gutter);
   padding-top: max(var(--space-1), env(safe-area-inset-top));
   border-bottom: 1px solid var(--outline-subtle);
   background: rgba(11, 19, 38, 0.85);
+}
+
+.topBoard {
+  display: contents;
+}
+
+.scores {
+  /* Always the middle column, even when the brand is hidden on small phones. */
+  grid-column: 2;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
 }
 
 .brand {
@@ -45,6 +58,10 @@
 }
 
 .brandText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--text-lg);
@@ -53,6 +70,9 @@
 }
 
 .mode {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
   padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
   border: 1px solid var(--outline-strong);
@@ -63,6 +83,7 @@
 
 .topActions {
   display: flex;
+  justify-self: end;
   align-items: center;
   gap: var(--space-1);
 }
@@ -284,7 +305,8 @@
 /* Wide: board on the left, a rail with status, hand and log on the right. */
 @media (min-aspect-ratio: 1/1) and ((min-width: 1100px) or (max-height: 520px)) {
   .screen {
-    grid-template-columns: minmax(0, 1fr) clamp(300px, 26vw, 380px);
+    --rail-width: clamp(300px, 26vw, 380px);
+    grid-template-columns: minmax(0, 1fr) var(--rail-width);
     grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas:
       'top top'
@@ -296,19 +318,30 @@
     padding: var(--space-4) var(--space-5);
   }
 
+  /* The header takes the board and rail columns too: brand and scoreboard over the board, actions over the rail.
+     Padding moves inside the columns, so the board column's centre is the board's centre. */
+  .top {
+    grid-template-columns: minmax(0, 1fr) var(--rail-width);
+    gap: 0;
+    padding-inline: 0;
+  }
+
+  .topBoard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-2);
+    padding-inline: var(--gutter);
+  }
+
+  .topActions {
+    padding-inline: var(--space-4);
+  }
+
   .status {
     padding: var(--space-4) var(--space-4) var(--space-3);
     border-left: 1px solid var(--outline-subtle);
     background: var(--surface-low);
-  }
-
-  .turn {
-    font-size: var(--text-lg);
-  }
-
-  .turnChip {
-    width: 26px;
-    height: 26px;
   }
 
   .rail {
@@ -343,11 +376,17 @@
 /* Short landscape screens (phones on their side): tighter rail, log moves behind the button. */
 @media (min-aspect-ratio: 1/1) and (max-height: 520px) {
   .screen {
-    grid-template-columns: minmax(0, 1fr) clamp(260px, 42vw, 340px);
+    --rail-width: clamp(260px, 42vw, 340px);
   }
 
   .top {
     min-height: 44px;
+  }
+
+  /* Little room beside the centred scoreboard: keep just the logo. */
+  .brandText,
+  .mode {
+    display: none;
   }
 
   .boardArea {
@@ -356,10 +395,6 @@
 
   .status {
     padding: var(--space-2) var(--space-3) var(--space-1);
-  }
-
-  .turn {
-    font-size: var(--text-md);
   }
 
   .rail {
