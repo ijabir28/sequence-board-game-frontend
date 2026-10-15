@@ -422,3 +422,11 @@
   flex: none;
   margin-top: 2px;
 }
+
+/* Phones: the scoreboard lives inside the expanded turn panel. */
+.foldedScores {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--outline-subtle);
+}
