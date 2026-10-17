@@ -1,0 +1,92 @@
+/* Sizes are in cqw, so the face looks the same on a 50px phone card as on a 92px desktop one. */
+.face {
+  position: absolute;
+  inset: 0;
+  container-type: inline-size;
+  border-radius: inherit;
+  background: var(--card-face);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
+  color: var(--suit-color, var(--card-ink-black));
+  font-family: var(--font-display);
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.face[data-suit='Spade'] {
+  --suit-color: var(--suit-spade);
+}
+
+.face[data-suit='Heart'] {
+  --suit-color: var(--suit-heart);
+}
+
+.face[data-suit='Diamond'] {
+  --suit-color: var(--suit-diamond);
+}
+
+.face[data-suit='Club'] {
+  --suit-color: var(--suit-club);
+}
+
+.index {
+  position: absolute;
+  top: 5cqw;
+  left: 6cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 26cqw;
+  gap: 1cqw;
+}
+
+.turned {
+  top: auto;
+  left: auto;
+  right: 6cqw;
+  bottom: 5cqw;
+  rotate: 180deg;
+}
+
+.rank {
+  font-size: 26cqw;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+
+.indexPip {
+  width: 18cqw;
+  height: 18cqw;
+}
+
+.pip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46cqw;
+  height: 46cqw;
+  translate: -50% -50%;
+}
+
+/* Court cards: the letter in a frame of the suit's colour, with the pip under it. */
+.court {
+  position: absolute;
+  inset: 24cqw 22cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2cqw;
+  border: 1.6cqw solid currentColor;
+  border-radius: 6cqw;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.courtLetter {
+  font-size: 30cqw;
+  line-height: 0.9;
+}
+
+.courtPip {
+  width: 22cqw;
+  height: 22cqw;
+}
