@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { vibrateTurn } from '../../game/haptics';
 import { playTick, playTurnChime } from '../../game/sounds';
 import { useNow } from '../../game/turnClock';
 import { FINAL_TICKS, tickSecond } from '../../game/turnTicks';
@@ -12,14 +13,18 @@ interface TurnSoundsProps {
 }
 
 /**
- * Plays the turn sounds: a chime when your turn arrives, and a tick each second over its last 20. It draws nothing and
- * keeps its own clock, so the ticking never re-renders the rest of the game screen.
+ * Plays the turn sounds: a chime (and a buzz on phones) when your turn arrives, and a tick each second over its last
+ * 20. It draws nothing and keeps its own clock, so the ticking never re-renders the rest of the game screen.
  */
 export function TurnSounds({ chimeKey, ticking, turnDeadline }: TurnSoundsProps) {
   const previousChime = useRef(chimeKey);
   useEffect(() => {
     // Not when the page opens on your turn: only when the turn passes to you.
-    if (chimeKey !== null && chimeKey !== previousChime.current) playTurnChime();
+    if (chimeKey !== null && chimeKey !== previousChime.current) {
+      playTurnChime();
+      // Phones also buzz, so a player who has the sound off (or the phone on silent) still feels it.
+      vibrateTurn();
+    }
     previousChime.current = chimeKey;
   }, [chimeKey]);
 

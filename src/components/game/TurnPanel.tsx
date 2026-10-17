@@ -231,8 +231,9 @@ export function TurnPanel({
 }
 
 /**
- * When it becomes the viewer's turn: flash for a moment, buzz a phone, and put "Your turn" in the tab title
- * until the turn ends, so a player in another tab notices. In hot-seat play the flash marks every new turn.
+ * When it becomes the viewer's turn: flash for a moment and put "Your turn" in the tab title until the turn ends, so
+ * a player in another tab notices. In hot-seat play the flash marks every new turn. (The chime and the phone's buzz
+ * come from TurnSounds.)
  */
 function useTurnAlert(yours: boolean, currentId: string | null, hotSeat: boolean): boolean {
   const [alerting, setAlerting] = useState(false);
@@ -243,7 +244,6 @@ function useTurnAlert(yours: boolean, currentId: string | null, hotSeat: boolean
     previous.current = currentId;
     if (!changed || !(yours || hotSeat)) return;
     setAlerting(true);
-    if (yours) navigator.vibrate?.(200);
     const timer = setTimeout(() => setAlerting(false), 2400);
     return () => clearTimeout(timer);
   }, [currentId, yours, hotSeat]);
