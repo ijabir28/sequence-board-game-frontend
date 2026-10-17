@@ -1,9 +1,40 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from './http';
-import { AccountError, getProfile, requestPasswordReset, resendVerification, resetPassword, signIn, signOut, signUp } from './user';
+import {
+  AccountError,
+  changeEmail,
+  changePassword,
+  getProfile,
+  listSessions,
+  removeAvatar,
+  requestPasswordReset,
+  resendVerification,
+  resetPassword,
+  signIn,
+  signOut,
+  signUp,
+  updateName,
+  uploadAvatar,
+} from './user';
 
-const PROFILE_BODY = { handle: 'jabir', name: 'Jabir', email: 'jabir@example.com', email_verified: true, image: null };
-const PROFILE = { handle: 'jabir', name: 'Jabir', email: 'jabir@example.com', emailVerified: true, image: null };
+const PROFILE_BODY = {
+  handle: 'jabir',
+  name: 'Jabir',
+  email: 'jabir@example.com',
+  email_verified: true,
+  image: null,
+  created_at: '2026-10-01T10:00:00.000Z',
+  stats: { played: 5, won: 3, playing: 1 },
+};
+const PROFILE = {
+  handle: 'jabir',
+  name: 'Jabir',
+  email: 'jabir@example.com',
+  emailVerified: true,
+  image: null,
+  createdAt: '2026-10-01T10:00:00.000Z',
+  stats: { played: 5, won: 3, playing: 1 },
+};
 
 /** Answers each fetch with the next [status, body], and records the calls. */
 function respond(...responses: [number, unknown?][]) {
@@ -135,6 +166,11 @@ describe('getProfile', () => {
     await expect(getProfile()).resolves.toEqual(PROFILE);
   });
 
+  it('copes with a server that sends no stats or date', async () => {
+    respond([200, { handle: 'old', name: 'Old', email: null, email_verified: false, image: null }]);
+    await expect(getProfile()).resolves.toMatchObject({ createdAt: null, stats: { played: 0, won: 0, playing: 0 } });
+  });
+
   it('has no email for accounts made before emails were asked for', async () => {
     respond([200, { handle: 'old', name: 'Old', email: null, email_verified: false, image: null }]);
     await expect(getProfile()).resolves.toMatchObject({ email: null, emailVerified: false });
@@ -147,5 +183,68 @@ describe('signOut', () => {
     await signOut();
     expect(calls[0].url).toBe('/api/auth/sign-out');
     expect(calls[0].init?.method).toBe('POST');
+  });
+});
+
+describe('profile', () => {
+  it('saves the display name through Better Auth', async () => {
+    const calls = respond([200, { status: true }]);
+    await updateName('New');
+    expect(calls[0].url).toBe('/api/auth/update-user');
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({ name: 'New' });
+  });
+
+  it('asks to change the email, with links that come back to the profile', async () => {
+    const calls = respond([200, { status: true }]);
+    await changeEmail('new@example.com');
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({ newEmail: 'new@example.com', callbackURL: '/profile' });
+  });
+
+  it('changes the password and signs out other devices; a wrong current one is that field', async () => {
+    const calls = respond([200, { token: 't' }]);
+    await changePassword('old', 'new password');
+    expect(calls[0].url).toBe('/api/auth/change-password');
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({ currentPassword: 'old', newPassword: 'new password', revokeOtherSessions: true });
+
+    respond([400, { code: 'INVALID_PASSWORD', message: 'Invalid password' }]);
+    await expect(changePassword('nope', 'new password')).rejects.toMatchObject({ field: 'currentPassword' });
+  });
+
+  it('uploads the picture as is and returns its URL', async () => {
+    const calls = respond([200, { image: '/user/avatar/3?v=abc' }]);
+    const picture = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/webp' });
+    await expect(uploadAvatar(picture)).resolves.toBe('/user/avatar/3?v=abc');
+    expect(calls[0].url).toBe('/user/avatar');
+    expect(calls[0].init?.method).toBe('PUT');
+    expect(new Headers(calls[0].init?.headers).get('Content-Type')).toBe('image/webp');
+  });
+
+  it('explains a refused picture', async () => {
+    respond([413, { error: 'IMAGE_TOO_LARGE', message: 'Pictures can be at most 256 KB.' }]);
+    await expect(uploadAvatar(new Blob(['x'], { type: 'image/png' }))).rejects.toMatchObject({
+      field: 'image',
+      message: 'Pictures can be at most 256 KB.',
+    });
+  });
+
+  it('removes the picture', async () => {
+    const calls = respond([204]);
+    await removeAvatar();
+    expect(calls[0].init?.method).toBe('DELETE');
+  });
+
+  it('lists devices, most recent first, marking this one', async () => {
+    respond([
+      200,
+      [
+        { token: 'a', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-02T00:00:00Z', userAgent: 'Firefox/1' },
+        { token: 'b', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-05T00:00:00Z', userAgent: '' },
+      ],
+    ]);
+    const sessions = await listSessions('a');
+    expect(sessions.map((s) => [s.userAgent, s.current])).toEqual([
+      [null, false],
+      ['Firefox/1', true],
+    ]);
   });
 });
