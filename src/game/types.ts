@@ -81,6 +81,14 @@ export interface RoundResult {
   } | null;
 }
 
+/** A won round to look back on: its statistics, the board as it ended and every move. */
+export interface RoundDetail {
+  result: RoundResult;
+  board: CellView[][];
+  sequences: Sequence[];
+  log: LogEntry[];
+}
+
 export interface TeamSeriesStats {
   team: TeamIndex;
   roundsWon: number;
@@ -199,5 +207,7 @@ export interface GameAdapter {
   nextRound?(): Promise<ActionResult>;
   /** Table games, the host only: once a round is won, end the rounds there for the final result. */
   endRounds?(): Promise<ActionResult>;
+  /** Table games: a won round's statistics, final board and move log. Rejects with a readable message. */
+  roundDetail?(round: number): Promise<RoundDetail>;
   dispose(): void;
 }

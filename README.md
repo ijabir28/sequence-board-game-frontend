@@ -128,6 +128,8 @@ The game screen only talks to a `GameAdapter`: `getState`, `subscribe`, `legalTa
   passes and timed-out moves). The host then deals another round with the same teams (`POST /room/:id/rounds/next`)
   or ends the rounds there (`POST /room/:id/rounds/end`), which shows everyone the final result: every round added
   up, and the verdict (the team with the most round wins, or a draw). Other players see who they're waiting for.
+  In the final results each round opens in detail (`GET /room/:id/rounds/:round`, fetched on demand): its
+  statistics, the board as it ended (winning move ringed) and its whole move log.
   Round 1 opens with a player drawn at random (a toast says who while nobody has moved yet). Each later round opens
   with the seat after the one that opened the round before, so the first turn alternates between the teams; a toast
   says who moves first.
