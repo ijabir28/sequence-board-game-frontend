@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { onSignedInElsewhere } from '../api/socket';
 import { getProfile, signIn as apiSignIn, signOut as apiSignOut, signUp as apiSignUp, type Profile } from '../api/user';
+import { useToast } from '../components/toast/Toaster';
 import styles from '../screens/Forms.module.css';
 
 // The session cookie is HttpOnly, so the app asks the server who is signed in (GET /user/profile)
@@ -19,6 +21,8 @@ interface AuthValue {
 
 const AuthContext = createContext<AuthValue | null>(null);
 
+export const SIGNED_IN_ELSEWHERE = 'You were signed out here because your account signed in on another device.';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
 
@@ -34,6 +38,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  // An account is signed in on one device at a time: signing in elsewhere ends this session on the server. The server
+  // announces it, and this page checks its own session (the announcement is public, so it isn't trusted on its own).
+  // Coming back to the tab checks again, in case the announcement was missed while offline.
+  const toast = useToast();
+  const handle = profile?.handle ?? null;
+  useEffect(() => {
+    if (handle === null) return;
+    const check = async (elsewhere: boolean) => {
+      // A network failure isn't a sign-out: keep the session until the server says otherwise.
+      const current = await getProfile().catch(() => undefined);
+      if (current !== null) return;
+      setProfile(null);
+      if (elsewhere) toast.info(SIGNED_IN_ELSEWHERE, { id: 'session' });
+    };
+    const stop = onSignedInElsewhere((who) => {
+      if (who === handle) void check(true);
+    });
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void check(false);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [handle, toast]);
 
   const signIn = useCallback(async (handle: string, password: string) => {
     const next = await apiSignIn(handle, password);
