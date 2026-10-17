@@ -37,6 +37,84 @@ export interface TeamView {
 
 export type GameStatus = 'loading' | 'ready' | 'error';
 
+/** How one player did in a round (or, in a summary, over every round). */
+export interface PlayerStats {
+  id: string;
+  name: string;
+  team: TeamIndex;
+  /** Cards played: chips placed or removed. */
+  plays: number;
+  /** Two-eyed jacks played. */
+  wilds: number;
+  /** One-eyed jacks played: opponents' chips taken off. */
+  removals: number;
+  /** Dead cards exchanged. */
+  exchanges: number;
+  passes: number;
+  /** Moves made for them when their turn timer ran out. */
+  timedOut: number;
+}
+
+export interface TeamRoundStats {
+  team: TeamIndex;
+  sequences: number;
+  /** Chips on the board when the round ended. */
+  chips: number;
+  /** Chips put down, wild jacks included. */
+  placed: number;
+  /** Opponents' chips taken off. */
+  removed: number;
+}
+
+export interface RoundResult {
+  round: number;
+  winner: TeamIndex | null;
+  /** How long the round took, in ms; null when unknown. */
+  durationMs: number | null;
+  /** Null for a round won before statistics were kept. */
+  stats: {
+    turns: number;
+    /** Who moved first in the round. */
+    firstPlayerId: string;
+    teams: TeamRoundStats[];
+    players: PlayerStats[];
+  } | null;
+}
+
+export interface TeamSeriesStats {
+  team: TeamIndex;
+  roundsWon: number;
+  sequences: number;
+  placed: number;
+  removed: number;
+}
+
+/** Every round added up, once the host ended the rounds. */
+export interface SeriesSummary {
+  roundsPlayed: number;
+  turns: number;
+  teams: TeamSeriesStats[];
+  players: PlayerStats[];
+  /** The team with the most round wins; null with several leaders (a draw), all listed in `leaders`. */
+  winner: TeamIndex | null;
+  leaders: TeamIndex[];
+}
+
+/** Where a table is in its rounds (table games only). */
+export interface RoundsView {
+  /** The current round, from 1. */
+  round: number;
+  /** The host ended the rounds: `summary` is the final result. */
+  over: boolean;
+  /** The won rounds, in order (the current one too once it's won). */
+  results: RoundResult[];
+  summary: SeriesSummary | null;
+  /** The host deals each round and decides whether another follows. */
+  hostId: string | null;
+  /** The viewer is the host. */
+  isHost: boolean;
+}
+
 /** How the game is shown, chosen with the table (or the hot-seat setup). */
 export interface PlaySettings {
   /** Training games show hints; standard games never do. */
@@ -92,6 +170,8 @@ export interface GameView {
   away: string[];
   /** The table's name, when the game belongs to one. */
   title?: string;
+  /** Table games are played in rounds; null for games without them (hot-seat, older servers). */
+  rounds?: RoundsView | null;
 }
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
@@ -115,5 +195,9 @@ export interface GameAdapter {
    * like leaving the table: the viewer's turn pauses until they're back. Optional; others ignore it.
    */
   stepAway?(away: boolean): void;
+  /** Table games, the host only: once a round is won, deal the next one with the same teams. */
+  nextRound?(): Promise<ActionResult>;
+  /** Table games, the host only: once a round is won, end the rounds there for the final result. */
+  endRounds?(): Promise<ActionResult>;
   dispose(): void;
 }

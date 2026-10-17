@@ -22,6 +22,7 @@ import { Tooltip } from '../ui/Tooltip';
 import { tipProps } from '../ui/TooltipLayer';
 import { HandPanel } from './HandPanel';
 import { MoveLog } from './MoveLog';
+import { describeVerdict, RoundResults } from './RoundResults';
 import { Scoreboard } from './Scoreboard';
 import { useToast } from '../toast/Toaster';
 import { TurnPanel } from './TurnPanel';
@@ -71,11 +72,16 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     adapter.stepAway?.(steppedAway);
   }, [adapter, steppedAway]);
   const [busy, setBusy] = useState(false);
+  const [resultsOpen, setResultsOpen] = useState(false);
   // Phones: the turn panel and the scoreboard fold into one line until the player opens them.
   const phone = useMediaQuery('(max-width: 600px)');
   const [statusOpen, setStatusOpen] = useState(false);
 
   const viewer = view.viewer;
+  // Table games are played in rounds; the host deals each one and decides after it is won whether another follows.
+  const rounds = view.rounds ?? null;
+  const hostName = rounds?.hostId ? (view.players.find((p) => p.id === rounds.hostId)?.name ?? 'the host') : 'the host';
+  const title = `${view.title ?? modeLabel}${rounds ? ` · Round ${rounds.round}` : ''}`;
   // Every update is a fresh snapshot; keep the hand the same object while its cards are, so the memoised cards don't
   // re-render when only the turn or the board changed.
   const hand = useStableValue(view.hand, sameHand);
@@ -152,6 +158,28 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     }
     return null;
   }, [view.log, history]);
+
+  // The results open by themselves when a round is won and again when the host ends the rounds (also for a player
+  // who opens the game afterwards), once each.
+  const resultsKey = rounds && gameOver && rounds.results.length > 0 ? `${rounds.round}:${rounds.over}` : null;
+  const openedResults = useRef<string | null>(null);
+  useEffect(() => {
+    if (resultsKey === null || openedResults.current === resultsKey) return;
+    openedResults.current = resultsKey;
+    setResultsOpen(true);
+  }, [resultsKey]);
+
+  // Everyone hears when the host deals the next round.
+  const roundNumber = rounds?.round ?? null;
+  const seenRound = useRef(roundNumber);
+  useEffect(() => {
+    if (roundNumber === null) return;
+    if (seenRound.current !== null && roundNumber > seenRound.current) {
+      setResultsOpen(false);
+      toast.success(`Round ${roundNumber} has started. Same teams, a fresh deal.`, { id: FEEDBACK_TOAST });
+    }
+    seenRound.current = roundNumber;
+  }, [roundNumber]);
 
   // Stable, so the memoised hand cards don't re-render just because this screen did. It reads the latest state
   // through a ref.
@@ -277,6 +305,14 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (passed && adapter.hotSeat) setRevealedFor(null);
   };
 
+  const onNextRound = async () => {
+    if (adapter.nextRound && (await run(() => adapter.nextRound!()))) setResultsOpen(false);
+  };
+  const onEndRounds = async () => {
+    if (adapter.endRounds) await run(() => adapter.endRounds!());
+  };
+  const waitingForHost = `Waiting for ${hostName} to deal another round or end the rounds here.`;
+
   const exchangeTip = !exchangeable
     ? manualDead
       ? `Pick a card whose two cells are both taken, then exchange it for a new one. ${exchangesNote}`
@@ -366,13 +402,31 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       <span className={styles.gameOverChip}>
         <Chip team={view.winner!} />
       </span>
-      <h2>{teamName(view.winner!)} wins</h2>
+      <h2>
+        {teamName(view.winner!)} wins{rounds && ` round ${rounds.round}`}
+      </h2>
       <p>
         {view.teams.find((t) => t.index === view.winner)?.sequences} sequence
         {view.teams.find((t) => t.index === view.winner)?.sequences === 1 ? '' : 's'} completed
         {view.turn !== null && ` in ${view.turn} turns`}.
       </p>
+      {rounds?.over && rounds.summary && <p className={styles.verdict}>{describeVerdict(rounds.summary)}.</p>}
+      {rounds && !rounds.over && !rounds.isHost && <p>{waitingForHost}</p>}
       <div className={styles.actionButtons}>
+        {rounds && !rounds.over && rounds.isHost && (
+          <Button variant="primary" onClick={onNextRound} busy={busy} tip="Deal another round with the same teams">
+            Next round
+          </Button>
+        )}
+        {rounds && rounds.results.length > 0 && (
+          <Button
+            variant={rounds.over ? 'primary' : 'secondary'}
+            onClick={() => setResultsOpen(true)}
+            tip={rounds.over ? 'The final result: every round added up' : "This round's statistics"}
+          >
+            {rounds.over ? 'Final results' : 'Round results'}
+          </Button>
+        )}
         {onNewGame && (
           <Button variant="primary" onClick={onNewGame} tip="Deal a new game with the same players and settings">
             Play again
@@ -426,7 +480,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
                   <Chip team={0} />
                 </span>
                 <span>Sequence</span>
-                <span className={styles.mode}>{view.title ?? modeLabel}</span>
+                <span className={styles.mode}>{title}</span>
               </span>
             }
           >
@@ -444,6 +498,23 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
                 <span>
                   <strong>Move log</strong>
                   <small>Every move so far</small>
+                </span>
+              </button>
+            )}
+            {rounds && rounds.results.length > 0 && (
+              <button
+                type="button"
+                className={styles.drawerItem}
+                {...tipProps(rounds.over ? 'The final result: every round added up' : 'How each round went')}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setResultsOpen(true);
+                }}
+              >
+                <Icon name="log" />
+                <span>
+                  <strong>{rounds.over ? 'Final results' : 'Round results'}</strong>
+                  <small>{rounds.over ? 'Every round added up' : `${rounds.results.length} round${rounds.results.length === 1 ? '' : 's'} won so far`}</small>
                 </span>
               </button>
             )}
@@ -482,7 +553,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
                 <Chip team={0} />
               </span>
               <span className={styles.brandText}>Sequence</span>
-              <span className={styles.mode}>{view.title ?? modeLabel}</span>
+              <span className={styles.mode}>{title}</span>
             </div>
             <div className={styles.scores}>
               {!phone && <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />}
@@ -642,6 +713,45 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       <Dialog open={logOpen && history} title="Move log" onClose={() => setLogOpen(false)}>
         <MoveLog entries={view.log} emptyText="No moves yet. Moves will appear here as they are played." />
       </Dialog>
+
+      {rounds && rounds.results.length > 0 && (
+        <Dialog
+          open={resultsOpen}
+          size="wide"
+          title={rounds.over ? 'Final results' : `Round ${rounds.results.at(-1)!.round} results`}
+          onClose={() => setResultsOpen(false)}
+          actions={
+            gameOver && !rounds.over && rounds.isHost ? (
+              <>
+                <Button
+                  onClick={onEndRounds}
+                  busy={busy}
+                  tip="Finish the match here: show the final results of every round. No further round can be played."
+                >
+                  End rounds here
+                </Button>
+                <Button variant="primary" onClick={onNextRound} busy={busy} tip="Deal another round with the same teams">
+                  Play another round
+                </Button>
+              </>
+            ) : (
+              <>
+                {rounds.over && onDashboard && (
+                  <Button onClick={onDashboard} tip="Go back to the dashboard to start or join another game">
+                    Back to dashboard
+                  </Button>
+                )}
+                <Button variant={rounds.over ? 'secondary' : 'primary'} onClick={() => setResultsOpen(false)} tip="Close the results">
+                  Close
+                </Button>
+              </>
+            )
+          }
+        >
+          <RoundResults rounds={rounds} playerName={(id) => view.players.find((p) => p.id === id)?.name ?? id} />
+          {gameOver && !rounds.over && !rounds.isHost && <p className={styles.waitingNote}>{waitingForHost}</p>}
+        </Dialog>
+      )}
 
       <Dialog
         open={exitOpen}

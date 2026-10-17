@@ -1,11 +1,15 @@
 import { errorMessage } from '../../api/http';
 import {
+  endRoomRounds,
   exchangeRoomCard,
   GameRejectedError,
   getRoomGame,
+  nextRoomRound,
   passRoomTurn,
   playRoomCard,
   type RawHint,
+  type RawPlayerStats,
+  type RawRounds,
   type RoomGameView,
 } from '../../api/roomGame';
 import { sanitizeSettings } from '../../api/rooms';
@@ -16,7 +20,15 @@ import { legalTargets, type GameState } from '../../engine/game';
 import type { Hint } from '../../engine/hints';
 import { isLocked } from '../../engine/sequences';
 import type { TeamIndex } from '../../engine/setup';
-import { DEFAULT_PLAY_SETTINGS, type ActionResult, type GameAdapter, type GameView, type PlayerView } from '../types';
+import {
+  DEFAULT_PLAY_SETTINGS,
+  type ActionResult,
+  type GameAdapter,
+  type GameView,
+  type PlayerStats,
+  type PlayerView,
+  type RoundsView,
+} from '../types';
 
 export interface RoomGameOptions {
   roomId: string;
@@ -106,6 +118,14 @@ export class RoomGameAdapter implements GameAdapter {
 
   pass(): Promise<ActionResult> {
     return this.act(() => passRoomTurn(this.options.roomId));
+  }
+
+  nextRound(): Promise<ActionResult> {
+    return this.act(() => nextRoomRound(this.options.roomId));
+  }
+
+  endRounds(): Promise<ActionResult> {
+    return this.act(() => endRoomRounds(this.options.roomId));
   }
 
   stepAway(away: boolean): void {
@@ -243,6 +263,7 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     turnPaused: server.winner === null && server.turn_paused === true,
     turnTimeLeft: server.winner === null && server.turn_paused === true ? (server.turn_time_left_ms ?? null) : null,
     away: server.away ?? [],
+    rounds: toRounds(server.rounds, server.host ?? null, server.viewer),
     notice: viewer ? undefined : "You don't have a seat in this game, so you're watching.",
     board: server.board.map((row, r) =>
       row.map((cell, c) => {
@@ -265,6 +286,53 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     log: server.log,
     winner: server.winner,
     turn: server.turn,
+  };
+}
+
+function toPlayerStats(raw: RawPlayerStats): PlayerStats {
+  return {
+    id: raw.handle,
+    name: raw.name,
+    team: raw.team,
+    plays: raw.plays,
+    wilds: raw.wilds,
+    removals: raw.removals,
+    exchanges: raw.exchanges,
+    passes: raw.passes,
+    timedOut: raw.timed_out,
+  };
+}
+
+function toRounds(raw: RawRounds | undefined, hostId: string | null, viewer: string | null): RoundsView | null {
+  if (!raw) return null;
+  return {
+    round: raw.round,
+    over: raw.over,
+    hostId,
+    isHost: hostId !== null && hostId === viewer,
+    results: raw.results.map((result) => {
+      const started = result.started_at ? Date.parse(result.started_at) : NaN;
+      const finished = result.finished_at ? Date.parse(result.finished_at) : NaN;
+      return {
+        round: result.round,
+        winner: result.winner,
+        durationMs: Number.isNaN(started) || Number.isNaN(finished) ? null : Math.max(0, finished - started),
+        stats: result.stats && {
+          turns: result.stats.turns,
+          firstPlayerId: result.stats.first_player,
+          teams: result.stats.teams,
+          players: result.stats.players.map(toPlayerStats),
+        },
+      };
+    }),
+    summary: raw.summary && {
+      roundsPlayed: raw.summary.rounds_played,
+      turns: raw.summary.turns,
+      teams: raw.summary.teams.map((t) => ({ team: t.team, roundsWon: t.rounds_won, sequences: t.sequences, placed: t.placed, removed: t.removed })),
+      players: raw.summary.players.map(toPlayerStats),
+      winner: raw.summary.verdict.winner,
+      leaders: raw.summary.verdict.leaders,
+    },
   };
 }
 

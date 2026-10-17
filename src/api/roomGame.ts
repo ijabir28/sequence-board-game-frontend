@@ -22,6 +22,46 @@ export type RawHint =
   | { type: 'exchange'; hand_index: number; reason: HintReason }
   | { type: 'pass'; reason: HintReason };
 
+export interface RawPlayerStats {
+  handle: string;
+  name: string;
+  team: TeamIndex;
+  plays: number;
+  wilds: number;
+  removals: number;
+  exchanges: number;
+  passes: number;
+  timed_out: number;
+}
+
+export interface RawRoundResult {
+  round: number;
+  winner: TeamIndex | null;
+  started_at: string | null;
+  finished_at: string | null;
+  stats: {
+    winner: TeamIndex | null;
+    turns: number;
+    first_player: string;
+    teams: { team: TeamIndex; sequences: number; chips: number; placed: number; removed: number }[];
+    players: RawPlayerStats[];
+  } | null;
+}
+
+/** Where the table is in its rounds (missing from older backends). */
+export interface RawRounds {
+  round: number;
+  over: boolean;
+  results: RawRoundResult[];
+  summary: {
+    rounds_played: number;
+    turns: number;
+    teams: { team: TeamIndex; rounds_won: number; sequences: number; placed: number; removed: number }[];
+    players: RawPlayerStats[];
+    verdict: { winner: TeamIndex | null; leaders: TeamIndex[] };
+  } | null;
+}
+
 export interface RoomGameView {
   team_count: 2 | 3;
   sequences_to_win: number;
@@ -44,6 +84,9 @@ export interface RoomGameView {
   log: LogEntry[];
   /** The room's name and settings (missing from older backends). */
   name?: string;
+  /** The host's handle, and the table's rounds (missing from older backends). */
+  host?: string;
+  rounds?: RawRounds;
   settings?: RawRoomSettings;
   hint?: RawHint | null;
   /** When the current turn began (ISO time), and the server's clock at the time of the response. */
@@ -110,4 +153,14 @@ export async function exchangeRoomCard(roomId: string, handIndex: number): Promi
 
 export async function passRoomTurn(roomId: string): Promise<RoomGameView> {
   return readGame(await postJson(`${base(roomId)}/game/pass`, {}));
+}
+
+/** POST /room/:id/rounds/next (host). Deals the next round once the current one is won. */
+export async function nextRoomRound(roomId: string): Promise<RoomGameView> {
+  return readGame(await postJson(`${base(roomId)}/rounds/next`, {}));
+}
+
+/** POST /room/:id/rounds/end (host). Ends the rounds once the current one is won; the view then has the summary. */
+export async function endRoomRounds(roomId: string): Promise<RoomGameView> {
+  return readGame(await postJson(`${base(roomId)}/rounds/end`, {}));
 }

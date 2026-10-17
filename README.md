@@ -123,6 +123,11 @@ The game screen only talks to a `GameAdapter`: `getState`, `subscribe`, `legalTa
 - **`RoomGameAdapter`** plays a table's game: `POST /room/:id/start`, then `GET /room/:id/game` and
   `POST /room/:id/game/{play,exchange,pass}`. It re-fetches on the `game_updated` socket event (plus a slow safety
   poll), and the server's reason for a refused move (for example "It's Sakib's turn.") is shown as is.
+  Table games are played in **rounds**: when a round is won, its statistics open by themselves
+  (`src/components/game/RoundResults.tsx`: each team's sequences and chips, each player's cards, jacks, exchanges,
+  passes and timed-out moves). The host then deals another round with the same teams (`POST /room/:id/rounds/next`)
+  or ends the rounds there (`POST /room/:id/rounds/end`), which shows everyone the final result: every round added
+  up, and the verdict (the team with the most round wins, or a draw). Other players see who they're waiting for.
 - **`RemoteGameAdapter`** implements the legacy test game's contract: it polls `GET /board/deck` and `GET /game/hand_cards` (there
   are no game socket events) and sends `GET /game/play` with `board_card_index` as URL-encoded JSON. A
   `404 Invalid Move` becomes a readable message.
