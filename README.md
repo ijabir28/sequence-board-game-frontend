@@ -81,7 +81,7 @@ pins `socket.io-client@2.3.0`. The two majors must match. If your backend instal
 
 ## Deploy
 
-Production is https://sequence-board-game-zn2z.onrender.com, served by the backend, which builds this repo's `dev`
+Production is https://sequence-board-game-svxj.onrender.com, served by the backend, which builds this repo's `dev`
 branch into its image (see the backend's `docs/deploy.md`). Every push to `dev` runs
 [.github/workflows/deploy.yml](.github/workflows/deploy.yml): tests and build, then the Render deploy hook from the
 repository secret `RENDER_DEPLOY_HOOK_URL`. A failing test stops the deploy. Run it by hand from the Actions tab
