@@ -165,7 +165,7 @@ invariants.
 ## Design notes
 
 - **Choose your card deck.** Each player picks the design of the cards in their hand (`src/decks/decks.ts`) from the
-  Card deck card on their profile, or at any time in a game from the cards button in the top bar (the menu drawer on
+  Card deck section of their profile, or at any time in a game from the cards button in the top bar (the menu drawer on
   phones); the hand changes at once. The choice is only seen by you and is remembered on this device, so in a
   hot-seat game everyone shares it. There are five decks:
   - **Original**, the backend's deck, served from `/images/card_deck/` (the default).
@@ -176,6 +176,13 @@ invariants.
 
   The three image decks are SVGO-optimised copies in `public/decks/`, served with the app. Cards keep each deck's own
   proportions, so the art is never cropped, and a deck whose images can't be loaded falls back to drawn faces.
+- **The board matches your deck.** Full card art doesn't fit the board: a cell is about 33 px on a phone, its middle
+  is covered by a chip, and 100 images would be heavy (the court cards are up to 450 KB each). So the cells keep their
+  corner rank and suit, but draw the suits with the same vector pips as the Minimal deck (text suit characters turn
+  into emoji on some phones) in your deck's colours, so a blue diamond in your hand is a blue diamond on the board.
+  Under the deck you also choose the **board cells**: **Dark tiles** (the default) or **Card faces**, light cells in
+  your deck's face colour with dark ink, like a printed Sequence board. The game's dialog for both is called Cards and
+  board.
 
 - **The game screen never scrolls.** It is exactly one viewport tall. The board area is a CSS size container, and the
   board sizes itself to whichever is smaller, the area's width or its height, so all 100 cells are always visible.
