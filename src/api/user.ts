@@ -11,9 +11,13 @@ export interface Profile {
   emailVerified: boolean;
   /** The avatar's URL, or null. */
   image: string | null;
+  /** When the account was made (ISO 8601), or null if the server didn't say. */
+  createdAt: string | null;
+  /** Table games: finished ones played and won, and the ones in progress. */
+  stats: { played: number; won: number; playing: number };
 }
 
-export type AccountField = 'handle' | 'name' | 'email' | 'password' | 'credentials';
+export type AccountField = 'handle' | 'name' | 'email' | 'password' | 'currentPassword' | 'image' | 'credentials';
 
 // Better Auth's own messages are terse ("Username is too short"), so the ones players see are written here. Codes
 // without an entry keep the server's message.
@@ -32,6 +36,10 @@ const ERRORS: Record<string, { field: AccountField | null; message?: string }> =
   // The server's message says where the new link went.
   EMAIL_NOT_VERIFIED: { field: null },
   INVALID_TOKEN: { field: null, message: 'This link has expired or was already used. Ask for a new one.' },
+  INVALID_PASSWORD: { field: 'currentPassword', message: "That isn't your current password." },
+  INVALID_IMAGE: { field: 'image' },
+  IMAGE_TOO_LARGE: { field: 'image' },
+  UNSUPPORTED_MEDIA_TYPE: { field: 'image' },
 };
 
 /** The server refused a sign-in or sign-up, for example a taken handle. `message` is written for players. */
@@ -66,16 +74,23 @@ function refusal(response: Response, body: Record<string, unknown> | null): neve
   throw new ApiError('server', `The server returned an error (${response.status}). Try again in a moment.`, response.status);
 }
 
+function count(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
 function toProfile(body: Record<string, unknown> | null): Profile {
   if (typeof body?.handle !== 'string') {
     throw new ApiError('unexpected', 'The server sent a response this app could not read. Try again.');
   }
+  const stats = (body.stats && typeof body.stats === 'object' ? body.stats : {}) as Record<string, unknown>;
   return {
     handle: body.handle,
     name: typeof body.name === 'string' ? body.name : body.handle,
     email: typeof body.email === 'string' ? body.email : null,
     emailVerified: body.email_verified === true,
     image: typeof body.image === 'string' ? body.image : null,
+    createdAt: typeof body.created_at === 'string' ? body.created_at : null,
+    stats: { played: count(stats.played), won: count(stats.won), playing: count(stats.playing) },
   };
 }
 
@@ -137,4 +152,75 @@ export async function getProfile(): Promise<Profile | null> {
   const body = await readBody(response);
   if (!response.ok) refusal(response, body);
   return toProfile(body);
+}
+
+// --- Profile ---
+
+/** Where the links for a new email land. */
+export const PROFILE_PATH = '/profile';
+
+export async function updateName(name: string): Promise<void> {
+  await authAction('/update-user', { name });
+}
+
+/**
+ * Starts moving the account to `newEmail`. Nothing changes yet: a confirmed current address is first asked to
+ * approve, then the new address gets a link to confirm itself. Resolves the same if the address has an account.
+ */
+export async function changeEmail(newEmail: string): Promise<void> {
+  await authAction('/change-email', { newEmail, callbackURL: PROFILE_PATH });
+}
+
+/** Changes the password and signs out every other device. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await authAction('/change-password', { currentPassword, newPassword, revokeOtherSessions: true });
+}
+
+/** Uploads a PNG, JPEG or WebP picture as the avatar; resolves to the URL that serves it. */
+export async function uploadAvatar(picture: Blob): Promise<string> {
+  const response = await request('/user/avatar', { method: 'PUT', headers: { 'Content-Type': picture.type }, body: picture });
+  const body = await readBody(response);
+  if (!response.ok) refusal(response, body);
+  if (typeof body?.image !== 'string') throw new ApiError('unexpected', 'The server sent a response this app could not read. Try again.');
+  return body.image;
+}
+
+export async function removeAvatar(): Promise<void> {
+  const response = await request('/user/avatar', { method: 'DELETE' });
+  if (!response.ok) refusal(response, await readBody(response));
+}
+
+export interface DeviceSession {
+  createdAt: string;
+  updatedAt: string;
+  userAgent: string | null;
+  /** Whether it is this browser's session. */
+  current: boolean;
+}
+
+/** Every device the account is signed in on, most recently used first. `currentToken` marks this browser's. */
+export async function listSessions(currentToken: string | null): Promise<DeviceSession[]> {
+  const response = await request('/api/auth/list-sessions');
+  const body = (await response.json().catch(() => null)) as unknown;
+  if (!response.ok || !Array.isArray(body)) refusal(response, null);
+  return (body as Record<string, unknown>[])
+    .map((session) => ({
+      createdAt: String(session.createdAt),
+      updatedAt: String(session.updatedAt),
+      userAgent: typeof session.userAgent === 'string' && session.userAgent ? session.userAgent : null,
+      current: currentToken !== null && session.token === currentToken,
+    }))
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+}
+
+/** The token of this browser's session, to tell it apart in listSessions. */
+export async function currentSessionToken(): Promise<string | null> {
+  const response = await request('/api/auth/get-session');
+  const body = (await response.json().catch(() => null)) as { session?: { token?: unknown } } | null;
+  return typeof body?.session?.token === 'string' ? body.session.token : null;
+}
+
+/** Signs out every device but this one. */
+export async function signOutOtherDevices(): Promise<void> {
+  await authAction('/revoke-other-sessions', {});
 }

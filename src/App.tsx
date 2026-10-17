@@ -3,6 +3,7 @@ import { AuthProvider, RequireAuth, SessionCheck, useAuth } from './auth/AuthCon
 import { ToastProvider } from './components/toast/Toaster';
 import { TooltipLayer } from './components/ui/TooltipLayer';
 import { LocalGamePage } from './screens/LocalGamePage';
+import { ProfilePage } from './screens/ProfilePage';
 import { Lobby } from './screens/Lobby';
 import { RoomGamePage } from './screens/RoomGamePage';
 import { RoomPage } from './screens/RoomPage';
@@ -30,6 +31,14 @@ export function App() {
             element={
               <RequireAuth>
                 <Lobby />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <ProfilePage />
               </RequireAuth>
             }
           />
