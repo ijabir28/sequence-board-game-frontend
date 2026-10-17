@@ -169,7 +169,10 @@ invariants.
   see only whose turn it is), and the turn order. The countdown turns amber at 20 s and red at 10 s. When it runs out, a random playable card from the
   player's hand is played for them: by the server for tables, by `LocalGameAdapter` for hot-seat games, and the
   move log says so. On your own turn (not a teammate's) the turn timer is a glow round the board's outer edge, in place of a clock bar, drawn into the space around the full-size board (`src/components/board/TurnGlow.tsx`): a full ring when the turn starts that shrinks back along the edge towards the top centre as time runs out, green until the last 20 s and then turning red (`src/game/turnEdge.ts`; without a timer it shrinks over a minute and stays green, and it holds still while the turn is paused). The ring keeps its own clock, so the ticking never re-renders the board or the hand. On everyone else's turn the board is plain. When it becomes your turn it flashes,
-  phones buzz, and the tab title starts with "● Your turn". Table games take the turn's start time from the server
+  phones buzz, a chime plays, and the tab title starts with "● Your turn". Over your turn's last 20 s the clock ticks
+  every second, sharper for the final five. The sounds are synthesised with the Web Audio API (`src/game/sounds.ts`,
+  no audio files) and can be muted from the speaker button in the top bar (the menu drawer on phones), remembered on
+  this device. Table games take the turn's start time from the server
   (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
 - **Messages float.** Success and error messages (moves, joining or leaving a seat, saving options, signing in,
   dialogs) appear as toasts at the top of the screen (`src/components/toast/`), so they never push the layout around.
