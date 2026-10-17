@@ -43,7 +43,28 @@ function audio(): AudioContext | null {
  */
 const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const;
 
+/*
+ * iPhones mute web audio when the ring/silent switch is on silent, because pages default to the "ambient" audio
+ * category. The Audio Session API (Safari 16.4+) can ask for "playback" instead, which plays through the silent switch
+ * like a video does. It is only asked for while the game sounds are on; muted, the page goes back to the default.
+ * Other browsers don't have the API, and ignore this.
+ */
+type AudioSessionType = 'auto' | 'playback' | 'transient' | 'transient-solo' | 'ambient' | 'play-and-record';
+
+function applyAudioSession() {
+  const session = typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { audioSession?: { type: AudioSessionType } }).audioSession;
+  if (!session) return;
+  try {
+    session.type = muted ? 'auto' : 'playback';
+  } catch {
+    // An unknown type or a locked session: keep the default.
+  }
+}
+
+applyAudioSession();
+
 function unlock() {
+  applyAudioSession();
   const ctx = audio();
   if (!ctx || ctx.state === 'running') return;
   void ctx.resume().catch(() => {});
@@ -125,6 +146,7 @@ export function setMuted(next: boolean) {
   } catch {
     // Private mode or full storage: the choice still holds for this visit.
   }
+  applyAudioSession();
   listeners.forEach((listener) => listener());
 }
 

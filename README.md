@@ -174,7 +174,8 @@ invariants.
   every second, sharper for the final five. The sounds are synthesised with the Web Audio API (`src/game/sounds.ts`,
   no audio files). Phones need a tap before any sound: audio unlocks on touchend, pointerup or click (a touch's
   pointerdown doesn't count) with a silent sound for iOS, and any later tap restarts it after the phone suspends it
-  (screen lock, another tab). The sounds can be muted from the speaker button in the top bar (the menu drawer on phones), remembered on
+  (screen lock, another tab). On iPhones the page asks for the "playback" audio session (Safari 16.4+), so the sounds
+  play even with the ring/silent switch on silent; muting them in the game hands the session back. The sounds can be muted from the speaker button in the top bar (the menu drawer on phones), remembered on
   this device. Table games take the turn's start time from the server
   (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
 - **Draft your move ahead.** In table games, on someone else's turn you can pick a card and a cell as usual: the move
