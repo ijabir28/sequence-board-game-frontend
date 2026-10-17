@@ -185,6 +185,16 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     seenRound.current = roundNumber;
   }, [roundNumber]);
 
+  // Who opens a table's first round is drawn at random, so say who it is while nobody has moved yet.
+  const drawnOpener = rounds?.round === 1 && view.turn === 1 && view.log.length === 0 && currentPlayer !== null ? currentPlayer : null;
+  const announcedOpener = useRef(false);
+  useEffect(() => {
+    if (drawnOpener === null || announcedOpener.current) return;
+    announcedOpener.current = true;
+    const who = drawnOpener.id === viewer?.id ? 'You move' : `${drawnOpener.name} moves`;
+    toast.info(`Drawn at random: ${who} first. Each later round passes the first turn to the next team.`, { id: ROUND_TOAST });
+  }, [drawnOpener, viewer?.id]);
+
   // Stable, so the memoised hand cards don't re-render just because this screen did. It reads the latest state
   // through a ref.
   const latest = useRef({ handVisible, gameOver, handLength: hand.length, setFeedback });
