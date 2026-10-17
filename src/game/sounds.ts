@@ -2,7 +2,8 @@ import { useSyncExternalStore } from 'react';
 
 /*
  * Game sound effects, synthesised with the Web Audio API so there are no audio files to download. Browsers only
- * allow sound after the player has interacted with the page, so the audio context is unlocked on the first tap or key.
+ * allow sound after the player has interacted with the page, so the audio context is unlocked by a tap or key (and
+ * unlocked again after a phone suspends it).
  * The player can mute them; the choice is remembered on this device.
  */
 
@@ -32,15 +33,36 @@ function audio(): AudioContext | null {
   return context;
 }
 
-// The first interaction unlocks audio for the rest of the visit.
+/*
+ * Unlocking, so it works on phones too:
+ * - A touch's pointerdown is not a "user activation" (only a mouse's is), so phones never unlocked on it. Touch
+ *   browsers count touchend, pointerup and click, so listen for those as well.
+ * - iOS Safari only really starts the context when a sound is played inside the gesture, so play a silent one.
+ * - Phones suspend or interrupt the context when the tab is hidden, the screen locks or a call comes in, and don't
+ *   restart it themselves. So the listeners stay: any later tap resumes a context that isn't running.
+ */
+const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const;
+
+function unlock() {
+  const ctx = audio();
+  if (!ctx || ctx.state === 'running') return;
+  void ctx.resume().catch(() => {});
+  try {
+    const silence = ctx.createBufferSource();
+    silence.buffer = ctx.createBuffer(1, 1, 22050);
+    silence.connect(ctx.destination);
+    silence.start(0);
+  } catch {
+    // Not every browser lets a source start before the context runs; resume() alone is enough for those.
+  }
+}
+
 if (typeof window !== 'undefined') {
-  const unlock = () => {
-    void audio()?.resume().catch(() => {});
-    window.removeEventListener('pointerdown', unlock, true);
-    window.removeEventListener('keydown', unlock, true);
-  };
-  window.addEventListener('pointerdown', unlock, true);
-  window.addEventListener('keydown', unlock, true);
+  UNLOCK_EVENTS.forEach((type) => window.addEventListener(type, unlock, { capture: true, passive: true }));
+  // Back from another tab or a locked screen: some browsers allow resuming without a new gesture.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && context && context.state !== 'running') void context.resume().catch(() => {});
+  });
 }
 
 /** One short note: a pitch, a shape, and a quick attack and decay. */
@@ -59,10 +81,22 @@ function tone(ctx: AudioContext, { frequency, start, duration, volume, type }: {
 
 function play(sound: (ctx: AudioContext, at: number) => void) {
   if (muted) return;
-  const ctx = audio();
-  // Still locked (no interaction yet) or suspended in a background tab: stay quiet rather than queue sounds up.
-  if (!ctx || ctx.state !== 'running') return;
-  sound(ctx, ctx.currentTime);
+  // Never create the context here: outside a gesture it would start locked. It comes from the first tap (unlock).
+  const ctx = context;
+  if (!ctx) return;
+  if (ctx.state === 'running') {
+    sound(ctx, ctx.currentTime);
+    return;
+  }
+  // Suspended since (a phone that locked its screen, say): once the page has had a tap, browsers let it resume
+  // without a new one. Play then, unless it took too long to still mean anything; a locked one stays quiet.
+  const asked = Date.now();
+  ctx
+    .resume()
+    .then(() => {
+      if (ctx.state === 'running' && Date.now() - asked < 500) sound(ctx, ctx.currentTime);
+    })
+    .catch(() => {});
 }
 
 /** It's your turn: a bright two-note rising chime. */
