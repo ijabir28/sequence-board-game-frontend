@@ -87,6 +87,9 @@ export function SignIn() {
             autoComplete="current-password"
             aria-invalid={invalid || undefined}
           />
+          <Link to="/forgot-password" className={styles.help} {...tipProps('Get an email with a link to choose a new password')}>
+            Forgot your password?
+          </Link>
         </label>
         {import.meta.env.DEV && (
           <p className={styles.help}>

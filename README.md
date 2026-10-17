@@ -94,7 +94,8 @@ repository secret `RENDER_DEPLOY_HOOK_URL`. A failing test stops the deploy. Run
 The backend has no CORS, so the Vite dev server proxies `/api`, `/user`, `/room`, `/game`, `/board`, `/images` and
 `/socket.io` (websockets included) to `http://localhost:3000`. The session cookie `sequence.session_token` stays
 same-origin. App routes are
-chosen so they never start with a proxied prefix: `/signin`, `/signup`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
+chosen so they never start with a proxied prefix: `/signin`, `/signup`, `/email-verified`, `/forgot-password`,
+`/reset-password`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
 
 ### Code map
 
@@ -199,7 +200,10 @@ invariants.
 
 Anyone can create an account at `/signup` (handle, display name, email, password). The backend runs accounts on
 [Better Auth](https://better-auth.com) under `/api/auth` (`src/api/user.ts` calls it and words its errors) and keeps
-accounts and sessions in PostgreSQL, so a session survives backend restarts and lasts a week without use. On load the
+accounts and sessions in PostgreSQL, so a session survives backend restarts and lasts a week without use. A new
+account confirms its email first: sign-up ends on "Check your inbox", and the emailed link lands on `/email-verified`,
+signed in. "Forgot your password?" on the sign-in page emails a link to `/reset-password`. In development the backend
+prints these emails to its terminal. On load the
 app asks `GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the
 session on the server.
 
