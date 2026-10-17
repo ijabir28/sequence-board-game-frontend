@@ -169,9 +169,12 @@ invariants.
   see only whose turn it is), and the turn order. The countdown turns amber at 20 s and red at 10 s. When it runs out, a random playable card from the
   player's hand is played for them: by the server for tables, by `LocalGameAdapter` for hot-seat games, and the
   move log says so. On your own turn (not a teammate's) the turn timer is a progress bar round the board's whole perimeter, in place of a clock bar, lying just outside the full-size board (`src/components/board/TurnBar.tsx`): full when the turn starts, it empties clockwise from the top-left corner as time runs out, green until the last 20 s and then turning red (`src/game/turnEdge.ts`; without a timer it empties over a minute and stays green, and it holds still while the turn is paused). The bar keeps its own clock, so the ticking never re-renders the board or the hand. On everyone else's turn the board is plain. When it becomes your turn it flashes,
-  phones buzz, a chime plays, and the tab title starts with "● Your turn". Over your turn's last 20 s the clock ticks
+  phones buzz twice (the Vibration API on Android; a native switch's haptic tick on iOS 18, `src/game/haptics.ts`), a
+  chime plays, and the tab title starts with "● Your turn". Over your turn's last 20 s the clock ticks
   every second, sharper for the final five. The sounds are synthesised with the Web Audio API (`src/game/sounds.ts`,
-  no audio files) and can be muted from the speaker button in the top bar (the menu drawer on phones), remembered on
+  no audio files). Phones need a tap before any sound: audio unlocks on touchend, pointerup or click (a touch's
+  pointerdown doesn't count) with a silent sound for iOS, and any later tap restarts it after the phone suspends it
+  (screen lock, another tab). The sounds can be muted from the speaker button in the top bar (the menu drawer on phones), remembered on
   this device. Table games take the turn's start time from the server
   (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
 - **Draft your move ahead.** In table games, on someone else's turn you can pick a card and a cell as usual: the move
