@@ -38,6 +38,9 @@
   --cell-face-target: #22314a;
   --cell-ink-black: #e2e8f0;
   --cell-ink-red: #ff8a80;
+  /* Diamonds and clubs on the board with a four-colour deck. */
+  --cell-ink-blue: #8ab4ff;
+  --cell-ink-green: #7ee2a8;
   --card-face: #ffffff;
   --card-ink-black: #0f172a;
   --card-ink-red: #dc2626;
