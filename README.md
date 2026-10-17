@@ -91,8 +91,9 @@ repository secret `RENDER_DEPLOY_HOOK_URL`. A failing test stops the deploy. Run
 
 ### Talking to the backend
 
-The backend has no CORS, so the Vite dev server proxies `/user`, `/room`, `/game`, `/board`, `/images` and `/socket.io`
-(websockets included) to `http://localhost:3000`. The session cookie `connect.sid` stays same-origin. App routes are
+The backend has no CORS, so the Vite dev server proxies `/api`, `/user`, `/room`, `/game`, `/board`, `/images` and
+`/socket.io` (websockets included) to `http://localhost:3000`. The session cookie `sequence.session_token` stays
+same-origin. App routes are
 chosen so they never start with a proxied prefix: `/signin`, `/signup`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
 
 ### Code map
@@ -196,10 +197,11 @@ invariants.
 
 ## Accounts
 
-Anyone can create an account at `/signup` (handle, display name, password). The server keeps accounts and
-sessions in PostgreSQL, so a session survives backend restarts and lasts a week without use. On load the app asks
-`GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the session
-on the server.
+Anyone can create an account at `/signup` (handle, display name, email, password). The backend runs accounts on
+[Better Auth](https://better-auth.com) under `/api/auth` (`src/api/user.ts` calls it and words its errors) and keeps
+accounts and sessions in PostgreSQL, so a session survives backend restarts and lasts a week without use. On load the
+app asks `GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the
+session on the server.
 
 ## Tables and history
 

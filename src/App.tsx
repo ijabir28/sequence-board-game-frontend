@@ -10,7 +10,7 @@ import { ServerGamePage } from './screens/ServerGamePage';
 import { SignIn } from './screens/SignIn';
 import { SignUp } from './screens/SignUp';
 
-// SPA routes must not start with a proxied backend prefix (/user, /room, /game, /board, /images).
+// SPA routes must not start with a proxied backend prefix (/api, /user, /room, /game, /board, /images).
 export function App() {
   return (
     <ToastProvider>
