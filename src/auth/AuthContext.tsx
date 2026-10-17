@@ -10,7 +10,7 @@ interface AuthValue {
   /** undefined while the first check is running, null when signed out. */
   profile: Profile | null | undefined;
   signIn: (handle: string, password: string) => Promise<Profile>;
-  signUp: (handle: string, name: string, password: string) => Promise<Profile>;
+  signUp: (handle: string, name: string, email: string, password: string) => Promise<Profile>;
   signOut: () => Promise<void>;
 }
 
@@ -38,8 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return next;
   }, []);
 
-  const signUp = useCallback(async (handle: string, name: string, password: string) => {
-    const next = await apiSignUp(handle, name, password);
+  const signUp = useCallback(async (handle: string, name: string, email: string, password: string) => {
+    const next = await apiSignUp(handle, name, email, password);
     setProfile(next);
     return next;
   }, []);
