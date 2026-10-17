@@ -137,13 +137,16 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   );
 
   const lastEntry = view.log.at(-1);
+  // The last move's ring on the board is part of the move log: tables played without one don't mark it, so players
+  // have to keep track of the board themselves.
   const lastMove = useMemo(() => {
+    if (!history) return null;
     for (let i = view.log.length - 1; i >= 0; i--) {
       const entry = view.log[i];
       if (entry.kind === 'place' || entry.kind === 'remove') return entry.pos;
     }
     return null;
-  }, [view.log]);
+  }, [view.log, history]);
 
   // Stable, so the memoised hand cards don't re-render just because this screen did. It reads the latest state
   // through a ref.
