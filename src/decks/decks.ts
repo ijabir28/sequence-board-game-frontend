@@ -5,7 +5,8 @@ import { cardImageUrl, type CardName } from '../engine/cards';
  * The designs a player can pick for the cards in their hand. Each deck is a folder of SVGs in public/decks/<id>/
  * named after the cards (see public/decks/README.md for where each one comes from), except the original deck, which
  * the backend serves, and the drawn deck, which has no images at all.
- * The choice is remembered on this device and can be changed at any time, also in the middle of a game.
+ * The choice is remembered on this device, and on the account of a signed-in player (useAccountDeck.ts). It can be
+ * changed at any time, also in the middle of a game.
  */
 
 export type DeckId = 'original' | 'classic' | 'jumbo' | 'four-colour' | 'drawn';
@@ -134,13 +135,19 @@ function preference<T extends string>(storageKey: string, parse: (saved: string 
     };
   }
 
-  return { get, set, use: (): T => useSyncExternalStore(subscribe, get) };
+  return { get, set, subscribe, use: (): T => useSyncExternalStore(subscribe, get) };
 }
 
 const deckChoice = preference<DeckId>('sequence:deck', (saved) => deckById(saved).id);
 
 export const currentDeck = deckChoice.get;
 export const setDeck = deckChoice.set;
+/** Calls `listener` whenever the deck changes; returns a function that stops it. */
+export const onDeckChange = deckChoice.subscribe;
+
+export function isDeckId(id: string | null | undefined): id is DeckId {
+  return DECKS.some((deck) => deck.id === id);
+}
 
 /** The deck chosen on this device, and a way to change it. Every card on screen follows a change at once. */
 export function useDeck(): [Deck, (id: DeckId) => void] {
