@@ -215,9 +215,14 @@ prints these emails to its terminal.
 
 The header's avatar opens `/profile`: the player's picture, game stats and account. There they upload a picture
 (cropped and shrunk to 256×256 in the browser, `src/profile/avatarImage.ts`), change their display name, email
-(confirmed by an emailed link) or password, and sign out other devices. Handles never change. On load the
+(confirmed by an emailed link) or password, and see the device they are signed in on. Handles never change. On load the
 app asks `GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the
 session on the server.
+
+An account is signed in on one device at a time: signing in on another device ends the session here. The server
+announces it over Socket.IO (`signed_in_elsewhere`), so an open page checks its own session at once and, once it is
+gone, goes to the sign-in page with a message saying why (`src/auth/AuthContext.tsx`). Coming back to the tab checks
+again, in case the announcement was missed while offline.
 
 ## Tables and history
 
