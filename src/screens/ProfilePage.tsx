@@ -16,7 +16,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { Avatar } from '../components/Avatar';
-import { DeckPicker } from '../components/cards/DeckPicker';
+import { BoardStylePicker, DeckPicker } from '../components/cards/DeckPicker';
 import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
 import { AVATAR_ACCEPT, AvatarError, makeAvatar } from '../profile/avatarImage';
@@ -220,6 +220,8 @@ function DeckCard() {
         </p>
       </header>
       <DeckPicker />
+      <h3 className={own.subtitle}>Board cells</h3>
+      <BoardStylePicker />
     </section>
   );
 }

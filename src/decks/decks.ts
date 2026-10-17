@@ -19,6 +19,10 @@ export interface Deck {
   credit: string;
   /** Width over height of its cards, so they are never cropped. */
   aspect: number;
+  /** Its suit colours, which the board's cells follow: red and black, or a colour per suit. */
+  suits: 'two' | 'four';
+  /** The colour of its card faces, which the board's light cells take on. */
+  face: string;
   /** The face of `card` (or the back), or null for the drawn deck. */
   image: ((card: CardName | 'back') => string) | null;
 }
@@ -34,6 +38,8 @@ export const DECKS: readonly Deck[] = [
     description: 'The deck the game has always used.',
     credit: 'Served by the game server',
     aspect: 5 / 7,
+    suits: 'two',
+    face: '#ffffff',
     image: (card) => cardImageUrl(card === 'back' ? 'Reverse' : card),
   },
   {
@@ -42,6 +48,8 @@ export const DECKS: readonly Deck[] = [
     description: 'Traditional faces with detailed court cards.',
     credit: 'Byron Knoll, public domain (via MattCain/svg-playing-cards)',
     aspect: 167.09 / 242.67,
+    suits: 'two',
+    face: '#ffffff',
     image: folder('classic'),
   },
   {
@@ -50,6 +58,8 @@ export const DECKS: readonly Deck[] = [
     description: 'Big corner letters, easy to read on a small screen.',
     credit: 'saulspatz/SVGCards, public domain',
     aspect: 2 / 3,
+    suits: 'two',
+    face: '#fdfeee',
     image: folder('jumbo'),
   },
   {
@@ -58,6 +68,8 @@ export const DECKS: readonly Deck[] = [
     description: 'Jumbo index with a colour per suit: black spades, red hearts, blue diamonds, green clubs.',
     credit: 'saulspatz/SVGCards (Accessible set), public domain',
     aspect: 2 / 3,
+    suits: 'four',
+    face: '#fdfeee',
     image: folder('four-colour'),
   },
   {
@@ -66,6 +78,8 @@ export const DECKS: readonly Deck[] = [
     description: 'Clean flat cards drawn by the app, matching the board. Nothing to download.',
     credit: 'Drawn by this app',
     aspect: 5 / 7,
+    suits: 'two',
+    face: '#ffffff',
     image: null,
   },
 ];
@@ -76,49 +90,78 @@ export function deckById(id: string | null | undefined): Deck {
   return DECKS.find((deck) => deck.id === id) ?? DECKS.find((deck) => deck.id === DEFAULT_DECK)!;
 }
 
-const STORAGE_KEY = 'sequence:deck';
+/**
+ * A choice remembered on this device. Every component reading it follows a change at once, also one made in another
+ * tab.
+ */
+function preference<T extends string>(storageKey: string, parse: (saved: string | null) => T) {
+  let value = load();
+  const listeners = new Set<() => void>();
 
-let current: DeckId = load();
-const listeners = new Set<() => void>();
-
-function load(): DeckId {
-  try {
-    return deckById(window.localStorage.getItem(STORAGE_KEY)).id;
-  } catch {
-    return DEFAULT_DECK;
+  function load(): T {
+    try {
+      return parse(window.localStorage.getItem(storageKey));
+    } catch {
+      return parse(null);
+    }
   }
-}
 
-export function currentDeck(): DeckId {
-  return current;
-}
-
-export function setDeck(next: DeckId) {
-  current = deckById(next).id;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, current);
-  } catch {
-    // Private mode or full storage: the choice still holds for this visit.
+  function get(): T {
+    return value;
   }
-  listeners.forEach((listener) => listener());
+
+  function set(next: T) {
+    value = parse(next);
+    try {
+      window.localStorage.setItem(storageKey, value);
+    } catch {
+      // Private mode or full storage: the choice still holds for this visit.
+    }
+    listeners.forEach((listener) => listener());
+  }
+
+  function subscribe(listener: () => void) {
+    listeners.add(listener);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== storageKey) return;
+      value = parse(event.newValue);
+      listener();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => {
+      listeners.delete(listener);
+      window.removeEventListener('storage', onStorage);
+    };
+  }
+
+  return { get, set, use: (): T => useSyncExternalStore(subscribe, get) };
 }
 
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  // Another tab changing the deck changes it here too.
-  const onStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY) return;
-    current = deckById(event.newValue).id;
-    listener();
-  };
-  window.addEventListener('storage', onStorage);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener('storage', onStorage);
-  };
-}
+const deckChoice = preference<DeckId>('sequence:deck', (saved) => deckById(saved).id);
+
+export const currentDeck = deckChoice.get;
+export const setDeck = deckChoice.set;
 
 /** The deck chosen on this device, and a way to change it. Every card on screen follows a change at once. */
 export function useDeck(): [Deck, (id: DeckId) => void] {
-  return [deckById(useSyncExternalStore(subscribe, currentDeck)), setDeck];
+  return [deckById(deckChoice.use()), setDeck];
+}
+
+/**
+ * How the board's cells look: dark tiles on the felt (the default), or light card faces in the chosen deck's colours,
+ * like a printed Sequence board.
+ */
+export type BoardStyle = 'dark' | 'cards';
+
+export const BOARD_STYLES: readonly { id: BoardStyle; name: string; description: string }[] = [
+  { id: 'dark', name: 'Dark tiles', description: 'Light letters on dark cells, easy on the eyes.' },
+  { id: 'cards', name: 'Card faces', description: "Light cells like little cards, in your deck's colours." },
+];
+
+const boardChoice = preference<BoardStyle>('sequence:board-style', (saved) => (saved === 'cards' ? 'cards' : 'dark'));
+
+export const setBoardStyle = boardChoice.set;
+
+export function useBoardStyle(): [BoardStyle, (style: BoardStyle) => void] {
+  return [boardChoice.use(), setBoardStyle];
 }

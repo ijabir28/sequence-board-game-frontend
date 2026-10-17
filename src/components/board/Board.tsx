@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { BOARD_SIZE, posKey, type Pos } from '../../engine/board';
-import { BLANK, cardLabel, isRedSuit, parseCard, SUIT_SYMBOL, type BoardCardName } from '../../engine/cards';
+import { useBoardStyle, useDeck } from '../../decks/decks';
+import { BLANK, cardLabel, parseCard, type BoardCardName } from '../../engine/cards';
 import type { Sequence } from '../../engine/sequences';
 import type { TeamIndex } from '../../engine/setup';
 import { TEAM_STYLES, teamChipLabel, teamName } from '../../game/teams';
 import { tipProps } from '../ui/TooltipLayer';
 import type { CellView } from '../../game/types';
+import { SuitIcon } from '../cards/SuitIcon';
 import { Chip } from '../Chip';
 import { cellCentre } from './geometry';
 import { TurnBar, type TurnBarProps } from './TurnBar';
@@ -89,6 +91,9 @@ export function Board({
   };
 
   const teamStyle = activeTeam !== null ? TEAM_STYLES[activeTeam] : null;
+  // The cells follow the viewer's card deck: its suit colours, and on light card-face cells its face colour too.
+  const [deck] = useDeck();
+  const [boardStyle] = useBoardStyle();
 
   return (
     <div
@@ -99,7 +104,14 @@ export function Board({
       ]
         .filter(Boolean)
         .join(' ')}
-      style={teamStyle ? ({ '--active-team': teamStyle.color, '--active-glow': teamStyle.glow } as React.CSSProperties) : undefined}
+      data-suits={deck.suits}
+      data-cells={boardStyle}
+      style={
+        {
+          '--deck-face': deck.face,
+          ...(teamStyle && { '--active-team': teamStyle.color, '--active-glow': teamStyle.glow }),
+        } as React.CSSProperties
+      }
     >
       <div
         role="grid"
@@ -198,7 +210,6 @@ function cellLabelText(card: BoardCardName): string {
 function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, drafted, onFocus, onClick, cellRef }: CellProps) {
   const corner = cell.card === BLANK;
   const parsed = corner ? null : parseCard(cell.card as Exclude<BoardCardName, 'Blank'>);
-  const red = parsed ? isRedSuit(parsed.suit) : false;
   return (
     <div
       role="gridcell"
@@ -206,11 +217,11 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, drafted,
       tabIndex={tabbable ? 0 : -1}
       aria-label={cellAriaLabel(cell, target, removing, hinted, drafted)}
       aria-colindex={cell.column + 1}
+      data-suit={parsed?.suit}
       {...tipProps(cellTip(cell, target, removing, hinted, drafted))}
       className={[
         styles.cell,
         corner && styles.corner,
-        red && styles.red,
         target && styles.target,
         dimmed && styles.dimmed,
         last && styles.last,
@@ -227,9 +238,7 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, drafted,
           <span className={styles.rank} aria-hidden="true">
             {parsed.rank}
           </span>
-          <span className={styles.suit} aria-hidden="true">
-            {SUIT_SYMBOL[parsed.suit]}
-          </span>
+          <SuitIcon suit={parsed.suit} className={styles.suit} />
         </>
       ) : (
         <span className={styles.cornerMark} aria-hidden="true">
