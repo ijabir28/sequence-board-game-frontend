@@ -75,6 +75,9 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   }, [adapter, steppedAway]);
   const [busy, setBusy] = useState(false);
   const [resultsOpen, setResultsOpen] = useState(false);
+  // The round looked at in detail from the final results (null: the results themselves).
+  const [openRound, setOpenRound] = useState<number | null>(null);
+  const loadRound = useMemo(() => (adapter.roundDetail ? (round: number) => adapter.roundDetail!(round) : undefined), [adapter]);
   // Phones: the turn panel and the scoreboard fold into one line until the player opens them.
   const phone = useMediaQuery('(max-width: 600px)');
   const [statusOpen, setStatusOpen] = useState(false);
@@ -732,8 +735,13 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         <Dialog
           open={resultsOpen}
           size="wide"
-          title={rounds.over ? 'Final results' : `Round ${rounds.results.at(-1)!.round} results`}
-          onClose={() => setResultsOpen(false)}
+          title={
+            rounds.over ? (openRound !== null ? `Round ${openRound} in detail` : 'Final results') : `Round ${rounds.results.at(-1)!.round} results`
+          }
+          onClose={() => {
+            setResultsOpen(false);
+            setOpenRound(null);
+          }}
           actions={
             gameOver && !rounds.over && rounds.isHost ? (
               <>
@@ -755,14 +763,27 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
                     Back to dashboard
                   </Button>
                 )}
-                <Button variant={rounds.over ? 'secondary' : 'primary'} onClick={() => setResultsOpen(false)} tip="Close the results">
+                <Button
+                  variant={rounds.over ? 'secondary' : 'primary'}
+                  onClick={() => {
+                    setResultsOpen(false);
+                    setOpenRound(null);
+                  }}
+                  tip="Close the results"
+                >
                   Close
                 </Button>
               </>
             )
           }
         >
-          <RoundResults rounds={rounds} playerName={(id) => view.players.find((p) => p.id === id)?.name ?? id} />
+          <RoundResults
+            rounds={rounds}
+            playerName={(id) => view.players.find((p) => p.id === id)?.name ?? id}
+            loadRound={loadRound}
+            openRound={openRound}
+            onOpenRound={setOpenRound}
+          />
           {gameOver && !rounds.over && !rounds.isHost && <p className={styles.waitingNote}>{waitingForHost}</p>}
         </Dialog>
       )}
