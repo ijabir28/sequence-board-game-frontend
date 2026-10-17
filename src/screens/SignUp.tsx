@@ -158,7 +158,7 @@ export function SignUp() {
         <span className={styles.help}>At least {PASSWORD_MIN} characters.</span>
       </label>
       <label className={styles.field}>
-        <span className={styles.label}>Password again</span>
+        <span className={styles.label}>Confirm Password</span>
         <input
           className={styles.input}
           type="password"
