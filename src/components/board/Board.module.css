@@ -322,3 +322,19 @@
     animation: none;
   }
 }
+
+/* The move drafted for your next turn: a dashed ring in your team's colour, slowly turning, distinct from the hint. */
+.drafted {
+  z-index: 1;
+  opacity: 1;
+}
+
+.drafted::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px dashed var(--draft-team, var(--primary));
+  box-shadow: 0 0 10px var(--draft-glow, transparent);
+  pointer-events: none;
+}

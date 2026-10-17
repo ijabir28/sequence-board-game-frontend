@@ -11,6 +11,8 @@ interface HandCardProps {
   index: number;
   selected: boolean;
   dead: boolean;
+  /** This card is in the move drafted for the player's next turn. */
+  drafted?: boolean;
   disabled?: boolean;
   /** Called with handIndex. A stable function lets an unchanged card skip re-rendering. */
   onSelect: (handIndex: number) => void;
@@ -31,7 +33,7 @@ const JACK_TIP = {
 let imagesUnavailable = false;
 
 /** One card in the player's hand. Memoised: it re-renders only when its own props change, not on every game update. */
-export const HandCard = memo(function HandCard({ card, handIndex, index, selected, dead, disabled = false, onSelect }: HandCardProps) {
+export const HandCard = memo(function HandCard({ card, handIndex, index, selected, dead, drafted = false, disabled = false, onSelect }: HandCardProps) {
   const [imageFailed, setImageFailed] = useState(imagesUnavailable);
   const kind = cardKind(card);
   const { rank, suit } = parseCard(card);
@@ -47,9 +49,9 @@ export const HandCard = memo(function HandCard({ card, handIndex, index, selecte
   return (
     <button
       type="button"
-      className={[styles.card, selected && styles.selected, dead && styles.dead].filter(Boolean).join(' ')}
+      className={[styles.card, selected && styles.selected, dead && styles.dead, drafted && styles.drafted].filter(Boolean).join(' ')}
       aria-pressed={selected}
-      aria-label={[`${cardLabel(card)}`, hint, `key ${index + 1}`].filter(Boolean).join(', ')}
+      aria-label={[`${cardLabel(card)}`, hint, drafted && 'drafted for your next turn', `key ${index + 1}`].filter(Boolean).join(', ')}
       disabled={disabled}
       onClick={() => onSelect(handIndex)}
       {...tipProps(tip, 'top')}
@@ -78,6 +80,11 @@ export const HandCard = memo(function HandCard({ card, handIndex, index, selecte
       {kind !== 'normal' && (
         <span className={[styles.badge, kind === 'one-eyed-jack' ? styles.badgeRemove : styles.badgeWild].join(' ')} aria-hidden="true">
           {JACK_BADGE[kind]}
+        </span>
+      )}
+      {drafted && (
+        <span className={[styles.badge, styles.badgeQueued].join(' ')} aria-hidden="true">
+          Queued
         </span>
       )}
       {dead && (

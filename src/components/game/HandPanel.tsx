@@ -17,6 +17,8 @@ interface HandPanelProps {
   onReorder?: (order: number[]) => void;
   /** Hand index of the selected card. */
   selected: number | null;
+  /** Hand index of the card in the move drafted for the viewer's next turn. */
+  drafted?: number | null;
   /** Called with a hand index. Keep it stable (and `hand`, `order`, `onReorder`) so the cards skip re-rendering. */
   onSelect: (index: number) => void;
   /** Hot-seat: the hand stays face down until its owner reveals it. */
@@ -42,6 +44,7 @@ export function HandPanel({
   order,
   onReorder,
   selected,
+  drafted = null,
   onSelect,
   cover,
   disabled,
@@ -71,6 +74,7 @@ export function HandPanel({
               order={order}
               onReorder={cover ? undefined : onReorder}
               selected={selected}
+              drafted={drafted}
               onSelect={onSelect}
               disabled={disabled}
               cover={
@@ -100,6 +104,7 @@ interface HandCardsProps {
   order: readonly number[];
   onReorder?: (order: number[]) => void;
   selected: number | null;
+  drafted: number | null;
   onSelect: (index: number) => void;
   disabled?: boolean;
   /** Hot-seat: the hand is face down, with this over it. */
@@ -110,7 +115,7 @@ interface HandCardsProps {
  * The cards themselves. Memoised, so a game update that leaves the hand as it was (another player's move, the turn
  * passing to you) doesn't re-render them: only the heading and the prompt under them change.
  */
-const HandCards = memo(function HandCards({ hand, order, onReorder, selected, onSelect, disabled, cover }: HandCardsProps) {
+const HandCards = memo(function HandCards({ hand, order, onReorder, selected, drafted, onSelect, disabled, cover }: HandCardsProps) {
   const arrange = onReorder ?? null;
   const move = (from: number, to: number) => arrange?.(movedOrder(order, from, to));
   const keys = order.map((handIndex) => `${handIndex}-${hand[handIndex]?.card}`);
@@ -155,6 +160,7 @@ const HandCards = memo(function HandCards({ hand, order, onReorder, selected, on
                   index={slot}
                   dead={h.dead}
                   selected={selected === handIndex}
+                  drafted={drafted === handIndex}
                   disabled={disabled}
                   onSelect={onSelect}
                 />
