@@ -8,7 +8,7 @@ import { tipProps } from '../ui/TooltipLayer';
 import type { CellView } from '../../game/types';
 import { Chip } from '../Chip';
 import { cellCentre } from './geometry';
-import { TurnGlow, type TurnGlowProps } from './TurnGlow';
+import { TurnBar, type TurnBarProps } from './TurnBar';
 import styles from './Board.module.css';
 
 export type TargetMode = 'place' | 'remove';
@@ -28,10 +28,10 @@ interface BoardProps {
   draft?: Pos | null;
   disabled?: boolean;
   /**
-   * The viewer's own turn: the turn timer glows round the board's edge (see TurnGlow), keyed by `turn` so each turn
-   * starts with a full ring. Null on everyone else's turn: the plain board.
+   * The viewer's own turn: the turn timer runs round the board's perimeter as a bar (see TurnBar), keyed by `turn` so
+   * each turn starts with a full bar. Null on everyone else's turn: the plain board.
    */
-  turnEdge?: (TurnGlowProps & { turn: number | null }) | null;
+  turnEdge?: (TurnBarProps & { turn: number | null }) | null;
   onActivate: (pos: Pos) => void;
 }
 
@@ -137,7 +137,7 @@ export function Board({
       </div>
       <SequenceBeams sequences={sequences} />
       {turnEdge && (
-        <TurnGlow
+        <TurnBar
           key={turnEdge.turn ?? 'turn'}
           turnStartedAt={turnEdge.turnStartedAt}
           turnDeadline={turnEdge.turnDeadline}
