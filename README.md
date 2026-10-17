@@ -95,7 +95,7 @@ The backend has no CORS, so the Vite dev server proxies `/api`, `/user`, `/room`
 `/socket.io` (websockets included) to `http://localhost:3000`. The session cookie `sequence.session_token` stays
 same-origin. App routes are
 chosen so they never start with a proxied prefix: `/signin`, `/signup`, `/email-verified`, `/forgot-password`,
-`/reset-password`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
+`/reset-password`, `/profile`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
 
 ### Code map
 
@@ -203,7 +203,11 @@ Anyone can create an account at `/signup` (handle, display name, email, password
 accounts and sessions in PostgreSQL, so a session survives backend restarts and lasts a week without use. A new
 account confirms its email first: sign-up ends on "Check your inbox", and the emailed link lands on `/email-verified`,
 signed in. "Forgot your password?" on the sign-in page emails a link to `/reset-password`. In development the backend
-prints these emails to its terminal. On load the
+prints these emails to its terminal.
+
+The header's avatar opens `/profile`: the player's picture, game stats and account. There they upload a picture
+(cropped and shrunk to 256×256 in the browser, `src/profile/avatarImage.ts`), change their display name, email
+(confirmed by an emailed link) or password, and sign out other devices. Handles never change. On load the
 app asks `GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the
 session on the server.
 
