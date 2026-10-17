@@ -258,6 +258,10 @@ players out at random. The host can rename the table and
 change options on the table page until the game starts. Hot-seat games offer the
 same options. When the game starts, every seated player on the table page is taken into it.
 
+The table page reads top to bottom: the table name and its code, the teams, the start card, then the table options.
+On phones the name card and the options fold to their headings (tap one to open it); they start open for the host
+and folded for everyone else, so the teams and the start card fit on the first screen.
+
 The server stores tables, seats, options, games and every move in PostgreSQL. The **Your tables** list
 (`src/screens/YourTables.tsx`, from `GET /user/rooms`) lists the tables you opened or sat at, ten to a page, with their status
 (waiting, in progress with the move count, or who won) and links to resume or view them. It opens in a dialog from
