@@ -3,12 +3,12 @@ import { validateSignUp } from './SignUp';
 
 describe('validateSignUp', () => {
   it('accepts a valid account, normalising the handle like the server', () => {
-    expect(validateSignUp('  New_Player ', 'New', ' new@example.com ', 'long enough')).toBeNull();
+    expect(validateSignUp('  New_Player ', 'New', ' new@example.com ', 'long enough', 'long enough')).toBeNull();
   });
 
   it('allows display names of up to 10 characters', () => {
-    expect(validateSignUp('player', ' ' + 'x'.repeat(10) + ' ', 'p@example.com', 'long enough')).toBeNull();
-    expect(validateSignUp('player', 'x'.repeat(11), 'p@example.com', 'long enough')?.text).toMatch(/up to 10 characters/);
+    expect(validateSignUp('player', ' ' + 'x'.repeat(10) + ' ', 'p@example.com', 'long enough', 'long enough')).toBeNull();
+    expect(validateSignUp('player', 'x'.repeat(11), 'p@example.com', 'long enough', 'long enough')?.text).toMatch(/up to 10 characters/);
   });
 
   it.each([
@@ -21,6 +21,14 @@ describe('validateSignUp', () => {
     ['player', 'Name', 'no-at-sign.com', 'long enough', 'email'],
     ['player', 'Name', 'p@example.com', 'short', 'password'],
   ])('flags %j / %j / %j / %j on the %s field', (handle, name, email, password, field) => {
-    expect(validateSignUp(handle, name, email, password)?.field).toBe(field);
+    expect(validateSignUp(handle, name, email, password, password)?.field).toBe(field);
+  });
+
+  it('flags a repeated password that does not match, after the other fields', () => {
+    expect(validateSignUp('player', 'Name', 'p@example.com', 'long enough', 'long enougH')).toEqual({
+      text: "The two passwords don't match.",
+      field: 'confirm',
+    });
+    expect(validateSignUp('player', 'Name', 'p@example.com', 'short', 'other')?.field).toBe('password');
   });
 });

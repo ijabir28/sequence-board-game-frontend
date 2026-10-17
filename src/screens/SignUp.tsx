@@ -20,9 +20,11 @@ export const PASSWORD_MAX = 200;
 // A light check for typos; the server validates the address and, later, whether it receives mail.
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type FormError = { text: string; field: AccountField | null };
+// `confirm` is the repeated password, which only this form has.
+type Field = AccountField | 'confirm';
+type FormError = { text: string; field: Field | null };
 
-export function validateSignUp(handle: string, name: string, email: string, password: string): FormError | null {
+export function validateSignUp(handle: string, name: string, email: string, password: string, confirm: string): FormError | null {
   if (!HANDLE_PATTERN.test(handle.trim().toLowerCase())) {
     return { text: 'Handles are 3 to 20 characters: letters, digits and underscores.', field: 'handle' };
   }
@@ -34,6 +36,9 @@ export function validateSignUp(handle: string, name: string, email: string, pass
   }
   if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
     return { text: `Passwords need ${PASSWORD_MIN} to ${PASSWORD_MAX} characters.`, field: 'password' };
+  }
+  if (password !== confirm) {
+    return { text: "The two passwords don't match.", field: 'confirm' };
   }
   return null;
 }
@@ -47,6 +52,7 @@ export function SignUp() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [error, setFormError] = useState<FormError | null>(null);
   const toast = useToast();
   // The message floats as a toast; the field it is about stays marked until the next try.
@@ -59,7 +65,7 @@ export function SignUp() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const invalid = validateSignUp(handle, name, email, password);
+    const invalid = validateSignUp(handle, name, email, password, confirm);
     if (invalid) {
       setError(invalid);
       return;
@@ -85,7 +91,7 @@ export function SignUp() {
     );
   }
 
-  const fieldProps = (field: AccountField) => ({
+  const fieldProps = (field: Field) => ({
     'aria-invalid': error?.field === field || undefined,
   });
 
@@ -150,6 +156,18 @@ export function SignUp() {
           {...fieldProps('password')}
         />
         <span className={styles.help}>At least {PASSWORD_MIN} characters.</span>
+      </label>
+      <label className={styles.field}>
+        <span className={styles.label}>Password again</span>
+        <input
+          className={styles.input}
+          type="password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          autoComplete="new-password"
+          {...fieldProps('confirm')}
+        />
+        <span className={styles.help}>Type it once more, to catch typos.</span>
       </label>
 
       <Button type="submit" variant="primary" busy={busy} tip="Create the account and email you a link to confirm it">
