@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import { startRoomGame } from '../api/roomGame';
@@ -16,6 +16,7 @@ import { tipProps } from '../components/ui/TooltipLayer';
 import { isSupportedTable, sequencesToWin } from '../engine/setup';
 import { describeShuffle } from '../game/teamNotice';
 import { TEAM_STYLES } from '../game/teams';
+import { useMediaQuery } from '../game/useMediaQuery';
 import styles from './Forms.module.css';
 import own from './RoomPage.module.css';
 import { useRoom } from './useRoom';
@@ -244,24 +245,43 @@ function RoomView({
   // Only the host may start, and the server enforces it too.
   const canStart = supported && full && host;
   const editable = host && !room.gameStarted;
+  // Phones: the name card and the options fold to their headings. The host opens them by default, since they run
+  // the table; everyone else starts with them folded, so the teams and the start card are on the first screen.
+  const phone = useMediaQuery('(max-width: 600px)');
+  const [summaryOpen, setSummaryOpen] = useState(host);
+  const [optionsOpen, setOptionsOpen] = useState(host);
+  const summaryId = useId();
+  const optionsId = useId();
+  const showSummary = !phone || summaryOpen;
+  const showOptions = !phone || optionsOpen;
 
   return (
     <div className={own.layout}>
       <section className={[styles.card, own.summary].join(' ')}>
         <div className={own.titleRow}>
-          <h1>{room.name}</h1>
+          <h1>
+            {phone ? (
+              <FoldToggle open={summaryOpen} controls={summaryId} onToggle={() => setSummaryOpen((o) => !o)}>
+                {room.name}
+              </FoldToggle>
+            ) : (
+              room.name
+            )}
+          </h1>
           <span className={[own.live, own[connection]].join(' ')} role="status">
             <span className={own.dot} aria-hidden="true" />
             {connection === 'live' ? 'Live' : connection === 'connecting' ? 'Connecting…' : 'Offline, retrying'}
           </span>
         </div>
-        <p className={styles.help}>
-          {teamCount} teams of {perTeam}
-          {supported && `. First team to ${sequencesToWin(teamCount)} sequence${sequencesToWin(teamCount) > 1 ? 's' : ''} wins`}.{' '}
-          {hostName && <>Opened by {hostName}. </>}
-          {open === 0 ? 'Every seat is taken.' : `${open} open seat${open === 1 ? '' : 's'}.`}
-        </p>
-        <ShareCode id={room.id} />
+        <div id={summaryId} className={own.foldBody} hidden={!showSummary}>
+          <p className={styles.help}>
+            {teamCount} teams of {perTeam}
+            {supported && `. First team to ${sequencesToWin(teamCount)} sequence${sequencesToWin(teamCount) > 1 ? 's' : ''} wins`}.{' '}
+            {hostName && <>Opened by {hostName}. </>}
+            {open === 0 ? 'Every seat is taken.' : `${open} open seat${open === 1 ? '' : 's'}.`}
+          </p>
+          <ShareCode id={room.id} />
+        </div>
       </section>
 
       {host && !room.gameStarted && taken >= 2 && (
@@ -399,18 +419,39 @@ function RoomView({
       </section>
 
       <section className={[styles.card, own.options].join(' ')} aria-labelledby="table-options">
-        <h2 id="table-options">Table options</h2>
-        {editable && <RenameTable name={room.name} saving={saving} onSave={(name) => onSave({ name })} />}
-        <RoomOptions value={room.settings} onChange={editable ? (settings) => void onSave({ settings }) : undefined} disabled={saving} />
-        <p className={styles.help}>
-          {room.gameStarted
-            ? 'The game has started, so these are fixed.'
-            : editable
-              ? 'You opened this table, so you can change these until the game starts.'
-              : `Only ${hostName ?? 'the host'} can change these, until the game starts.`}
-        </p>
+        <h2 id="table-options">
+          {phone ? (
+            <FoldToggle open={optionsOpen} controls={optionsId} onToggle={() => setOptionsOpen((o) => !o)}>
+              Table options
+            </FoldToggle>
+          ) : (
+            'Table options'
+          )}
+        </h2>
+        {/* Folded with `hidden`, not unmounted, so a half-typed new name survives folding. */}
+        <div id={optionsId} className={own.foldBody} hidden={!showOptions}>
+          {editable && <RenameTable name={room.name} saving={saving} onSave={(name) => onSave({ name })} />}
+          <RoomOptions value={room.settings} onChange={editable ? (settings) => void onSave({ settings }) : undefined} disabled={saving} />
+          <p className={styles.help}>
+            {room.gameStarted
+              ? 'The game has started, so these are fixed.'
+              : editable
+                ? 'You opened this table, so you can change these until the game starts.'
+                : `Only ${hostName ?? 'the host'} can change these, until the game starts.`}
+          </p>
+        </div>
       </section>
     </div>
+  );
+}
+
+/** A card heading that folds the card's body on phones: the whole heading is the button. */
+function FoldToggle({ open, controls, onToggle, children }: { open: boolean; controls: string; onToggle: () => void; children: ReactNode }) {
+  return (
+    <button type="button" className={own.foldToggle} aria-expanded={open} aria-controls={controls} onClick={onToggle}>
+      <span className={own.foldLabel}>{children}</span>
+      <Icon name={open ? 'chevronUp' : 'chevronDown'} size={20} />
+    </button>
   );
 }
 
