@@ -1,0 +1,89 @@
+/* Full height, flush with the right edge of the screen. */
+.drawer {
+  width: min(20rem, 85vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--outline-strong);
+  background: var(--surface-container);
+  color: var(--on-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.drawer::backdrop {
+  background: rgba(2, 6, 23, 0.55);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.drawer[open] {
+  animation: drawer-in 200ms var(--ease-out);
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--outline-subtle);
+}
+
+.header h2 {
+  min-width: 0;
+  font-size: var(--text-lg);
+}
+
+.close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--on-surface-muted);
+}
+
+.close:hover {
+  background: var(--surface-high);
+  color: var(--on-surface);
+}
+
+.close:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer[open] {
+    animation: none;
+  }
+}

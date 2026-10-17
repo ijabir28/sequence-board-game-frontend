@@ -32,6 +32,7 @@ const EMPTY_VIEW: GameView = {
   viewer: null,
   hand: [],
   canExchange: false,
+  exchangesLeft: null,
   canPass: false,
   deckCount: null,
   sequences: [],
@@ -42,6 +43,9 @@ const EMPTY_VIEW: GameView = {
   hint: null,
   turnStartedAt: null,
   turnDeadline: null,
+  turnPaused: false,
+  turnTimeLeft: null,
+  away: [],
 };
 
 /** Talks to the backend's legacy HTTP game, polling because it emits no game events. */
@@ -179,7 +183,7 @@ export class RemoteGameAdapter implements GameAdapter {
       discard: [],
       current: 0,
       turn: 1,
-      exchangedThisTurn: false,
+      exchangesThisTurn: 0,
       sequences: [],
       winner: null,
       log: [],

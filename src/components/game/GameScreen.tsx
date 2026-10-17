@@ -1,23 +1,31 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Pos } from '../../engine/board';
 import { cardKind, cardShort, type CardName } from '../../engine/cards';
 import { describeHint } from '../../game/describeHint';
+import { describeDraft, draftLostMessage, draftProblem, type Draft } from '../../game/draft';
 import { describeLog } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter } from '../../game/types';
 import { useHandOrder } from '../../game/useHandOrder';
+import { useAwayWhileHidden } from '../../game/useAwayWhileHidden';
 import { useMediaQuery } from '../../game/useMediaQuery';
+import { useMuted } from '../../game/sounds';
+import { sameHand, sameNumbers, useStableValue } from '../../game/stableValue';
 import { useGame } from '../../game/useGame';
 import { Board } from '../board/Board';
 import { Chip } from '../Chip';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
+import { Drawer } from '../ui/Drawer';
 import { Icon } from '../ui/Icon';
 import { Tooltip } from '../ui/Tooltip';
+import { tipProps } from '../ui/TooltipLayer';
 import { HandPanel } from './HandPanel';
 import { MoveLog } from './MoveLog';
 import { Scoreboard } from './Scoreboard';
+import { useToast } from '../toast/Toaster';
 import { TurnPanel } from './TurnPanel';
+import { TurnSounds } from './TurnSounds';
 import styles from './GameScreen.module.css';
 
 interface GameScreenProps {
@@ -34,29 +42,75 @@ interface GameScreenProps {
   handOrderKey?: string;
 }
 
-type Feedback = { tone: 'error' | 'info'; text: string } | null;
+/** Game messages share one toast, so a new one replaces the last instead of piling up. */
+const FEEDBACK_TOAST = 'game-feedback';
 
 export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, handOrderKey }: GameScreenProps) {
   const view = useGame(adapter);
   const [selected, setSelected] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState<Feedback>(null);
+  const toast = useToast();
+  // A new selection or move clears a stale error or tip, but lets good news run its course.
+  const feedbackTone = useRef<'error' | 'info' | 'success' | null>(null);
+  const setFeedback = (feedback: { tone: 'error' | 'info' | 'success'; text: string } | null) => {
+    if (feedback) toast.show(feedback.tone, feedback.text, { id: FEEDBACK_TOAST });
+    else if (feedbackTone.current !== 'success') toast.dismiss(FEEDBACK_TOAST);
+    feedbackTone.current = feedback?.tone ?? feedbackTone.current;
+  };
   const [revealedFor, setRevealedFor] = useState<string | null>(null);
-  const [handOpen, setHandOpen] = useState(true);
   const [logOpen, setLogOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Opening the menu drawer or the leave dialog counts as stepping away from the table, as if the player had already
+  // left: their turn pauses until they close it.
+  // On a phone or tablet, a hidden page (the screen locked, another app) counts too, from the moment it is hidden.
+  // Desktop players may watch another tab while they wait: the tab title tells them when it is their turn.
+  const touch = useMediaQuery('(pointer: coarse)');
+  const hiddenAway = useAwayWhileHidden(touch, () => adapter.stepAway?.(true));
+  const steppedAway = menuOpen || exitOpen || hiddenAway;
+  useEffect(() => {
+    adapter.stepAway?.(steppedAway);
+  }, [adapter, steppedAway]);
   const [busy, setBusy] = useState(false);
   // Phones: the turn panel and the scoreboard fold into one line until the player opens them.
   const phone = useMediaQuery('(max-width: 600px)');
   const [statusOpen, setStatusOpen] = useState(false);
 
   const viewer = view.viewer;
+  // Every update is a fresh snapshot; keep the hand the same object while its cards are, so the memoised cards don't
+  // re-render when only the turn or the board changed.
+  const hand = useStableValue(view.hand, sameHand);
   const handVisible = !adapter.hotSeat || (viewer !== null && revealedFor === viewer.id);
   const gameOver = view.winner !== null;
   const currentPlayer = view.players.find((p) => p.id === view.currentPlayerId) ?? null;
   const activeTeam = currentPlayer?.team ?? viewer?.team ?? null;
   const selectedCard = selected !== null ? view.hand[selected]?.card : undefined;
+  // The viewer is the one to move (in hot-seat play, whoever has their hand showing).
+  const yourTurn =
+    !gameOver && currentPlayer !== null && (adapter.hotSeat ? handVisible : viewer !== null && currentPlayer.id === viewer.id);
+  // On your own turn (not a teammate's) the turn timer glows round the board, shrinking as its time runs down. The
+  // board's glow keeps its own clock, so this screen doesn't re-render every second.
+  const turnEdge = yourTurn
+    ? { turn: view.turn, turnStartedAt: view.turnStartedAt, turnDeadline: view.turnDeadline, paused: view.turnPaused }
+    : null;
+  // Table games: on someone else's turn the viewer may draft their next move. It is played for them as soon as their
+  // turn comes, unless a move in the meantime rules it out (then they're told, and can draft another).
+  const waiting = !adapter.hotSeat && !gameOver && view.status === 'ready' && currentPlayer !== null && viewer !== null && currentPlayer.id !== viewer.id;
+  const [draft, setDraft] = useState<Draft | null>(null);
+  // A chime when the turn passes to you (in hot-seat play, every new turn: the next person picks up the device), and
+  // the clock ticking over your turn's last 20 seconds.
+  const chimeKey =
+    gameOver || currentPlayer === null
+      ? null
+      : adapter.hotSeat
+        ? `${currentPlayer.id}:${view.turn}`
+        : viewer !== null && currentPlayer.id === viewer.id
+          ? `${view.turn}`
+          : null;
+  const [muted, setMuted] = useMuted();
+  const soundTip = muted ? 'Turn the game sounds back on' : 'Mute the game sounds: your-turn chime and the clock ticking';
   // How the viewer arranged their hand. Only the view changes; moves still use real hand indexes.
-  const { order, setOrder } = useHandOrder(viewer?.id ?? null, view.hand.length, handOrderKey);
+  const { order: freshOrder, setOrder } = useHandOrder(viewer?.id ?? null, hand.length, handOrderKey);
+  const order = useStableValue(freshOrder, sameNumbers);
   const { highlights, history } = view.settings;
   // Hints and card tips are for training games only.
   const training = view.settings.mode === 'training';
@@ -75,15 +129,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (hint.type !== 'pass') setSelected(hint.handIndex);
   };
 
-  // A new hand (after a move, or the next hot-seat player) starts with nothing selected.
+  // A new hand (after a move, or the next hot-seat player) starts with nothing selected. Other players' moves leave
+  // the hand (and so the selection) as it was.
   useEffect(() => {
     setSelected(null);
-  }, [view.hand, viewer?.id]);
-
-  // In hot-seat play the next person may not know the hand was collapsed, so reopen it.
-  useEffect(() => {
-    if (adapter.hotSeat) setHandOpen(true);
-  }, [adapter.hotSeat, viewer?.id]);
+  }, [hand, viewer?.id]);
 
   const targets = useMemo(
     () => (selected !== null && handVisible && !gameOver ? adapter.legalTargets(selected) : null),
@@ -92,19 +142,27 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   );
 
   const lastEntry = view.log.at(-1);
+  // The last move's ring on the board is part of the move log: tables played without one don't mark it, so players
+  // have to keep track of the board themselves.
   const lastMove = useMemo(() => {
+    if (!history) return null;
     for (let i = view.log.length - 1; i >= 0; i--) {
       const entry = view.log[i];
       if (entry.kind === 'place' || entry.kind === 'remove') return entry.pos;
     }
     return null;
-  }, [view.log]);
+  }, [view.log, history]);
 
-  const selectCard = (index: number) => {
-    if (!handVisible || gameOver || index >= view.hand.length) return;
+  // Stable, so the memoised hand cards don't re-render just because this screen did. It reads the latest state
+  // through a ref.
+  const latest = useRef({ handVisible, gameOver, handLength: hand.length, setFeedback });
+  latest.current = { handVisible, gameOver, handLength: hand.length, setFeedback };
+  const selectCard = useCallback((index: number) => {
+    const { handVisible, gameOver, handLength, setFeedback } = latest.current;
+    if (!handVisible || gameOver || index >= handLength) return;
     setFeedback(null);
     setSelected((current) => (current === index ? null : index));
-  };
+  }, []);
 
   // Number keys pick a hand card, Escape clears the selection.
   useEffect(() => {
@@ -137,6 +195,28 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     }
   };
 
+  // Checks the draft whenever the game moves on: drops it, with a message, once it can't be played, and plays it the
+  // moment the viewer's turn starts.
+  useEffect(() => {
+    if (!draft || busy) return;
+    if (gameOver) {
+      setDraft(null);
+      return;
+    }
+    const problem = draftProblem(draft, hand, adapter.legalTargets(draft.handIndex));
+    if (problem) {
+      setDraft(null);
+      setFeedback({ tone: 'error', text: draftLostMessage(draft, problem) });
+      return;
+    }
+    if (!yourTurn || view.turnPaused) return;
+    setDraft(null);
+    void run(() => adapter.playCard(draft.handIndex, draft.target)).then((played) => {
+      if (played) setFeedback({ tone: 'success', text: `Your drafted move was played: ${describeDraft(draft)}.` });
+    });
+    // `view` changes with every move, which is when the draft needs checking again.
+  }, [adapter, draft, view, hand, yourTurn, gameOver, busy]);
+
   const onCell = async (pos: Pos) => {
     if (gameOver || busy) return;
     if (!handVisible) {
@@ -153,17 +233,84 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       setFeedback({ tone: 'error', text: `That cell isn't ${what} for ${cardShort(selectedCard)}. Pick a highlighted cell.` });
       return;
     }
+    if (waiting) {
+      // Not your turn yet: draft the move instead. The engine checks it now, since the server won't until it is played.
+      if (!adapter.legalTargets(selected).some((t) => t.row === pos.row && t.column === pos.column)) {
+        setFeedback({ tone: 'error', text: `That cell isn't a legal move for ${cardShort(selectedCard)}, so it can't be drafted.` });
+        return;
+      }
+      const next = { handIndex: selected, card: selectedCard, target: pos };
+      setDraft(next);
+      setSelected(null);
+      setFeedback({ tone: 'info', text: `Move drafted: ${describeDraft(next)}. It is played as soon as your turn comes.` });
+      return;
+    }
     const played = await run(() => adapter.playCard(selected, pos));
     if (played && adapter.hotSeat) setRevealedFor(null);
   };
 
-  const onExchange = () => selected !== null && run(() => adapter.exchangeDeadCard(selected));
+  const manualDead = view.settings.deadCards === 'manual';
+  // With manual dead cards any normal card may be offered for exchange (jacks are never dead); the rules check it.
+  const exchangeable =
+    selected !== null &&
+    selectedCard !== undefined &&
+    handVisible &&
+    !gameOver &&
+    view.canExchange &&
+    (manualDead ? cardKind(selectedCard) === 'normal' : !!view.hand[selected]?.dead);
+  // Phones and tablets keep the exchange button in the hand strip's heading row, so it is never scrolled or squeezed
+  // out of view. It shows whenever an exchange is possible this turn and is enabled once a card that may be exchanged
+  // is selected.
+  const offerExchange =
+    handVisible && !gameOver && view.canExchange && (manualDead || view.hand.some((h) => h.dead));
+  const exchangesNote =
+    view.exchangesLeft === null ? 'You may exchange any number this turn.' : `${view.exchangesLeft} exchange${view.exchangesLeft === 1 ? '' : 's'} left this turn.`;
+  const onExchange = async () => {
+    if (selected === null || !selectedCard) return;
+    const card = selectedCard;
+    if (await run(() => adapter.exchangeDeadCard(selected))) {
+      setFeedback({ tone: 'success', text: `${cardShort(card)} was dead: you drew a new card.` });
+    }
+  };
   const onPass = async () => {
     const passed = await run(() => adapter.pass());
     if (passed && adapter.hotSeat) setRevealedFor(null);
   };
 
-  const prompt = handHint({ selectedCard, dead: selected !== null && !!view.hand[selected]?.dead, targets, canExchange: view.canExchange, highlights, tips: training });
+  const exchangeTip = !exchangeable
+    ? manualDead
+      ? `Pick a card whose two cells are both taken, then exchange it for a new one. ${exchangesNote}`
+      : `Pick the dead card in your hand, then exchange it for a new one. ${exchangesNote}`
+    : manualDead
+      ? `If both of ${cardShort(selectedCard!)}'s cells are taken, swap it for a new card. ${exchangesNote}`
+      : `Discard it and draw a new card, before you play. ${exchangesNote}`;
+
+  const barExchange = offerExchange ? (
+    <Button
+      size="sm"
+      variant={exchangeable && !manualDead ? 'primary' : 'secondary'}
+      onClick={onExchange}
+      busy={busy}
+      disabled={!exchangeable}
+      tip={exchangeTip}
+      tipAlign="end"
+    >
+      <Icon name="swap" size={16} />
+      Exchange dead
+    </Button>
+  ) : null;
+
+  const prompt = handHint({
+    selectedCard,
+    dead: selected !== null && !!view.hand[selected]?.dead,
+    targets,
+    canExchange: view.canExchange,
+    highlights,
+    tips: training,
+    manualDead,
+    waiting,
+    draft,
+  });
 
   const footer = (
     <div className={styles.actions}>
@@ -176,6 +323,14 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         <p className={styles.hint}>{prompt}</p>
       )}
       <div className={styles.actionButtons}>
+        {draft && (
+          <Tooltip text="Forget the drafted move, so nothing is played for you when your turn comes" side="top" align="end">
+            <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
+              <Icon name="close" size={16} />
+              Cancel draft
+            </Button>
+          </Tooltip>
+        )}
         {hint && !hintShown && (
           <Tooltip text="Suggest a move for this turn, and say why" side="top" align="end">
             <Button size="sm" variant="ghost" onClick={showHint}>
@@ -184,13 +339,16 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             </Button>
           </Tooltip>
         )}
-        {selected !== null && view.hand[selected]?.dead && view.canExchange && (
-          <Tooltip text="Discard it and draw a new card. One exchange per turn, before you play." side="top" align="end">
-            <Button size="sm" variant="primary" onClick={onExchange} busy={busy}>
-              <Icon name="swap" size={16} />
-              Exchange dead card
-            </Button>
-          </Tooltip>
+        {exchangeable && (
+          // Wide screens only: phones and tablets have it in the hand strip's heading row (barExchange).
+          <span className={styles.footerExchange}>
+            <Tooltip text={exchangeTip} side="top" align="end">
+              <Button size="sm" variant={manualDead ? 'secondary' : 'primary'} onClick={onExchange} busy={busy}>
+                <Icon name="swap" size={16} />
+                Exchange dead
+              </Button>
+            </Tooltip>
+          </span>
         )}
         {view.canPass && (
           <Tooltip text="No card in your hand can be played, so you may pass" side="top" align="end">
@@ -216,12 +374,18 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       </p>
       <div className={styles.actionButtons}>
         {onNewGame && (
-          <Button variant="primary" onClick={onNewGame}>
+          <Button variant="primary" onClick={onNewGame} tip="Deal a new game with the same players and settings">
             Play again
           </Button>
         )}
-        <Button onClick={onExit}>Leave game</Button>
-        {onDashboard && <Button onClick={onDashboard}>Back to dashboard</Button>}
+        <Button onClick={onExit} tip="Close the finished game">
+          Leave game
+        </Button>
+        {onDashboard && (
+          <Button onClick={onDashboard} tip="Go back to the dashboard to start or join another game">
+            Back to dashboard
+          </Button>
+        )}
       </div>
     </div>
   ) : null;
@@ -231,79 +395,159 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   return (
     <div
       className={styles.screen}
-      style={activeTeam !== null ? ({ '--active-team': TEAM_STYLES[activeTeam].color, '--active-glow': TEAM_STYLES[activeTeam].glow } as React.CSSProperties) : undefined}
+      style={
+        {
+          ...(activeTeam !== null ? { '--active-team': TEAM_STYLES[activeTeam].color, '--active-glow': TEAM_STYLES[activeTeam].glow } : {}),
+          // A drafted move is the viewer's, so it is marked in their team's colour whoever's turn it is.
+          ...(viewer ? { '--draft-team': TEAM_STYLES[viewer.team].color, '--draft-glow': TEAM_STYLES[viewer.team].glow } : {}),
+        } as React.CSSProperties
+      }
     >
-      <header className={styles.top}>
-        {/* Spans the board's column, so the scoreboard is centred over the board. */}
-        <div className={styles.topBoard}>
-          <div className={styles.brand}>
-            <span className={styles.logo} aria-hidden="true">
-              <Chip team={0} />
-            </span>
-            <span className={styles.brandText}>Sequence</span>
-            <span className={styles.mode}>{view.title ?? modeLabel}</span>
-          </div>
-          <div className={styles.scores}>
-            {!phone && <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />}
-          </div>
-        </div>
-        <div className={styles.topActions}>
-          {headerExtra}
-          {history && (
-            <Tooltip text="Every move so far" align="end">
-              <button type="button" className={[styles.iconButton, styles.logButton].join(' ')} onClick={() => setLogOpen(true)} aria-label="Move log">
+      {phone ? (
+        <>
+          {/* Phones: the header's options live in a drawer on the right, opened by this pull tab. */}
+          <button
+            type="button"
+            className={styles.drawerHandle}
+            onClick={() => setMenuOpen(true)}
+            aria-label="Game menu"
+            {...tipProps('Open the game menu: move log and leave game', 'bottom', 'end')}
+            aria-expanded={menuOpen}
+            aria-haspopup="dialog"
+          >
+            <Icon name="chevronLeft" size={18} />
+          </button>
+          <Drawer
+            open={menuOpen}
+            onClose={() => setMenuOpen(false)}
+            title={
+              <span className={styles.drawerTitle}>
+                <span className={styles.logo} aria-hidden="true">
+                  <Chip team={0} />
+                </span>
+                <span>Sequence</span>
+                <span className={styles.mode}>{view.title ?? modeLabel}</span>
+              </span>
+            }
+          >
+            {history && (
+              <button
+                type="button"
+                className={styles.drawerItem}
+                {...tipProps('See every move made so far in this game')}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setLogOpen(true);
+                }}
+              >
                 <Icon name="log" />
+                <span>
+                  <strong>Move log</strong>
+                  <small>Every move so far</small>
+                </span>
+              </button>
+            )}
+            <button type="button" className={styles.drawerItem} {...tipProps(soundTip)} aria-pressed={!muted} onClick={() => setMuted(!muted)}>
+              <Icon name={muted ? 'soundOff' : 'sound'} />
+              <span>
+                <strong>Sounds {muted ? 'off' : 'on'}</strong>
+                <small>Your-turn chime and the clock ticking</small>
+              </span>
+            </button>
+            {headerExtra && <div className={styles.drawerExtra}>{headerExtra}</div>}
+            <button
+              type="button"
+              className={[styles.drawerItem, styles.drawerLeave].join(' ')}
+              {...tipProps(gameOver ? 'Close the finished game' : 'Leave this game. You are asked to confirm first.')}
+              onClick={() => {
+                setMenuOpen(false);
+                if (gameOver) onExit();
+                else setExitOpen(true);
+              }}
+            >
+              <Icon name="exit" />
+              <span>
+                <strong>Leave game</strong>
+                <small>{adapter.mode === 'local' ? 'Hot-seat games are not saved.' : 'It is saved, so you can come back.'}</small>
+              </span>
+            </button>
+          </Drawer>
+        </>
+      ) : (
+        <header className={styles.top}>
+          {/* Spans the board's column, so the scoreboard is centred over the board. */}
+          <div className={styles.topBoard}>
+            <div className={styles.brand}>
+              <span className={styles.logo} aria-hidden="true">
+                <Chip team={0} />
+              </span>
+              <span className={styles.brandText}>Sequence</span>
+              <span className={styles.mode}>{view.title ?? modeLabel}</span>
+            </div>
+            <div className={styles.scores}>
+              {!phone && <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />}
+            </div>
+          </div>
+          <div className={styles.topActions}>
+            {headerExtra}
+            <Tooltip text={soundTip} align="end">
+              <button type="button" className={styles.iconButton} onClick={() => setMuted(!muted)} aria-label="Game sounds" aria-pressed={!muted}>
+                <Icon name={muted ? 'soundOff' : 'sound'} />
               </button>
             </Tooltip>
-          )}
-          <Tooltip
-            text={adapter.mode === 'local' ? 'Leave this game. Hot-seat games are not saved.' : 'Leave this game. It is saved, so you can come back.'}
-            align="end"
-          >
-            <button type="button" className={styles.iconButton} onClick={() => (gameOver ? onExit() : setExitOpen(true))} aria-label="Leave game">
-              <Icon name="exit" />
-            </button>
-          </Tooltip>
-        </div>
-      </header>
+            {history && (
+              <Tooltip text="Every move so far" align="end">
+                <button type="button" className={[styles.iconButton, styles.logButton].join(' ')} onClick={() => setLogOpen(true)} aria-label="Move log">
+                  <Icon name="log" />
+                </button>
+              </Tooltip>
+            )}
+            <Tooltip
+              text={adapter.mode === 'local' ? 'Leave this game. Hot-seat games are not saved.' : 'Leave this game. It is saved, so you can come back.'}
+              align="end"
+            >
+              <button type="button" className={styles.iconButton} onClick={() => (gameOver ? onExit() : setExitOpen(true))} aria-label="Leave game">
+                <Icon name="exit" />
+              </button>
+            </Tooltip>
+          </div>
+        </header>
+      )}
 
       <div className={styles.status} hidden={view.status !== 'ready'}>
-        <TurnPanel
-          players={view.players}
-          currentPlayerId={view.currentPlayerId}
-          viewer={viewer}
-          hotSeat={adapter.hotSeat}
-          winner={view.winner}
-          turn={view.turn}
-          turnStartedAt={view.turnStartedAt}
-          turnDeadline={view.turnDeadline}
-          collapsible={
-            phone
-              ? {
-                  open: statusOpen,
-                  onToggle: () => setStatusOpen((open) => !open),
-                  children: (
-                    <div className={styles.foldedScores}>
-                      <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
-                    </div>
-                  ),
-                }
-              : undefined
-          }
-        />
-        {/* Feedback takes the ticker's line, so messages never push the board around. */}
-        {feedback ? (
-          <p
-            className={[styles.line, styles.feedback, feedback.tone === 'error' && styles.feedbackError].filter(Boolean).join(' ')}
-            role={feedback.tone === 'error' ? 'alert' : 'status'}
-          >
-            {feedback.text}
-          </p>
-        ) : (
-          <p className={[styles.line, styles.ticker].join(' ')} aria-hidden="true">
-            {lastEntry ? describeLog(lastEntry) : 'No moves yet.'}
-          </p>
-        )}
+        {/* Large screens give the turn panel a fixed slot, so the hand under it never moves. */}
+        <div className={styles.turnSlot}>
+          <TurnPanel
+            players={view.players}
+            currentPlayerId={view.currentPlayerId}
+            viewer={viewer}
+            hotSeat={adapter.hotSeat}
+            winner={view.winner}
+            turn={view.turn}
+            turnStartedAt={view.turnStartedAt}
+            turnDeadline={view.turnDeadline}
+            turnPaused={view.turnPaused}
+            turnTimeLeft={view.turnTimeLeft}
+            away={view.away}
+            collapsible={
+              phone
+                ? {
+                    open: statusOpen,
+                    onToggle: () => setStatusOpen((open) => !open),
+                    children: (
+                      <div className={styles.foldedScores}>
+                        <Scoreboard teams={view.teams} sequencesToWin={view.sequencesToWin} currentTeam={gameOver ? null : activeTeam} />
+                      </div>
+                    ),
+                  }
+                : undefined
+            }
+          />
+        </div>
+        {/* Messages float as toasts, so this line only ever shows the latest move. */}
+        <p className={[styles.line, styles.ticker].join(' ')} aria-hidden="true">
+          {lastEntry ? describeLog(lastEntry) : 'No moves yet.'}
+        </p>
         {view.notice && (
           <p className={styles.notice}>
             <Icon name="alert" size={16} />
@@ -321,8 +565,10 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             targetMode={selectedCard && cardKind(selectedCard) === 'one-eyed-jack' ? 'remove' : 'place'}
             activeTeam={activeTeam}
             lastMove={lastMove}
+            draft={draft?.target ?? null}
             hint={hint && hintShown && hint.type === 'play' ? hint.target : null}
             disabled={busy || gameOver}
+            turnEdge={turnEdge}
             onActivate={onCell}
           />
         ) : view.status === 'loading' ? (
@@ -335,11 +581,13 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             <Icon name="wifiOff" size={28} />
             <p>{view.error}</p>
             <div className={styles.actionButtons}>
-              <Button variant="primary" onClick={() => adapter.refresh()}>
+              <Button variant="primary" onClick={() => adapter.refresh()} tip="Try to load the game again">
                 <Icon name="refresh" size={16} />
                 Try again
               </Button>
-              <Button onClick={onExit}>Leave game</Button>
+              <Button onClick={onExit} tip="Give up loading and leave this game">
+                Leave game
+              </Button>
             </div>
           </div>
         )}
@@ -349,18 +597,18 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         {view.status === 'ready' && (
           <HandPanel
             title={handTitle}
-            hand={view.hand}
+            hand={hand}
             order={order}
             onReorder={handVisible && !gameOver ? setOrder : undefined}
             selected={selected}
+            drafted={draft?.handIndex ?? null}
             onSelect={selectCard}
             cover={adapter.hotSeat && !handVisible && !gameOver && viewer ? { playerName: viewer.name, onReveal: () => setRevealedFor(viewer.id) } : null}
-            open={handOpen || gameOver}
-            onToggle={() => setHandOpen((o) => !o)}
             disabled={busy || gameOver || view.status !== 'ready'}
             footer={footer}
             replaceWith={winnerPanel}
             summary={gameOver ? `${teamName(view.winner!)} wins` : undefined}
+            barAction={barExchange}
           />
         )}
         {history ? (
@@ -389,6 +637,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           : ''}
       </div>
 
+      <TurnSounds chimeKey={chimeKey} ticking={!!turnEdge && !turnEdge.paused} turnDeadline={view.turnDeadline} />
+
       <Dialog open={logOpen && history} title="Move log" onClose={() => setLogOpen(false)}>
         <MoveLog entries={view.log} emptyText="No moves yet. Moves will appear here as they are played." />
       </Dialog>
@@ -399,9 +649,19 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         onClose={() => setExitOpen(false)}
         actions={
           <>
-            <Button onClick={() => setExitOpen(false)}>Keep playing</Button>
-            {onDashboard && <Button onClick={onDashboard}>Back to dashboard</Button>}
-            <Button variant="danger" onClick={onExit}>
+            <Button onClick={() => setExitOpen(false)} tip="Close this and go back to the board">
+              Keep playing
+            </Button>
+            {onDashboard && (
+              <Button onClick={onDashboard} tip="Leave the game for the dashboard. It stays saved.">
+                Back to dashboard
+              </Button>
+            )}
+            <Button
+              variant="danger"
+              onClick={onExit}
+              tip={adapter.mode === 'local' ? 'Leave and end this game. It is not saved.' : 'Leave the game for the table page. It stays saved.'}
+            >
               Leave game
             </Button>
           </>
@@ -422,6 +682,9 @@ function handHint({
   canExchange,
   highlights,
   tips,
+  manualDead,
+  waiting,
+  draft,
 }: {
   selectedCard: CardName | undefined;
   dead: boolean;
@@ -430,9 +693,26 @@ function handHint({
   highlights: boolean;
   /** Explain what the selected card does (training games). */
   tips: boolean;
+  /** Players spot dead cards themselves and may offer any card for exchange. */
+  manualDead: boolean;
+  /** Someone else's turn: a move made now is drafted for the viewer's next turn. */
+  waiting: boolean;
+  draft: Draft | null;
 }): string {
-  if (!selectedCard) return `Pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}. Keys 1–7 pick cards.`;
+  if (waiting && !selectedCard) {
+    return draft
+      ? `Drafted: ${describeDraft(draft)}. It is played as soon as your turn comes. Pick another card to change it.`
+      : `Not your turn yet. Draft your next move: pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}, and it is played when your turn comes.`;
+  }
+  if (!selectedCard) {
+    return manualDead && canExchange
+      ? `Pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}. Spotted a dead card? Pick it and exchange it.`
+      : `Pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}. Keys 1–7 pick cards.`;
+  }
   const card = selectedCard;
+  if (manualDead && canExchange && cardKind(card) === 'normal' && !tips) {
+    return `${cardShort(card)} selected. If both its cells are taken, it's dead: exchange it.`;
+  }
   if (!tips) {
     if (dead) return canExchange ? `${cardShort(card)} is dead. You can exchange it.` : `${cardShort(card)} is dead.`;
     return `${cardShort(card)} selected.`;

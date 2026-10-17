@@ -55,6 +55,21 @@ export function onTeamsShuffled(roomId: string, listener: (event: TeamsShuffled)
   };
 }
 
+/**
+ * `signed_in_elsewhere {handle}`: that account just signed in on another device, which signed out its other sessions
+ * (one device at a time). Every client hears it; the listener checks its own session before acting on it.
+ */
+export function onSignedInElsewhere(listener: (handle: string) => void): () => void {
+  const s = getSocket();
+  const handler = (data?: { handle?: unknown }) => {
+    if (typeof data?.handle === 'string') listener(data.handle);
+  };
+  s.on('signed_in_elsewhere', handler);
+  return () => {
+    s.off('signed_in_elsewhere', handler);
+  };
+}
+
 export type ConnectionState = 'connecting' | 'live' | 'offline';
 
 export function onConnectionChange(listener: (state: ConnectionState) => void): () => void {
@@ -74,5 +89,21 @@ export function onConnectionChange(listener: (state: ConnectionState) => void): 
     s.off('disconnect', offline);
     s.off('connect_error', offline);
     s.off('reconnecting', connecting);
+  };
+}
+
+/**
+ * Tells the server this player has the table's game open (`join_game`), again after every reconnect, until the
+ * returned function is called (`leave_game`). While the current player isn't at the table, their turn is paused.
+ * `token` is the `presence_token` from the player's own game view.
+ */
+export function announcePresence(roomId: string, handle: string, token: string): () => void {
+  const s = getSocket();
+  const join = () => s.emit('join_game', { room_id: roomId, handle, token });
+  if (s.connected) join();
+  s.on('connect', join);
+  return () => {
+    s.off('connect', join);
+    s.emit('leave_game', { room_id: roomId });
   };
 }

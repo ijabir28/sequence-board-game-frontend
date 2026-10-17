@@ -6,7 +6,7 @@
  *   top                                      top    top
  *   status                                   board  status
  *   board                                    board  rail (hand + log)
- *   rail (collapsible hand strip)
+ *   rail (hand strip, always open)
  */
 .screen {
   display: grid;
@@ -113,6 +113,94 @@
   padding: var(--space-2) var(--gutter) 0;
 }
 
+/* Phones: a pull tab on the right edge, level with the turn panel, opens the drawer with the header's options. */
+.drawerHandle {
+  position: fixed;
+  top: calc(max(var(--space-2), env(safe-area-inset-top)));
+  right: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid var(--outline-strong);
+  border-right: 0;
+  border-radius: var(--radius-card) 0 0 var(--radius-card);
+  background: var(--surface-high);
+  color: var(--on-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.drawerHandle:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.drawerTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--primary);
+  font-family: var(--font-display);
+}
+
+.drawerItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--outline-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-low);
+  color: var(--on-surface);
+  text-align: left;
+}
+
+.drawerItem:hover {
+  background: var(--surface-high);
+}
+
+.drawerItem:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.drawerItem > svg {
+  flex: none;
+  color: var(--on-surface-muted);
+}
+
+.drawerItem > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.drawerItem small {
+  color: var(--on-surface-muted);
+  font-size: var(--text-xs);
+}
+
+/* Leaving goes last, set apart from the rest. */
+.drawerLeave {
+  margin-top: var(--space-2);
+}
+
+.drawerLeave:first-child {
+  margin-top: 0;
+}
+
+.drawerLeave > svg {
+  color: var(--error);
+}
+
+.drawerExtra {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .status[hidden] {
   display: none;
 }
@@ -127,13 +215,7 @@
   color: var(--on-surface-muted);
 }
 
-.feedback {
-  color: var(--on-surface);
-}
 
-.feedbackError {
-  color: var(--error);
-}
 
 .notice {
   display: flex;
@@ -161,7 +243,8 @@
   min-width: 0;
   min-height: 0;
   padding: var(--space-2) var(--gutter);
-  overflow: hidden;
+  /* The board fills this area; your-turn edge and glow spill out over the space around it (shadows never scroll). */
+  overflow: visible;
   container-type: size;
 }
 
@@ -232,6 +315,10 @@
   gap: var(--space-2);
 }
 
+.footerExchange {
+  display: contents;
+}
+
 .gameOver {
   display: flex;
   flex-direction: column;
@@ -283,16 +370,27 @@
     white-space: nowrap;
   }
 
-  /* Feedback must be readable in full, so it may wrap (up to three lines). */
-  .feedback {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
   .hint {
     font-size: var(--text-xs);
+  }
+
+  /* Two lines of prompt (or a row of buttons) are always reserved, so the board doesn't resize as the prompt
+     changes length. */
+  .actions {
+    min-height: calc(2 * 1.5 * var(--text-xs));
+  }
+
+  /* The exchange button lives in the hand strip's heading row instead. */
+  .footerExchange {
+    display: none;
+  }
+}
+
+/* Phones (same query as GameScreen's `phone`): no header; the status row leaves room for the drawer's pull tab. */
+@media (max-width: 600px) {
+  .status {
+    padding-top: max(var(--space-2), env(safe-area-inset-top));
+    padding-right: calc(28px + var(--space-2));
   }
 }
 
@@ -429,4 +527,77 @@
   justify-content: center;
   padding-top: var(--space-1);
   border-top: 1px solid var(--outline-subtle);
+}
+
+/* Only large screens fix the turn panel's height; elsewhere the slot is invisible to layout. */
+.turnSlot {
+  display: contents;
+}
+
+/*
+ * Large screens (wide, and tall enough to spare the room): every block in the right rail has a fixed height, sized
+ * for its largest content, so nothing moves when a turn passes, a timer warning appears, a name wraps or a hint
+ * shows. Above all, the hand stays in exactly the same place. Only the move log takes the height that is left.
+ */
+@media (min-aspect-ratio: 1/1) and (min-width: 1100px) and (min-height: 760px) {
+  .screen {
+    /* Fits the tallest turn panel: a two-line "whose turn" and the team line under it, plus the paused notice (or
+       the timer bar and the hurry warning) and the turn order. */
+    --turn-slot-height: 14rem;
+  }
+
+  .turnSlot {
+    display: flex;
+    flex-direction: column;
+    height: var(--turn-slot-height);
+  }
+
+  /* The panel's box fills the slot, so its border doesn't jump either. */
+  .turnSlot > * {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* The last move is always one line; the log has the full text. */
+  .ticker {
+    flex: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rail > * {
+    flex: none;
+  }
+
+  .rail > .logPanel {
+    flex: 1;
+  }
+
+  /* The hand's footer: three lines for the prompt or hint and room for two rows of buttons. Either scrolls inside
+     its own box rather than growing. */
+  .actions {
+    --hint-line: 1.45;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .hint {
+    flex: none;
+    height: calc(3 * var(--hint-line) * var(--text-sm));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    line-height: var(--hint-line);
+  }
+
+  .actionButtons {
+    flex: none;
+    align-content: flex-start;
+    justify-content: flex-end;
+    height: calc(2 * 36px + var(--space-2));
+    overflow-y: auto;
+  }
 }

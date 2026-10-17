@@ -20,6 +20,71 @@
     var(--shadow-raised);
 }
 
+/*
+ * Your turn: the turn timer is a progress bar round the board's whole perimeter (TurnBar.tsx). Full when the turn
+ * starts, it empties clockwise from the top-left corner as time runs out, green until the last 20 seconds and then
+ * turning red (--edge-color). The SVG is half a bar wider than the board on every side, so the bar's centre line runs
+ * round it and the bar lies just outside the board's edge: in the space around it (the board area lets it overflow),
+ * so the board keeps its full size and no cell is covered.
+ */
+.turnBar {
+  position: absolute;
+  inset: calc(var(--bar-px) / -2);
+  width: calc(100% + var(--bar-px));
+  height: calc(100% + var(--bar-px));
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1;
+  filter: drop-shadow(0 0 3px var(--edge-color));
+}
+
+.turnBar rect {
+  fill: none;
+  stroke-width: var(--bar-px);
+}
+
+/* The empty part of the bar, so the whole perimeter always reads as the clock. */
+.barTrack {
+  stroke: var(--edge-color);
+  opacity: 0.18;
+  transition: stroke 1s linear;
+}
+
+.barFill {
+  stroke: var(--edge-color);
+  stroke-dasharray: 1 1;
+  transition:
+    stroke-dashoffset 1s linear,
+    stroke 1s linear;
+}
+
+/* The last seconds: the bar pulses. */
+.barHot .barFill {
+  animation: turn-bar-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes turn-bar-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* The turn is paused: the bar holds still and dims. */
+.barPaused {
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barTrack,
+  .barFill {
+    transition: none;
+  }
+
+  .barHot .barFill {
+    animation: none;
+  }
+}
+
 .grid {
   position: absolute;
   inset: 1.1cqw; /* cq units here resolve against the board itself */
@@ -239,4 +304,20 @@
   .hinted::after {
     animation: none;
   }
+}
+
+/* The move drafted for your next turn: a dashed ring in your team's colour, slowly turning, distinct from the hint. */
+.drafted {
+  z-index: 1;
+  opacity: 1;
+}
+
+.drafted::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px dashed var(--draft-team, var(--primary));
+  box-shadow: 0 0 10px var(--draft-glow, transparent);
+  pointer-events: none;
 }

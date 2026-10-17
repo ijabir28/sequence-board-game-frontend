@@ -54,6 +54,28 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/*
+ * No text in the app can be selected, copied or dragged out (see copyGuard.ts for the events). iOS's long-press
+ * callout (link preview, save image) is off too, since a long press shows a control's tooltip instead.
+ */
+*,
+*::before,
+*::after {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+/* Except what you type: Safari won't let you type into a field that can't be selected, and fixing a typo needs a
+   caret. Read-only fields, like the table code, stay unselectable. */
+input:not([readonly]):not([type='checkbox']):not([type='radio']),
+textarea:not([readonly]),
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 :focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);

@@ -34,6 +34,8 @@ export interface RoomGameView {
   viewer: string | null;
   hand: string[];
   can_exchange: boolean;
+  /** Current player only: dead card exchanges left this turn; null when unlimited (missing from older backends). */
+  exchanges_left?: number | null;
   can_pass: boolean;
   deck_count: number;
   sequences: Sequence[];
@@ -48,6 +50,14 @@ export interface RoomGameView {
   turn_started_at?: string | null;
   /** When the turn's timer runs out (ISO time); the server then plays a random card for the player. */
   turn_deadline?: string | null;
+  /** The current player is away from the table: the turn waits for them, with no deadline. */
+  turn_paused?: boolean;
+  /** While paused: the time the current player will have left (ms). */
+  turn_time_left_ms?: number | null;
+  /** Seated players whose game page isn't open. */
+  away?: string[];
+  /** Seated viewers only: sent on the game socket to say they're at the table. */
+  presence_token?: string | null;
   server_time?: string;
 }
 

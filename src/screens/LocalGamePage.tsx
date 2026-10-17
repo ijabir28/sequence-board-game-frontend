@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { DevAdapterToggle } from '../components/game/DevAdapterToggle';
 import { GameScreen } from '../components/game/GameScreen';
+import { tipProps } from '../components/ui/TooltipLayer';
 import { LocalGameAdapter } from '../game/local/LocalGameAdapter';
 import { LocalSetup, type LocalConfig } from './LocalSetup';
 
@@ -18,16 +19,29 @@ export function LocalGamePage() {
       config
         ? new LocalGameAdapter({
             ...config,
-            rules: { autoDrawDead: config.settings.autoDrawDead },
+            rules: {
+              autoDrawDead: config.settings.autoDrawDead,
+              deadCards: config.settings.deadCards,
+              exchangesPerTurn: config.settings.exchangesPerTurn,
+            },
             turnSeconds: config.settings.turnSeconds,
-            settings: { mode: config.settings.mode, highlights: config.settings.highlights, history: config.settings.history },
+            settings: {
+              mode: config.settings.mode,
+              highlights: config.settings.highlights,
+              history: config.settings.history,
+              deadCards: config.settings.deadCards,
+            },
           })
         : null,
     [config, round],
   );
   useEffect(() => () => adapter?.dispose(), [adapter]);
 
-  if (!config || !adapter) return <LocalSetup initial={preset ?? undefined} onStart={setConfig} backAction={<Link to="/">Back</Link>} />;
+  if (!config || !adapter) return <LocalSetup initial={preset ?? undefined} onStart={setConfig} backAction={
+        <Link to="/" {...tipProps('Go back without starting a game')}>
+          Back
+        </Link>
+      } />;
 
   return (
     <GameScreen

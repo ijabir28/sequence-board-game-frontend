@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
 import { Icon } from '../components/ui/Icon';
 import { Pager } from '../components/ui/Pager';
+import { tipProps } from '../components/ui/TooltipLayer';
 import { teamName } from '../game/teams';
 import styles from './Forms.module.css';
 import own from './YourTables.module.css';
@@ -85,7 +86,12 @@ export function CurrentGame() {
           {room.yourTeam !== null && <> · you play for {teamName(room.yourTeam)}</>}
         </span>
       </span>
-      <Link className={own.resumeLink} to={`/table/${room.id}/game`} aria-label={`Resume ${room.name}`}>
+      <Link
+        className={own.resumeLink}
+        to={`/table/${room.id}/game`}
+        aria-label={`Resume ${room.name}`}
+        {...tipProps('Go back to this game where it left off', 'bottom', 'end')}
+      >
         Resume
       </Link>
     </section>
@@ -111,7 +117,7 @@ export function YourTablesDialog({ open, onClose }: { open: boolean; onClose: ()
               <Icon name="alert" size={18} />
               <span>{state.message}</span>
             </p>
-            <Button size="sm" onClick={() => void reload()}>
+            <Button size="sm" onClick={() => void reload()} tip="Load your tables again">
               Try again
             </Button>
           </div>
@@ -143,6 +149,15 @@ export function YourTablesDialog({ open, onClose }: { open: boolean; onClose: ()
                   className={own.open}
                   to={room.status === 'open' ? `/table/${room.id}` : `/table/${room.id}/game`}
                   aria-label={`${room.status === 'playing' ? 'Resume' : 'Open'} ${room.name}`}
+                  {...tipProps(
+                    room.status === 'playing'
+                      ? 'Go back to this game where it left off'
+                      : room.status === 'finished'
+                        ? 'See how this game ended'
+                        : 'Open the table to take a seat or change its options',
+                    'bottom',
+                    'end',
+                  )}
                 >
                   {room.status === 'playing' ? 'Resume' : room.status === 'finished' ? 'View' : 'Open'}
                 </Link>

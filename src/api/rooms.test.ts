@@ -36,10 +36,22 @@ describe('sanitizeRoom', () => {
   it('reads the name and settings, with defaults for an older backend', () => {
     const room = sanitizeRoom('friday-k3m9', { ...raw, name: 'Friday', settings: { history: false, highlights: true, auto_draw_dead: true } });
     expect(room.name).toBe('Friday');
-    expect(room.settings).toEqual({ mode: 'standard', history: false, highlights: true, autoDrawDead: true, turnSeconds: 90 });
+    // A backend without the dead card settings marks dead cards and allows one exchange per turn.
+    expect(room.settings).toEqual({
+      mode: 'standard',
+      history: false,
+      highlights: true,
+      autoDrawDead: true,
+      turnSeconds: 90,
+      deadCards: 'indicator',
+      exchangesPerTurn: 1,
+    });
     const old = sanitizeRoom('42', raw);
     expect(old.name).toBe('Table 42');
-    expect(old.settings).toEqual({ mode: 'standard', history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 });
+    expect(old.settings).toMatchObject({ mode: 'standard', history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 });
+    const current = sanitizeRoom('x', { ...raw, settings: { dead_cards: 'manual', exchanges_per_turn: null } }).settings;
+    expect(current).toMatchObject({ deadCards: 'manual', exchangesPerTurn: null });
+    expect(sanitizeRoom('x', { ...raw, settings: { exchanges_per_turn: 4 } }).settings.exchangesPerTurn).toBe(4);
     expect(sanitizeRoom('x', { ...raw, settings: { turn_seconds: 45 } }).settings.turnSeconds).toBe(45);
     expect(sanitizeRoom('x', { ...raw, settings: { mode: 'training' } }).settings.mode).toBe('training');
     expect(sanitizeRoom('x', { ...raw, settings: { mode: 'chaos' } }).settings.mode).toBe('standard');
@@ -108,6 +120,9 @@ describe('createRoom', () => {
     });
     await expect(createRoom(2, 1, { name: ' Friday ', settings: { history: false, autoDrawDead: true } })).resolves.toBe('friday-k3m9');
     expect(sent).toEqual({ number_of_team: 2, number_of_player_in_each_team: 1, name: 'Friday', history: false, auto_draw_dead: true });
+    // Unlimited exchanges go to the backend as null.
+    await createRoom(2, 1, { settings: { deadCards: 'manual', exchangesPerTurn: null } });
+    expect(sent).toMatchObject({ dead_cards: 'manual', exchanges_per_turn: null });
   });
 });
 

@@ -66,14 +66,33 @@ describe('RoomGameAdapter', () => {
     const a = adapter();
     await a.refresh();
     expect(a.getState().title).toBe('Friday');
-    expect(a.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false });
+    expect(a.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false, deadCards: 'indicator' });
     a.dispose();
 
     stubFetch(() => ({ status: 200, body: serverView() }));
     const old = adapter();
     await old.refresh();
-    expect(old.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false });
+    expect(old.getState().settings).toEqual({ mode: 'standard', highlights: false, history: false, deadCards: 'indicator' });
     old.dispose();
+  });
+
+  it('marks dead cards only when the table marks them, and passes the exchanges left on', async () => {
+    // Both 6-Diamond cells are covered, so the 6-Diamond in the hand is dead.
+    const board = serverView().board.map((row) => row.map((cell) => ({ ...cell, team: cell.name === '6-Diamond' ? (1 as const) : null })));
+    stubFetch(() => ({ status: 200, body: serverView({ board, settings: { dead_cards: 'indicator' }, can_exchange: true, exchanges_left: 2 }) }));
+    const marked = adapter();
+    await marked.refresh();
+    expect(marked.getState().hand[0]).toEqual({ card: '6-Diamond', dead: true });
+    expect(marked.getState().exchangesLeft).toBe(2);
+    marked.dispose();
+
+    stubFetch(() => ({ status: 200, body: serverView({ board, settings: { dead_cards: 'manual' }, can_exchange: true, exchanges_left: null }) }));
+    const manual = adapter();
+    await manual.refresh();
+    expect(manual.getState().hand[0]).toEqual({ card: '6-Diamond', dead: false });
+    expect(manual.getState().settings.deadCards).toBe('manual');
+    expect(manual.getState().exchangesLeft).toBeNull();
+    manual.dispose();
   });
 
   it("maps a training game's hint, and ignores a hint outside training", async () => {
@@ -162,6 +181,64 @@ describe('RoomGameAdapter', () => {
     await a.refresh();
     expect(a.getState().viewer).toBeNull();
     expect(a.getState().notice).toMatch(/watching/);
+    a.dispose();
+  });
+
+  it('shows a paused turn and who is away', async () => {
+    stubFetch(() => ({
+      status: 200,
+      body: serverView({ current_player: 'sakib', turn_deadline: null, turn_paused: true, turn_time_left_ms: 42_000, away: ['sakib'] }),
+    }));
+    const a = adapter();
+    await a.refresh();
+    expect(a.getState()).toMatchObject({ turnPaused: true, turnTimeLeft: 42_000, turnDeadline: null, away: ['sakib'] });
+    a.dispose();
+  });
+
+  it('says the viewer is at the table while the game is open, and that they left when it closes', async () => {
+    stubFetch(() => ({ status: 200, body: serverView({ presence_token: 'tok' }) }));
+    const leave = vi.fn();
+    const announcePresence = vi.fn(() => leave);
+    const a = new RoomGameAdapter({ roomId: '42', subscribeUpdates: () => () => {}, pollIntervalMs: 60_000, announcePresence });
+    const unsubscribe = a.subscribe(() => {});
+    await a.refresh();
+    await a.refresh();
+    expect(announcePresence).toHaveBeenCalledTimes(1);
+    expect(announcePresence).toHaveBeenCalledWith('jabir', 'tok');
+    unsubscribe();
+    expect(leave).toHaveBeenCalledTimes(1);
+    a.dispose();
+  });
+
+  it('never announces a spectator', async () => {
+    stubFetch(() => ({ status: 200, body: serverView({ viewer: null, hand: [], presence_token: null }) }));
+    const announcePresence = vi.fn(() => () => {});
+    const a = new RoomGameAdapter({ roomId: '42', subscribeUpdates: () => () => {}, pollIntervalMs: 60_000, announcePresence });
+    const unsubscribe = a.subscribe(() => {});
+    await a.refresh();
+    expect(announcePresence).not.toHaveBeenCalled();
+    unsubscribe();
+    a.dispose();
+  });
+
+  it('counts the viewer as away while they step away, and back when they return', async () => {
+    stubFetch(() => ({ status: 200, body: serverView({ presence_token: 'tok' }) }));
+    const leave = vi.fn();
+    const announcePresence = vi.fn(() => leave);
+    const a = new RoomGameAdapter({ roomId: '42', subscribeUpdates: () => () => {}, pollIntervalMs: 60_000, announcePresence });
+    const unsubscribe = a.subscribe(() => {});
+    await a.refresh();
+    expect(announcePresence).toHaveBeenCalledTimes(1);
+
+    a.stepAway(true);
+    expect(leave).toHaveBeenCalledTimes(1);
+    // A refresh while away must not announce the viewer again.
+    await a.refresh();
+    expect(announcePresence).toHaveBeenCalledTimes(1);
+
+    a.stepAway(false);
+    expect(announcePresence).toHaveBeenCalledTimes(2);
+    unsubscribe();
     a.dispose();
   });
 });

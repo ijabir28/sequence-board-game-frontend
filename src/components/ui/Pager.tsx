@@ -16,14 +16,14 @@ export function Pager({ page, pages, label, busy, onPage }: PagerProps) {
   if (pages <= 1) return null;
   return (
     <nav className={styles.pager} aria-label={`Pages of ${label}`}>
-      <Button size="sm" variant="ghost" disabled={page <= 1 || busy} onClick={() => onPage(page - 1)} aria-label="Previous page">
+      <Button size="sm" variant="ghost" disabled={page <= 1 || busy} onClick={() => onPage(page - 1)} aria-label="Previous page" tip={`Show the previous page of ${label}`}>
         <Icon name="chevronLeft" size={16} />
         Previous
       </Button>
       <span className={styles.position} aria-live="polite">
         Page {page} of {pages}
       </span>
-      <Button size="sm" variant="ghost" disabled={page >= pages || busy} onClick={() => onPage(page + 1)} aria-label="Next page">
+      <Button size="sm" variant="ghost" disabled={page >= pages || busy} onClick={() => onPage(page + 1)} aria-label="Next page" tip={`Show the next page of ${label}`}>
         Next
         <Icon name="chevronRight" size={16} />
       </Button>

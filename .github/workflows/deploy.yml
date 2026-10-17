@@ -1,0 +1,39 @@
+# On every push to dev: test and build, then ask Render to redeploy. The Render service builds this frontend into
+# the backend's image (sequence-board-game-backend/Dockerfile clones the latest dev), so a redeploy is what ships it.
+#
+# Needs the repository secret RENDER_DEPLOY_HOOK_URL: the service's Deploy Hook from Render (Settings → Deploy Hook).
+# Anyone with that URL can trigger deploys, so it lives only in the secret.
+
+name: Deploy
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+# A newer push replaces a run still waiting, so quick successive pushes deploy once.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Trigger the Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::Add the repository secret RENDER_DEPLOY_HOOK_URL (Render → service → Settings → Deploy Hook)."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL"

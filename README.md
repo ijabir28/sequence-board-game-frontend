@@ -79,13 +79,23 @@ pins `socket.io-client@2.3.0`. The two majors must match. If your backend instal
 | `npm run build` | Type-check and build to `dist/` |
 | `npm run preview` | Serve the build (uses the same proxy) |
 
+## Deploy
+
+Production is https://sequence-board-game-svxj.onrender.com, served by the backend, which builds this repo's `dev`
+branch into its image (see the backend's `docs/deploy.md`). Every push to `dev` runs
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml): tests and build, then the Render deploy hook from the
+repository secret `RENDER_DEPLOY_HOOK_URL`. A failing test stops the deploy. Run it by hand from the Actions tab
+(*Deploy → Run workflow*).
+
 ## How it works
 
 ### Talking to the backend
 
-The backend has no CORS, so the Vite dev server proxies `/user`, `/room`, `/game`, `/board`, `/images` and `/socket.io`
-(websockets included) to `http://localhost:3000`. The session cookie `connect.sid` stays same-origin. App routes are
-chosen so they never start with a proxied prefix: `/signin`, `/signup`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
+The backend has no CORS, so the Vite dev server proxies `/api`, `/user`, `/room`, `/game`, `/board`, `/images` and
+`/socket.io` (websockets included) to `http://localhost:3000`. The session cookie `sequence.session_token` stays
+same-origin. App routes are
+chosen so they never start with a proxied prefix: `/signin`, `/signup`, `/email-verified`, `/forgot-password`,
+`/reset-password`, `/profile`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
 
 ### Code map
 
@@ -133,8 +143,8 @@ The engine implements the official rules:
 - **Sequences** are 5 in a row in any direction. A new sequence may share at most one chip with the team's earlier
   sequences.
 - **Winning** takes 2 sequences with 2 teams, or 1 with 3 teams.
-- **Dead cards:** a card whose two cells are both covered can be exchanged once per turn, before playing. If no move is
-  possible, the player may pass.
+- **Dead cards:** a card whose two cells are both covered can be exchanged, before playing, as many times per turn as
+  the table allows (unlimited by default). If no move is possible, the player may pass.
 
 Tests in `src/engine/*.test.ts` cover sequence detection (every direction, corners, 9-long lines, crossing sequences,
 the shared-chip limit), both jack types, dead cards and deck reshuffling. They also play random full games and check
@@ -148,6 +158,8 @@ invariants.
   - **Phones and tablets** get a collapsible hand strip docked at the bottom; collapsing it gives the board more room.
   - **Phones** also fold the turn panel and scoreboard into one line (your countdown on your turn, else whose turn
     it is); tap it to see the full panel and the scores.
+  - **Phones** drop the header: its options (move log, leave game, developer tools) live in a drawer that slides in
+    from the right, opened by the pull tab on the right edge, level with the turn panel.
   - **Phones in landscape** use the side rail, so the board stays usable.
   - The move log is the one region that scrolls, and only inside its own box. On small screens it opens in a dialog.
 - **The scoreboard is centred over the board.** The game header uses the same columns as the screen (board | rail on
@@ -156,9 +168,31 @@ invariants.
   team in the team's colour, a countdown on your own turn (the table's turn timer, 90 s by default; other players
   see only whose turn it is), and the turn order. The countdown turns amber at 20 s and red at 10 s. When it runs out, a random playable card from the
   player's hand is played for them: by the server for tables, by `LocalGameAdapter` for hot-seat games, and the
-  move log says so. When it becomes your turn it flashes,
-  phones buzz, and the tab title starts with "● Your turn". Table games take the turn's start time from the server
+  move log says so. On your own turn (not a teammate's) the turn timer is a progress bar round the board's whole perimeter, in place of a clock bar, lying just outside the full-size board (`src/components/board/TurnBar.tsx`): full when the turn starts, it empties clockwise from the top-left corner as time runs out, green until the last 20 s and then turning red (`src/game/turnEdge.ts`; without a timer it empties over a minute and stays green, and it holds still while the turn is paused). The bar keeps its own clock, so the ticking never re-renders the board or the hand. On everyone else's turn the board is plain. When it becomes your turn it flashes,
+  phones buzz twice (the Vibration API on Android; a native switch's haptic tick on iOS 18, `src/game/haptics.ts`), a
+  chime plays, and the tab title starts with "● Your turn". Over your turn's last 20 s the clock ticks
+  every second, sharper for the final five. The sounds are synthesised with the Web Audio API (`src/game/sounds.ts`,
+  no audio files). Phones need a tap before any sound: audio unlocks on touchend, pointerup or click (a touch's
+  pointerdown doesn't count) with a silent sound for iOS, and any later tap restarts it after the phone suspends it
+  (screen lock, another tab). On iPhones the page asks for the "playback" audio session (Safari 16.4+), so the sounds
+  play even with the ring/silent switch on silent; muting them in the game hands the session back. The sounds can be muted from the speaker button in the top bar (the menu drawer on phones), remembered on
+  this device. Table games take the turn's start time from the server
   (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
+- **Draft your move ahead.** In table games, on someone else's turn you can pick a card and a cell as usual: the move
+  is drafted, not sent. The card gets a "Queued" tag and the cell a dashed ring in your team's colour, and it is played
+  for you the moment your turn starts. If a move in the meantime rules it out (the cell is taken, or a chip you meant
+  to remove is locked), the draft is dropped and a message says why, so you can draft another. Pick another card to
+  change it, or "Cancel draft". Drafts live only on your device (`src/game/draft.ts`); the server never sees them.
+- **Messages float.** Success and error messages (moves, joining or leaving a seat, saving options, signing in,
+  dialogs) appear as toasts at the top of the screen (`src/components/toast/`), so they never push the layout around.
+  Errors stay 7 s, other messages 4 s; hovering or focusing one holds it. While a modal dialog is open the toasts
+  render inside it, above its backdrop, so their buttons still work. Page states with a retry button (a table that
+  can't load) stay in the page.
+- **Nobody plays for a player who left.** While a table's game is open, the page tells the server the player is at
+  the table (`announcePresence` in `src/api/socket.ts`, sent again after every reconnect). If the current player
+  closes the game, their turn **pauses**: the timer stops, nothing is played for them, and everyone sees
+  "*Name* is not at the table. The game is paused until they come back." with a "Paused" clock showing the time they
+  have left. Players who are away are tagged "away" in the turn order. The turn resumes when they come back. Opening the phone menu drawer or the "Leave this game?" dialog counts as leaving too (`stepAway` on the adapter), so your turn pauses while it is open, even before you confirm. On a phone or tablet, so does a hidden page, from the moment it is hidden (the screen locked, another app; `src/game/useAwayWhileHidden.ts`): the game's sounds keep an iPhone's page running when locked, so its connection no longer drops by itself. A hidden page also stops its audio and hands the playback session back. Desktop players can still watch another tab while they wait.
 - **Your hand, your order.** Drag a card to a new place with a finger, mouse or pen (the other cards slide out of the
   way; a tap still selects), or move the focused card with Alt+←/→ (`src/components/game/useCardDrag.ts`). Only your view changes (`src/game/handOrder.ts`): moves still use the
   real hand index, and a new card arrives where the played one was. Table games remember the order per table on this
@@ -176,10 +210,23 @@ invariants.
 
 ## Accounts
 
-Anyone can create an account at `/signup` (handle, display name, password). The server keeps accounts and
-sessions in PostgreSQL, so a session survives backend restarts and lasts a week without use. On load the app asks
-`GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the session
-on the server.
+Anyone can create an account at `/signup` (handle, display name, email, password). The backend runs accounts on
+[Better Auth](https://better-auth.com) under `/api/auth` (`src/api/user.ts` calls it and words its errors) and keeps
+accounts and sessions in PostgreSQL, so a session survives backend restarts and lasts a week without use. A new
+account confirms its email first: sign-up ends on "Check your inbox", and the emailed link lands on `/email-verified`,
+signed in. "Forgot your password?" on the sign-in page emails a link to `/reset-password`. In development the backend
+prints these emails to its terminal.
+
+The header's avatar opens `/profile`: the player's picture, game stats and account. There they upload a picture
+(cropped and shrunk to 256×256 in the browser, `src/profile/avatarImage.ts`), change their display name, email
+(confirmed by an emailed link) or password, and see the device they are signed in on. Handles never change. On load the
+app asks `GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the
+session on the server.
+
+An account is signed in on one device at a time: signing in on another device ends the session here. The server
+announces it over Socket.IO (`signed_in_elsewhere`), so an open page checks its own session at once and, once it is
+gone, goes to the sign-in page with a message saying why (`src/auth/AuthContext.tsx`). Coming back to the tab checks
+again, in case the announcement was missed while offline.
 
 ## Tables and history
 
@@ -196,9 +243,11 @@ Whoever opens a table (the host) picks its options, shown by `src/components/Roo
 |---|---|---|
 | Mode | Standard | Training: on your turn a Hint button suggests a move and says why, and card tips explain what the selected card does. Standard games never show hints or tips |
 | Highlight legal cells | off | Off: picking a card doesn't light up its cells, and wrong cells are explained by the rules |
-| Move history | off | Off: no move log; the server sends only the latest move |
+| Move history | off | Off: no move log, and the board doesn't ring the last move; the server sends only the latest move |
 | Turn timer | 90 s | 30 s, 1 min, 1 min 30 s, 2 min, 3 min, or a custom number of seconds (15–600) |
-| Auto-draw dead cards | off | On: a dead card is swapped automatically when its owner's turn starts |
+| Dead cards | Players spot them | Players spot them: nothing marks dead cards; pick a card you think is dead and press **Exchange as dead**, and the rules check it ("That card still has an open cell…" if not). Mark them: dead cards are marked in the hand, as before |
+| Dead card exchanges per turn | Unlimited | 1, Unlimited, or a custom number (1–10) |
+| Auto-draw dead cards | off | Only when dead cards are marked. On: dead cards are swapped automatically when their owner's turn starts (up to the exchange limit) |
 
 Hints come from the server for tables (only to the player whose turn it is, only in training games) and from
 `src/engine/hints.ts` for hot-seat games; `src/game/describeHint.ts` words them.

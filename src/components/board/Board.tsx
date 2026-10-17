@@ -3,10 +3,12 @@ import { BOARD_SIZE, posKey, type Pos } from '../../engine/board';
 import { BLANK, cardLabel, isRedSuit, parseCard, SUIT_SYMBOL, type BoardCardName } from '../../engine/cards';
 import type { Sequence } from '../../engine/sequences';
 import type { TeamIndex } from '../../engine/setup';
-import { TEAM_STYLES, teamChipLabel } from '../../game/teams';
+import { TEAM_STYLES, teamChipLabel, teamName } from '../../game/teams';
+import { tipProps } from '../ui/TooltipLayer';
 import type { CellView } from '../../game/types';
 import { Chip } from '../Chip';
 import { cellCentre } from './geometry';
+import { TurnBar, type TurnBarProps } from './TurnBar';
 import styles from './Board.module.css';
 
 export type TargetMode = 'place' | 'remove';
@@ -22,12 +24,31 @@ interface BoardProps {
   lastMove: Pos | null;
   /** A training hint's suggested cell. */
   hint?: Pos | null;
+  /** The cell of the move drafted for the viewer's next turn. */
+  draft?: Pos | null;
   disabled?: boolean;
+  /**
+   * The viewer's own turn: the turn timer runs round the board's perimeter as a bar (see TurnBar), keyed by `turn` so
+   * each turn starts with a full bar. Null on everyone else's turn: the plain board.
+   */
+  turnEdge?: (TurnBarProps & { turn: number | null }) | null;
   onActivate: (pos: Pos) => void;
 }
 
 /** The 10×10 board as an ARIA grid: arrow keys move, Enter or Space plays the selected card. */
-export function Board({ board, sequences, targets, targetMode, activeTeam, lastMove, hint = null, disabled = false, onActivate }: BoardProps) {
+export function Board({
+  board,
+  sequences,
+  targets,
+  targetMode,
+  activeTeam,
+  lastMove,
+  hint = null,
+  draft = null,
+  disabled = false,
+  turnEdge = null,
+  onActivate,
+}: BoardProps) {
   const [focus, setFocus] = useState<Pos>({ row: 0, column: 1 });
   const cellRefs = useRef<(HTMLDivElement | null)[]>([]);
   const targetKeys = useMemo(() => new Set(targets?.map(posKey)), [targets]);
@@ -71,7 +92,13 @@ export function Board({ board, sequences, targets, targetMode, activeTeam, lastM
 
   return (
     <div
-      className={[styles.board, hasSelection && styles.selecting, targetMode === 'remove' && styles.removing].filter(Boolean).join(' ')}
+      className={[
+        styles.board,
+        hasSelection && styles.selecting,
+        targetMode === 'remove' && styles.removing,
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={teamStyle ? ({ '--active-team': teamStyle.color, '--active-glow': teamStyle.glow } as React.CSSProperties) : undefined}
     >
       <div
@@ -99,6 +126,7 @@ export function Board({ board, sequences, targets, targetMode, activeTeam, lastM
                   removing={targetMode === 'remove'}
                   last={lastMove !== null && lastMove.row === cell.row && lastMove.column === cell.column}
                   hinted={hint !== null && hint.row === cell.row && hint.column === cell.column}
+                  drafted={draft !== null && draft.row === cell.row && draft.column === cell.column}
                   onFocus={() => setFocus({ row: cell.row, column: cell.column })}
                   onClick={() => !disabled && onActivate({ row: cell.row, column: cell.column })}
                 />
@@ -108,6 +136,14 @@ export function Board({ board, sequences, targets, targetMode, activeTeam, lastM
         ))}
       </div>
       <SequenceBeams sequences={sequences} />
+      {turnEdge && (
+        <TurnBar
+          key={turnEdge.turn ?? 'turn'}
+          turnStartedAt={turnEdge.turnStartedAt}
+          turnDeadline={turnEdge.turnDeadline}
+          paused={turnEdge.paused}
+        />
+      )}
     </div>
   );
 }
@@ -120,25 +156,46 @@ interface CellProps {
   removing: boolean;
   last: boolean;
   hinted: boolean;
+  drafted: boolean;
   onFocus: () => void;
   onClick: () => void;
   cellRef: (el: HTMLDivElement | null) => void;
 }
 
-function cellAriaLabel(cell: CellView, target: boolean, removing: boolean, hinted: boolean): string {
+function cellAriaLabel(cell: CellView, target: boolean, removing: boolean, hinted: boolean, drafted: boolean): string {
   const parts = [cellLabelText(cell.card)];
   parts.push(cell.chip === null ? (cell.card === BLANK ? 'counts for every team' : 'empty') : teamChipLabel(cell.chip));
   if (cell.locked) parts.push('in a completed sequence');
   if (target) parts.push(removing ? 'can be removed' : 'playable');
   if (hinted) parts.push('suggested by the hint');
+  if (drafted) parts.push('your drafted move');
   return parts.join(', ');
+}
+
+/** What hovering (or long-pressing) a cell says: the card, who holds it, and what a click would do. */
+function cellTip(cell: CellView, target: boolean, removing: boolean, hinted: boolean, drafted: boolean): string {
+  const corner = cell.card === BLANK;
+  const name = corner ? 'Free corner' : cardLabel(cell.card);
+  let state: string;
+  if (cell.chip !== null) state = `${teamName(cell.chip)} chip${cell.locked ? ', locked in a sequence' : ''}`;
+  else state = corner ? 'counts for every team' : 'empty';
+  const action = drafted
+    ? 'Your drafted move: it is played here when your turn comes.'
+    : target
+      ? removing
+        ? 'Click to remove this chip.'
+        : 'Click to place your chip here.'
+      : hinted
+        ? 'The hint suggests this cell.'
+        : '';
+  return [`${name}: ${state}.`, action].filter(Boolean).join(' ');
 }
 
 function cellLabelText(card: BoardCardName): string {
   return card === BLANK ? 'Corner' : cardLabel(card);
 }
 
-function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, onFocus, onClick, cellRef }: CellProps) {
+function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, drafted, onFocus, onClick, cellRef }: CellProps) {
   const corner = cell.card === BLANK;
   const parsed = corner ? null : parseCard(cell.card as Exclude<BoardCardName, 'Blank'>);
   const red = parsed ? isRedSuit(parsed.suit) : false;
@@ -147,8 +204,9 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, onFocus,
       role="gridcell"
       ref={cellRef}
       tabIndex={tabbable ? 0 : -1}
-      aria-label={cellAriaLabel(cell, target, removing, hinted)}
+      aria-label={cellAriaLabel(cell, target, removing, hinted, drafted)}
       aria-colindex={cell.column + 1}
+      {...tipProps(cellTip(cell, target, removing, hinted, drafted))}
       className={[
         styles.cell,
         corner && styles.corner,
@@ -157,6 +215,7 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, onFocus,
         dimmed && styles.dimmed,
         last && styles.last,
         hinted && styles.hinted,
+        drafted && styles.drafted,
       ]
         .filter(Boolean)
         .join(' ')}

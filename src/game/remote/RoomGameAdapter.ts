@@ -9,7 +9,7 @@ import {
   type RoomGameView,
 } from '../../api/roomGame';
 import { sanitizeSettings } from '../../api/rooms';
-import { onGameUpdated } from '../../api/socket';
+import { announcePresence, onGameUpdated } from '../../api/socket';
 import { positionsOf, type Pos } from '../../engine/board';
 import { BLANK, cardKind, isCardName, type BoardCardName, type CardName } from '../../engine/cards';
 import { legalTargets, type GameState } from '../../engine/game';
@@ -24,6 +24,11 @@ export interface RoomGameOptions {
   subscribeUpdates?: (listener: () => void) => () => void;
   /** Safety-net poll in case a socket event is missed. */
   pollIntervalMs?: number;
+  /**
+   * Tells the server the viewer is at the table while this game is open; returns a function that says they left.
+   * Defaults to the socket's `join_game` / `leave_game`.
+   */
+  announcePresence?: (handle: string, token: string) => () => void;
 }
 
 const EMPTY_VIEW: GameView = {
@@ -36,6 +41,7 @@ const EMPTY_VIEW: GameView = {
   viewer: null,
   hand: [],
   canExchange: false,
+  exchangesLeft: null,
   canPass: false,
   deckCount: null,
   sequences: [],
@@ -46,6 +52,9 @@ const EMPTY_VIEW: GameView = {
   hint: null,
   turnStartedAt: null,
   turnDeadline: null,
+  turnPaused: false,
+  turnTimeLeft: null,
+  away: [],
 };
 
 /** A table's game, run by the server. Each player sees only their own hand. */
@@ -61,6 +70,10 @@ export class RoomGameAdapter implements GameAdapter {
   private inFlight: Promise<void> | null = null;
   /** This device's clock minus the server's, measured once so the turn start stays put between refreshes. */
   private clockSkew: number | null = null;
+  /** The token we announced presence with, and how to take it back. */
+  private presence: { token: string; leave: () => void } | null = null;
+  /** The viewer has a menu or the leave dialog open: they count as away from the table. */
+  private steppedAway = false;
 
   constructor(private readonly options: RoomGameOptions) {}
 
@@ -95,6 +108,17 @@ export class RoomGameAdapter implements GameAdapter {
     return this.act(() => passRoomTurn(this.options.roomId));
   }
 
+  stepAway(away: boolean): void {
+    if (away === this.steppedAway) return;
+    this.steppedAway = away;
+    if (away) {
+      this.presence?.leave();
+      this.presence = null;
+    } else if (this.server) {
+      this.announce(this.server);
+    }
+  }
+
   /** Re-reads the game. Concurrent calls share one request. */
   refresh(): Promise<void> {
     this.inFlight ??= this.load().finally(() => (this.inFlight = null));
@@ -118,6 +142,8 @@ export class RoomGameAdapter implements GameAdapter {
   }
 
   private stop() {
+    this.presence?.leave();
+    this.presence = null;
     this.unsubscribeUpdates?.();
     this.unsubscribeUpdates = null;
     clearInterval(this.timer);
@@ -155,7 +181,17 @@ export class RoomGameAdapter implements GameAdapter {
       const serverNow = Date.parse(server.server_time);
       if (!Number.isNaN(serverNow)) this.clockSkew = Date.now() - serverNow;
     }
+    this.announce(server);
     this.publish(toView(server, this.clockSkew ?? 0));
+  }
+
+  /** Seated players are "at the table" while the game is open, so their turn doesn't pause. */
+  private announce(server: RoomGameView) {
+    const token = server.viewer && server.presence_token;
+    if (!token || this.steppedAway || this.presence?.token === token || this.listeners.size === 0 || this.disposed) return;
+    this.presence?.leave();
+    const announce = this.options.announcePresence ?? ((handle, t) => announcePresence(this.options.roomId, handle, t));
+    this.presence = { token, leave: announce(server.viewer!, token) };
   }
 
   /** The engine only needs the board, sequences and the viewer's hand to list legal cells. */
@@ -172,7 +208,7 @@ export class RoomGameAdapter implements GameAdapter {
       discard: [],
       current: 0,
       turn: server.turn,
-      exchangedThisTurn: false,
+      exchangesThisTurn: 0,
       sequences: server.sequences,
       winner: server.winner,
       log: [],
@@ -195,15 +231,18 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
   const teamIndexes = Array.from({ length: server.team_count }, (_, i) => i as TeamIndex);
   const hand = server.hand.filter(isCardName) as CardName[];
   const chips = server.board.map((row) => row.map((cell) => cell.team));
-  const { mode, highlights, history } = sanitizeSettings(server.settings);
+  const { mode, highlights, history, deadCards } = sanitizeSettings(server.settings);
   return {
     status: 'ready',
     title: server.name,
-    settings: { mode, highlights, history },
+    settings: { mode, highlights, history, deadCards },
     // The server only sends hints in training games; never show one elsewhere.
     hint: mode === 'training' ? toHint(server.hint) : null,
     turnStartedAt: server.winner === null && server.turn_started_at ? Date.parse(server.turn_started_at) + clockSkew : null,
     turnDeadline: server.winner === null && server.turn_deadline ? Date.parse(server.turn_deadline) + clockSkew : null,
+    turnPaused: server.winner === null && server.turn_paused === true,
+    turnTimeLeft: server.winner === null && server.turn_paused === true ? (server.turn_time_left_ms ?? null) : null,
+    away: server.away ?? [],
     notice: viewer ? undefined : "You don't have a seat in this game, so you're watching.",
     board: server.board.map((row, r) =>
       row.map((cell, c) => {
@@ -216,8 +255,10 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     players,
     currentPlayerId: server.current_player,
     viewer,
-    hand: hand.map((card) => ({ card, dead: isDead(card, chips) })),
+    // With manual dead cards, players find them themselves: nothing is marked.
+    hand: hand.map((card) => ({ card, dead: deadCards === 'indicator' && isDead(card, chips) })),
     canExchange: server.can_exchange,
+    exchangesLeft: server.exchanges_left ?? null,
     canPass: server.can_pass,
     deckCount: server.deck_count,
     sequences: server.sequences,
