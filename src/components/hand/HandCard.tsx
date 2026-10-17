@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { cardImageUrl, cardKind, cardLabel, isRedSuit, parseCard, SUIT_SYMBOL, type CardName } from '../../engine/cards';
 import { tipProps } from '../ui/TooltipLayer';
 import styles from './HandCard.module.css';
 
 interface HandCardProps {
   card: CardName;
+  /** The card's index in the real hand, passed back to onSelect. */
+  handIndex: number;
+  /** Where it is shown (the player may have rearranged their hand): its number key is index + 1. */
   index: number;
   selected: boolean;
   dead: boolean;
   disabled?: boolean;
-  onSelect: () => void;
+  /** Called with handIndex. A stable function lets an unchanged card skip re-rendering. */
+  onSelect: (handIndex: number) => void;
 }
 
 const JACK_BADGE = { 'two-eyed-jack': 'Wild', 'one-eyed-jack': 'Remove' } as const;
@@ -26,7 +30,8 @@ const JACK_TIP = {
 // Remember failures for the whole session so a missing backend doesn't cause a burst of 404s.
 let imagesUnavailable = false;
 
-export function HandCard({ card, index, selected, dead, disabled = false, onSelect }: HandCardProps) {
+/** One card in the player's hand. Memoised: it re-renders only when its own props change, not on every game update. */
+export const HandCard = memo(function HandCard({ card, handIndex, index, selected, dead, disabled = false, onSelect }: HandCardProps) {
   const [imageFailed, setImageFailed] = useState(imagesUnavailable);
   const kind = cardKind(card);
   const { rank, suit } = parseCard(card);
@@ -46,7 +51,7 @@ export function HandCard({ card, index, selected, dead, disabled = false, onSele
       aria-pressed={selected}
       aria-label={[`${cardLabel(card)}`, hint, `key ${index + 1}`].filter(Boolean).join(', ')}
       disabled={disabled}
-      onClick={onSelect}
+      onClick={() => onSelect(handIndex)}
       {...tipProps(tip, 'top')}
     >
       {imageFailed ? (
@@ -82,4 +87,4 @@ export function HandCard({ card, index, selected, dead, disabled = false, onSele
       )}
     </button>
   );
-}
+});

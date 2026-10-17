@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Pos } from '../../engine/board';
 import { cardKind, cardShort, type CardName } from '../../engine/cards';
 import { describeHint } from '../../game/describeHint';
@@ -8,6 +8,7 @@ import type { GameAdapter } from '../../game/types';
 import { useHandOrder } from '../../game/useHandOrder';
 import { useMediaQuery } from '../../game/useMediaQuery';
 import { useMuted } from '../../game/sounds';
+import { sameHand, sameNumbers, useStableValue } from '../../game/stableValue';
 import { useGame } from '../../game/useGame';
 import { Board } from '../board/Board';
 import { Chip } from '../Chip';
@@ -69,6 +70,9 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const [statusOpen, setStatusOpen] = useState(false);
 
   const viewer = view.viewer;
+  // Every update is a fresh snapshot; keep the hand the same object while its cards are, so the memoised cards don't
+  // re-render when only the turn or the board changed.
+  const hand = useStableValue(view.hand, sameHand);
   const handVisible = !adapter.hotSeat || (viewer !== null && revealedFor === viewer.id);
   const gameOver = view.winner !== null;
   const currentPlayer = view.players.find((p) => p.id === view.currentPlayerId) ?? null;
@@ -95,7 +99,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const [muted, setMuted] = useMuted();
   const soundTip = muted ? 'Turn the game sounds back on' : 'Mute the game sounds: your-turn chime and the clock ticking';
   // How the viewer arranged their hand. Only the view changes; moves still use real hand indexes.
-  const { order, setOrder } = useHandOrder(viewer?.id ?? null, view.hand.length, handOrderKey);
+  const { order: freshOrder, setOrder } = useHandOrder(viewer?.id ?? null, hand.length, handOrderKey);
+  const order = useStableValue(freshOrder, sameNumbers);
   const { highlights, history } = view.settings;
   // Hints and card tips are for training games only.
   const training = view.settings.mode === 'training';
@@ -114,10 +119,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (hint.type !== 'pass') setSelected(hint.handIndex);
   };
 
-  // A new hand (after a move, or the next hot-seat player) starts with nothing selected.
+  // A new hand (after a move, or the next hot-seat player) starts with nothing selected. Other players' moves leave
+  // the hand (and so the selection) as it was.
   useEffect(() => {
     setSelected(null);
-  }, [view.hand, viewer?.id]);
+  }, [hand, viewer?.id]);
 
   const targets = useMemo(
     () => (selected !== null && handVisible && !gameOver ? adapter.legalTargets(selected) : null),
@@ -134,11 +140,16 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     return null;
   }, [view.log]);
 
-  const selectCard = (index: number) => {
-    if (!handVisible || gameOver || index >= view.hand.length) return;
+  // Stable, so the memoised hand cards don't re-render just because this screen did. It reads the latest state
+  // through a ref.
+  const latest = useRef({ handVisible, gameOver, handLength: hand.length, setFeedback });
+  latest.current = { handVisible, gameOver, handLength: hand.length, setFeedback };
+  const selectCard = useCallback((index: number) => {
+    const { handVisible, gameOver, handLength, setFeedback } = latest.current;
+    if (!handVisible || gameOver || index >= handLength) return;
     setFeedback(null);
     setSelected((current) => (current === index ? null : index));
-  };
+  }, []);
 
   // Number keys pick a hand card, Escape clears the selection.
   useEffect(() => {
@@ -522,7 +533,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         {view.status === 'ready' && (
           <HandPanel
             title={handTitle}
-            hand={view.hand}
+            hand={hand}
             order={order}
             onReorder={handVisible && !gameOver ? setOrder : undefined}
             selected={selected}
