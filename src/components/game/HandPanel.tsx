@@ -1,4 +1,5 @@
-import { memo, type KeyboardEvent, type ReactNode } from 'react';
+import { memo, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useDeck } from '../../decks/decks';
 import { cardShort } from '../../engine/cards';
 import { movedOrder } from '../../game/handOrder';
 import type { HandCardView } from '../../game/types';
@@ -121,6 +122,11 @@ const HandCards = memo(function HandCards({ hand, order, onReorder, selected, dr
   const keys = order.map((handIndex) => `${handIndex}-${hand[handIndex]?.card}`);
   // Drag a card to a new place (mouse, pen or touch); the other cards glide out of the way.
   const drag = useCardDrag({ keys, enabled: arrange !== null, onMove: move });
+  const [deck] = useDeck();
+  const backStyle = {
+    '--card-aspect': deck.aspect,
+    '--deck-back': deck.image ? `url(${deck.image('back')})` : undefined,
+  } as CSSProperties;
 
   // Alt+Left/Right moves the focused card. Its button keeps focus, since cards are keyed by identity.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -140,7 +146,7 @@ const HandCards = memo(function HandCards({ hand, order, onReorder, selected, dr
       {...drag.containerProps}
     >
       {cover
-        ? hand.map((_, i) => <span key={i} className={styles.back} aria-hidden="true" />)
+        ? hand.map((_, i) => <span key={i} className={styles.back} style={backStyle} aria-hidden="true" />)
         : order.map((handIndex, slot) => {
             const h = hand[handIndex];
             const key = keys[slot];

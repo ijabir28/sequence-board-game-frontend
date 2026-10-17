@@ -57,8 +57,8 @@ Then open http://localhost:5173. Code changes in either repo reload live.
 3. Open http://localhost:5173 and create an account, or sign in with a development account: `jabir` / `1` or
    `sakib` / `123`. Docker creates these itself; for a host-run backend, run `npm run db:seed` there once.
 
-Hot-seat play (`/local`) works without the backend. Card faces then fall back to drawn cards, because the card images
-come from the backend.
+Hot-seat play (`/local`) works without the backend. The Original card deck then falls back to drawn cards, because
+its images come from the backend; the other decks ship with this app (see Card decks below).
 
 To point the dev server at another backend, set `BACKEND_URL`, for example `BACKEND_URL=http://localhost:4000 npm run dev`.
 
@@ -110,7 +110,9 @@ src/
   auth/            Who is signed in (asked from the server on load), route guard
   components/      Board, hand, chips, game screen, UI primitives
   screens/         Sign in, sign up, lobby, table, hot-seat setup, server game
+  decks/           The hand card decks a player can choose, and the remembered choice
   styles/          Design tokens and global CSS
+public/decks/      SVG art of the image decks, with its sources and licences (README.md there)
 ```
 
 ### GameAdapter
@@ -161,6 +163,19 @@ the shared-chip limit), both jack types, dead cards and deck reshuffling. They a
 invariants.
 
 ## Design notes
+
+- **Choose your card deck.** Each player picks the design of the cards in their hand (`src/decks/decks.ts`) from the
+  Card deck card on their profile, or at any time in a game from the cards button in the top bar (the menu drawer on
+  phones); the hand changes at once. The choice is only seen by you and is remembered on this device, so in a
+  hot-seat game everyone shares it. There are five decks:
+  - **Original**, the backend's deck, served from `/images/card_deck/` (the default).
+  - **Classic**, Byron Knoll's public-domain cards (via MattCain/svg-playing-cards).
+  - **Jumbo index** and **Four colour** (black spades, red hearts, blue diamonds, green clubs), with big corner letters
+    that stay readable on a phone, from the public-domain saulspatz/SVGCards.
+  - **Minimal**, drawn by the app (`src/components/cards/DrawnCard.tsx`) with vector suits, so nothing is downloaded.
+
+  The three image decks are SVGO-optimised copies in `public/decks/`, served with the app. Cards keep each deck's own
+  proportions, so the art is never cropped, and a deck whose images can't be loaded falls back to drawn faces.
 
 - **The game screen never scrolls.** It is exactly one viewport tall. The board area is a CSS size container, and the
   board sizes itself to whichever is smaller, the area's width or its height, so all 100 cells are always visible.

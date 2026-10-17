@@ -82,9 +82,11 @@
 }
 
 .back {
-  aspect-ratio: 5 / 7;
+  aspect-ratio: var(--card-aspect, 0.714);
   border-radius: var(--radius-card);
+  /* The chosen deck's back (HandPanel.tsx), over a drawn one that shows if it can't be loaded. */
   background:
+    var(--deck-back, none) center / 100% 100% no-repeat,
     repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.06) 0 4px, transparent 4px 9px),
     linear-gradient(160deg, #1e3a5f, #0f2a22);
   box-shadow:

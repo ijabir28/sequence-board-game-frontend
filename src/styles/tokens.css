@@ -41,6 +41,11 @@
   --card-face: #ffffff;
   --card-ink-black: #0f172a;
   --card-ink-red: #dc2626;
+  /* Suit colours on the drawn (Minimal) card faces. */
+  --suit-spade: var(--card-ink-black);
+  --suit-club: var(--card-ink-black);
+  --suit-heart: var(--card-ink-red);
+  --suit-diamond: var(--card-ink-red);
   --corner-foil: linear-gradient(135deg, #3a2f12 0%, #1b1f2e 55%, #4a3410 100%);
   --corner-ink: #f5c451;
 
