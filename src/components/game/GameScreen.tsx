@@ -13,6 +13,7 @@ import { useMuted } from '../../game/sounds';
 import { sameHand, sameNumbers, useStableValue } from '../../game/stableValue';
 import { useGame } from '../../game/useGame';
 import { Board } from '../board/Board';
+import { DeckPicker } from '../cards/DeckPicker';
 import { Chip } from '../Chip';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
@@ -61,6 +62,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   };
   const [revealedFor, setRevealedFor] = useState<string | null>(null);
   const [logOpen, setLogOpen] = useState(false);
+  const [deckOpen, setDeckOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   // Opening the menu drawer or the leave dialog counts as stepping away from the table, as if the player had already
@@ -542,6 +544,21 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
                 <small>Your-turn chime and the clock ticking</small>
               </span>
             </button>
+            <button
+              type="button"
+              className={styles.drawerItem}
+              {...tipProps('Choose the design of the cards in your hand')}
+              onClick={() => {
+                setMenuOpen(false);
+                setDeckOpen(true);
+              }}
+            >
+              <Icon name="cards" />
+              <span>
+                <strong>Card deck</strong>
+                <small>The design of your hand's cards</small>
+              </span>
+            </button>
             {headerExtra && <div className={styles.drawerExtra}>{headerExtra}</div>}
             <button
               type="button"
@@ -581,6 +598,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             <Tooltip text={soundTip} align="end">
               <button type="button" className={styles.iconButton} onClick={() => setMuted(!muted)} aria-label="Game sounds" aria-pressed={!muted}>
                 <Icon name={muted ? 'soundOff' : 'sound'} />
+              </button>
+            </Tooltip>
+            <Tooltip text="Choose the design of the cards in your hand" align="end">
+              <button type="button" className={styles.iconButton} onClick={() => setDeckOpen(true)} aria-label="Card deck" aria-haspopup="dialog">
+                <Icon name="cards" />
               </button>
             </Tooltip>
             {history && (
@@ -726,6 +748,20 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       </div>
 
       <TurnSounds chimeKey={chimeKey} ticking={!!turnEdge && !turnEdge.paused} turnDeadline={view.turnDeadline} />
+
+      <Dialog
+        open={deckOpen}
+        title="Card deck"
+        onClose={() => setDeckOpen(false)}
+        actions={
+          <Button variant="primary" onClick={() => setDeckOpen(false)} tip="Close this and go back to the board">
+            Done
+          </Button>
+        }
+      >
+        <p className={styles.deckNote}>Your hand changes at once. Only you see your deck, and it is remembered on this device.</p>
+        <DeckPicker />
+      </Dialog>
 
       <Dialog open={logOpen && history} title="Move log" onClose={() => setLogOpen(false)}>
         <MoveLog entries={view.log} emptyText="No moves yet. Moves will appear here as they are played." />

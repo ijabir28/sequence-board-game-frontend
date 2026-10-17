@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { Avatar } from '../components/Avatar';
+import { DeckPicker } from '../components/cards/DeckPicker';
 import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
 import { AVATAR_ACCEPT, AvatarError, makeAvatar } from '../profile/avatarImage';
@@ -43,6 +44,7 @@ export function ProfilePage() {
         <div className={own.grid}>
           <IdentityCard profile={profile} refresh={refresh} />
           <NameCard profile={profile} refresh={refresh} />
+          <DeckCard />
           <EmailCard profile={profile} />
           <PasswordCard />
           <DevicesCard />
@@ -202,6 +204,23 @@ function NameCard({ profile, refresh }: CardProps) {
         </Button>
       </div>
     </form>
+  );
+}
+
+function DeckCard() {
+  return (
+    <section className={styles.card} aria-labelledby="deck-title">
+      <header className={styles.header}>
+        <h2 id="deck-title" className={own.title}>
+          Card deck
+        </h2>
+        <p>
+          The design of the cards in your hand. Only you see it, and you can change it any time, also from the game menu
+          in the middle of a game. It is remembered on this device.
+        </p>
+      </header>
+      <DeckPicker />
+    </section>
   );
 }
 
