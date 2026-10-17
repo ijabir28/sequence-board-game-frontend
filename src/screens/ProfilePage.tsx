@@ -8,7 +8,6 @@ import {
   listSessions,
   removeAvatar,
   resendVerification,
-  signOutOtherDevices,
   updateName,
   uploadAvatar,
   type DeviceSession,
@@ -397,7 +396,6 @@ function PasswordCard() {
 function DevicesCard() {
   const toast = useToast();
   const [sessions, setSessions] = useState<DeviceSession[] | null>(null);
-  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -411,28 +409,16 @@ function DevicesCard() {
     void load();
   }, [load]);
 
-  const signOutOthers = async () => {
-    setBusy(true);
-    try {
-      await signOutOtherDevices();
-      await load();
-      toast.success('Signed out of every other device.', { id: 'devices' });
-    } catch (e) {
-      toast.error(problem(e), { id: 'devices' });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const others = sessions?.filter((session) => !session.current).length ?? 0;
-
   return (
     <section className={styles.card} aria-labelledby="devices-title">
       <header className={styles.header}>
         <h2 id="devices-title" className={own.title}>
-          Signed-in devices
+          Signed-in device
         </h2>
-        <p>Where your account is signed in. Don't recognise one? Sign it out and change your password.</p>
+        <p>
+          Your account is signed in on one device at a time: signing in somewhere else signs this one out. Signed out and
+          it wasn't you? Change your password.
+        </p>
       </header>
       {sessions === null ? (
         <p className={styles.help} role="status">
@@ -451,11 +437,6 @@ function DevicesCard() {
           ))}
         </ul>
       )}
-      <div className={own.actions}>
-        <Button variant="danger" busy={busy} disabled={others === 0} onClick={signOutOthers} tip="Sign out everywhere except this browser">
-          Sign out other devices
-        </Button>
-      </div>
     </section>
   );
 }
