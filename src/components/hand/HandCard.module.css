@@ -3,7 +3,8 @@
   flex: 1 1 0;
   min-width: 0;
   max-width: var(--hand-card-max, 92px);
-  aspect-ratio: 5 / 7;
+  /* Each deck has its own proportions (decks.ts), so its art is never cropped. */
+  aspect-ratio: var(--card-aspect, 0.714);
   padding: 0;
   border: 0;
   border-radius: var(--radius-card);
@@ -45,39 +46,8 @@
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  object-fit: cover;
+  object-fit: fill;
   pointer-events: none;
-}
-
-/* Drawn fallback when /images is not reachable (for example hot-seat play without the backend). */
-.face {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  color: var(--card-ink-black);
-  font-family: var(--font-display);
-  font-weight: 700;
-}
-
-.red {
-  color: var(--card-ink-red);
-}
-
-.index {
-  position: absolute;
-  top: 6%;
-  left: 9%;
-  font-size: clamp(0.7rem, 2.2vmin, 1rem);
-  line-height: 1;
-  text-align: center;
-}
-
-.pip {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: clamp(1.4rem, 5vmin, 2.4rem);
 }
 
 .dead {

@@ -1,5 +1,7 @@
-import { memo, useState } from 'react';
-import { cardImageUrl, cardKind, cardLabel, isRedSuit, parseCard, SUIT_SYMBOL, type CardName } from '../../engine/cards';
+import { memo, useState, type CSSProperties } from 'react';
+import { useDeck, type DeckId } from '../../decks/decks';
+import { cardKind, cardLabel, type CardName } from '../../engine/cards';
+import { DrawnCard } from '../cards/DrawnCard';
 import { tipProps } from '../ui/TooltipLayer';
 import styles from './HandCard.module.css';
 
@@ -29,14 +31,16 @@ const JACK_TIP = {
   'one-eyed-jack': "Remove an opponent's chip that isn't in a sequence.",
 } as const;
 
-// Remember failures for the whole session so a missing backend doesn't cause a burst of 404s.
-let imagesUnavailable = false;
+// Decks whose images failed to load, remembered for the whole session so a missing backend (the original deck comes
+// from it) doesn't cause a burst of 404s. Their cards are drawn instead.
+const unavailableDecks = new Set<DeckId>();
 
 /** One card in the player's hand. Memoised: it re-renders only when its own props change, not on every game update. */
 export const HandCard = memo(function HandCard({ card, handIndex, index, selected, dead, drafted = false, disabled = false, onSelect }: HandCardProps) {
-  const [imageFailed, setImageFailed] = useState(imagesUnavailable);
+  const [deck] = useDeck();
+  const [, setFailures] = useState(0);
+  const image = deck.image && !unavailableDecks.has(deck.id) ? deck.image(card) : null;
   const kind = cardKind(card);
-  const { rank, suit } = parseCard(card);
   const hint = kind === 'normal' ? (dead ? 'dead card, both cells taken' : null) : JACK_HINT[kind];
   const tip = `${cardLabel(card)}. ${
     kind !== 'normal'
@@ -53,29 +57,24 @@ export const HandCard = memo(function HandCard({ card, handIndex, index, selecte
       aria-pressed={selected}
       aria-label={[`${cardLabel(card)}`, hint, drafted && 'drafted for your next turn', `key ${index + 1}`].filter(Boolean).join(', ')}
       disabled={disabled}
+      style={{ '--card-aspect': deck.aspect } as CSSProperties}
       onClick={() => onSelect(handIndex)}
       {...tipProps(tip, 'top')}
     >
-      {imageFailed ? (
-        <span className={[styles.face, isRedSuit(suit) && styles.red].filter(Boolean).join(' ')} aria-hidden="true">
-          <span className={styles.index}>
-            {rank}
-            <br />
-            {SUIT_SYMBOL[suit]}
-          </span>
-          <span className={styles.pip}>{SUIT_SYMBOL[suit]}</span>
-        </span>
-      ) : (
+      {image ? (
         <img
+          key={image}
           className={styles.image}
-          src={cardImageUrl(card)}
+          src={image}
           alt=""
           draggable={false}
           onError={() => {
-            imagesUnavailable = true;
-            setImageFailed(true);
+            unavailableDecks.add(deck.id);
+            setFailures((n) => n + 1);
           }}
         />
+      ) : (
+        <DrawnCard card={card} />
       )}
       {kind !== 'normal' && (
         <span className={[styles.badge, kind === 'one-eyed-jack' ? styles.badgeRemove : styles.badgeWild].join(' ')} aria-hidden="true">
