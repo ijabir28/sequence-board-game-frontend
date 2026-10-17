@@ -20,3 +20,23 @@ export function turnEdgeStrength({
   if (total <= 0) return 0;
   return Math.min(1, Math.max(0, left / total));
 }
+
+/** The glow starts turning from green to red this long before the turn's time runs out. */
+export const EDGE_WARN_MS = 20_000;
+
+/**
+ * How far the board's glow has turned from green towards red: 0 until the last EDGE_WARN_MS of a timed turn, then up
+ * to 1 when time is up. Untimed turns stay green.
+ */
+export function turnEdgeHeat({ now, turnDeadline }: { now: number; turnDeadline: number | null }): number {
+  if (turnDeadline === null) return 0;
+  const left = turnDeadline - now;
+  if (left >= EDGE_WARN_MS) return 0;
+  return Math.min(1, Math.max(0, 1 - left / EDGE_WARN_MS));
+}
+
+/** The glow's colour for a heat from turnEdgeHeat: green (hue 150) through amber to red (hue 0). */
+export function turnEdgeColor(heat: number): string {
+  const hue = Math.round(150 * (1 - heat));
+  return `hsl(${hue} 85% ${55 - 5 * heat}%)`;
+}

@@ -40,8 +40,8 @@ const WARN_MS = 20_000;
 const URGENT_MS = 10_000;
 
 /**
- * Whose turn it is, in its own box so it can't be missed: the player and team, the timer on your own turn, and the turn
- * order with the current player marked. When it becomes your turn, the box flashes and the tab title says so.
+ * Whose turn it is, in its own box so it can't be missed: the player and team, the time left on your own turn (the
+ * board's glow shows it too, in place of a clock bar), and the turn order with the current player marked. When it becomes your turn, the box flashes and the tab title says so.
  */
 export function TurnPanel({
   players,
@@ -74,7 +74,6 @@ export function TurnPanel({
   const elapsed = running ? now - turnStartedAt! : 0;
   const counting = running && turnDeadline !== null;
   const left = counting ? Math.max(0, turnDeadline! - now) : 0;
-  const total = counting ? Math.max(1, turnDeadline! - turnStartedAt!) : 1;
   const urgency = !counting ? (elapsed >= SLOW_TURN_MS ? 'warn' : null) : left <= URGENT_MS ? 'urgent' : left <= WARN_MS ? 'warn' : null;
 
   const className = [styles.panel, yours && styles.yours, paused && styles.paused, alerting && styles.alert, yours && urgency === 'urgent' && styles.hurry]
@@ -197,14 +196,6 @@ export function TurnPanel({
           </button>
         )}
       </div>
-      {counting && (
-        <div className={styles.track} aria-hidden="true">
-          <span
-            className={[styles.bar, urgency === 'warn' && styles.barWarn, urgency === 'urgent' && styles.barUrgent].filter(Boolean).join(' ')}
-            style={{ transform: `scaleX(${left / total})` }}
-          />
-        </div>
-      )}
       {pausedNotice}
       {yours && counting && left <= URGENT_MS && (
         <p className={styles.warning} role="alert">

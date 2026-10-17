@@ -105,30 +105,6 @@
   }
 }
 
-/* How much of the turn is left, draining from right to left. */
-.track {
-  height: 4px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: var(--surface-lowest);
-}
-
-.bar {
-  display: block;
-  height: 100%;
-  background: var(--turn-team);
-  transform-origin: left;
-  transition: transform 500ms linear, background var(--dur) var(--ease-out);
-}
-
-.barWarn {
-  background: var(--warning);
-}
-
-.barUrgent {
-  background: var(--error);
-}
-
 /* The current player left the table: the game waits for them. */
 .paused {
   border-style: dashed;
@@ -240,10 +216,6 @@
   .alert,
   .urgent {
     animation: none;
-  }
-
-  .bar {
-    transition: none;
   }
 }
 

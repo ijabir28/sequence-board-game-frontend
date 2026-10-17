@@ -21,51 +21,83 @@
 }
 
 /*
- * Your turn: a thick edge in your team's colour, 12px when the turn starts down to 3px as its time runs out
- * (--edge-strength, 1 to 0, set by Board.tsx). It is drawn outside the board, into the space around it (the board
- * area lets it overflow), so the board keeps its full size.
+ * Your turn: the turn timer glows round the outside of the board (TurnGlow.tsx). A full ring when the turn starts, it
+ * shrinks back along the edge towards the top centre as time runs out, green until the last 20 seconds and then
+ * turning red (--edge-color). It is drawn outside the board, into the space around it (the board area lets it
+ * overflow), so the board keeps its full size.
  */
-.turnEdge {
-  --edge-width: calc(3px + 9px * var(--edge-strength, 1));
-  box-shadow:
-    inset 0 0 0 1px var(--outline-subtle),
-    0 0 0 var(--edge-width) var(--active-team, var(--primary)),
-    0 0 calc(var(--edge-width) * 2) calc(var(--edge-width) / 2) var(--active-glow, rgba(78, 222, 163, 0.4));
-  transition: box-shadow 1s linear;
-}
-
-/* It also breathes, so it can't be missed. */
-.turnEdge::after {
-  content: '';
+.turnGlow {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: 0 0 calc(var(--edge-width) * 3) var(--edge-width) var(--active-glow, rgba(78, 222, 163, 0.4));
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  overflow: visible;
   pointer-events: none;
-  animation: your-turn-edge 1.6s ease-in-out infinite;
+  z-index: 1;
+  filter: drop-shadow(0 0 5px var(--edge-color));
 }
 
-@keyframes your-turn-edge {
+.turnGlow path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+/* The whole way round, faintly, so the part already used up still reads as the clock face. */
+.glowTrack {
+  stroke: var(--edge-color);
+  stroke-width: 4px;
+  opacity: 0.14;
+  transition: stroke 1s linear;
+}
+
+.glowLine,
+.glowHalo {
+  stroke: var(--edge-color);
+  stroke-dasharray: 1 1;
+  transition:
+    stroke-dashoffset 1s linear,
+    stroke 1s linear;
+}
+
+.glowLine {
+  stroke-width: 4px;
+}
+
+/* A soft halo that breathes, so it can't be missed. */
+.glowHalo {
+  stroke-width: 12px;
+  opacity: 0.3;
+  animation: turn-glow-breathe 1.6s ease-in-out infinite;
+}
+
+/* The last seconds: it breathes faster. */
+.glowHot .glowHalo {
+  animation-duration: 0.8s;
+}
+
+@keyframes turn-glow-breathe {
   50% {
-    opacity: 0.2;
+    opacity: 0.1;
   }
 }
 
-/* The current player is away: the edge holds still and dims. */
-.edgePaused {
-  opacity: 0.85;
+/* The turn is paused: the glow holds still and dims. */
+.glowPaused {
+  opacity: 0.6;
 }
 
-.edgePaused::after {
+.glowPaused .glowHalo {
   animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .turnEdge {
+  .glowLine,
+  .glowHalo,
+  .glowTrack {
     transition: none;
   }
 
-  .turnEdge::after {
+  .glowHalo {
     animation: none;
   }
 }
