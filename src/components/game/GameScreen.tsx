@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { Pos } from '../../engine/board';
 import { cardKind, cardShort, type CardName } from '../../engine/cards';
 import { describeHint } from '../../game/describeHint';
+import { describeDraft, draftLostMessage, draftProblem, type Draft } from '../../game/draft';
 import { describeLog } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter } from '../../game/types';
@@ -86,6 +87,10 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const turnEdge = yourTurn
     ? { turn: view.turn, turnStartedAt: view.turnStartedAt, turnDeadline: view.turnDeadline, paused: view.turnPaused }
     : null;
+  // Table games: on someone else's turn the viewer may draft their next move. It is played for them as soon as their
+  // turn comes, unless a move in the meantime rules it out (then they're told, and can draft another).
+  const waiting = !adapter.hotSeat && !gameOver && view.status === 'ready' && currentPlayer !== null && viewer !== null && currentPlayer.id !== viewer.id;
+  const [draft, setDraft] = useState<Draft | null>(null);
   // A chime when the turn passes to you (in hot-seat play, every new turn: the next person picks up the device), and
   // the clock ticking over your turn's last 20 seconds.
   const chimeKey =
@@ -182,6 +187,28 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     }
   };
 
+  // Checks the draft whenever the game moves on: drops it, with a message, once it can't be played, and plays it the
+  // moment the viewer's turn starts.
+  useEffect(() => {
+    if (!draft || busy) return;
+    if (gameOver) {
+      setDraft(null);
+      return;
+    }
+    const problem = draftProblem(draft, hand, adapter.legalTargets(draft.handIndex));
+    if (problem) {
+      setDraft(null);
+      setFeedback({ tone: 'error', text: draftLostMessage(draft, problem) });
+      return;
+    }
+    if (!yourTurn || view.turnPaused) return;
+    setDraft(null);
+    void run(() => adapter.playCard(draft.handIndex, draft.target)).then((played) => {
+      if (played) setFeedback({ tone: 'success', text: `Your drafted move was played: ${describeDraft(draft)}.` });
+    });
+    // `view` changes with every move, which is when the draft needs checking again.
+  }, [adapter, draft, view, hand, yourTurn, gameOver, busy]);
+
   const onCell = async (pos: Pos) => {
     if (gameOver || busy) return;
     if (!handVisible) {
@@ -196,6 +223,18 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (highlights && !targets?.some((t) => t.row === pos.row && t.column === pos.column)) {
       const what = cardKind(selectedCard) === 'one-eyed-jack' ? "a chip you can remove" : 'a legal move';
       setFeedback({ tone: 'error', text: `That cell isn't ${what} for ${cardShort(selectedCard)}. Pick a highlighted cell.` });
+      return;
+    }
+    if (waiting) {
+      // Not your turn yet: draft the move instead. The engine checks it now, since the server won't until it is played.
+      if (!adapter.legalTargets(selected).some((t) => t.row === pos.row && t.column === pos.column)) {
+        setFeedback({ tone: 'error', text: `That cell isn't a legal move for ${cardShort(selectedCard)}, so it can't be drafted.` });
+        return;
+      }
+      const next = { handIndex: selected, card: selectedCard, target: pos };
+      setDraft(next);
+      setSelected(null);
+      setFeedback({ tone: 'info', text: `Move drafted: ${describeDraft(next)}. It is played as soon as your turn comes.` });
       return;
     }
     const played = await run(() => adapter.playCard(selected, pos));
@@ -261,6 +300,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     highlights,
     tips: training,
     manualDead,
+    waiting,
+    draft,
   });
 
   const footer = (
@@ -274,6 +315,14 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         <p className={styles.hint}>{prompt}</p>
       )}
       <div className={styles.actionButtons}>
+        {draft && (
+          <Tooltip text="Forget the drafted move, so nothing is played for you when your turn comes" side="top" align="end">
+            <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
+              <Icon name="close" size={16} />
+              Cancel draft
+            </Button>
+          </Tooltip>
+        )}
         {hint && !hintShown && (
           <Tooltip text="Suggest a move for this turn, and say why" side="top" align="end">
             <Button size="sm" variant="ghost" onClick={showHint}>
@@ -338,7 +387,13 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   return (
     <div
       className={styles.screen}
-      style={activeTeam !== null ? ({ '--active-team': TEAM_STYLES[activeTeam].color, '--active-glow': TEAM_STYLES[activeTeam].glow } as React.CSSProperties) : undefined}
+      style={
+        {
+          ...(activeTeam !== null ? { '--active-team': TEAM_STYLES[activeTeam].color, '--active-glow': TEAM_STYLES[activeTeam].glow } : {}),
+          // A drafted move is the viewer's, so it is marked in their team's colour whoever's turn it is.
+          ...(viewer ? { '--draft-team': TEAM_STYLES[viewer.team].color, '--draft-glow': TEAM_STYLES[viewer.team].glow } : {}),
+        } as React.CSSProperties
+      }
     >
       {phone ? (
         <>
@@ -502,6 +557,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             targetMode={selectedCard && cardKind(selectedCard) === 'one-eyed-jack' ? 'remove' : 'place'}
             activeTeam={activeTeam}
             lastMove={lastMove}
+            draft={draft?.target ?? null}
             hint={hint && hintShown && hint.type === 'play' ? hint.target : null}
             disabled={busy || gameOver}
             turnEdge={turnEdge}
@@ -537,6 +593,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             order={order}
             onReorder={handVisible && !gameOver ? setOrder : undefined}
             selected={selected}
+            drafted={draft?.handIndex ?? null}
             onSelect={selectCard}
             cover={adapter.hotSeat && !handVisible && !gameOver && viewer ? { playerName: viewer.name, onReveal: () => setRevealedFor(viewer.id) } : null}
             disabled={busy || gameOver || view.status !== 'ready'}
@@ -618,6 +675,8 @@ function handHint({
   highlights,
   tips,
   manualDead,
+  waiting,
+  draft,
 }: {
   selectedCard: CardName | undefined;
   dead: boolean;
@@ -628,7 +687,15 @@ function handHint({
   tips: boolean;
   /** Players spot dead cards themselves and may offer any card for exchange. */
   manualDead: boolean;
+  /** Someone else's turn: a move made now is drafted for the viewer's next turn. */
+  waiting: boolean;
+  draft: Draft | null;
 }): string {
+  if (waiting && !selectedCard) {
+    return draft
+      ? `Drafted: ${describeDraft(draft)}. It is played as soon as your turn comes. Pick another card to change it.`
+      : `Not your turn yet. Draft your next move: pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}, and it is played when your turn comes.`;
+  }
   if (!selectedCard) {
     return manualDead && canExchange
       ? `Pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}. Spotted a dead card? Pick it and exchange it.`
