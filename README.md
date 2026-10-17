@@ -174,6 +174,11 @@ invariants.
   no audio files) and can be muted from the speaker button in the top bar (the menu drawer on phones), remembered on
   this device. Table games take the turn's start time from the server
   (`turn_started_at`, corrected for clock skew), so the timer is the same for everyone and survives reloads.
+- **Draft your move ahead.** In table games, on someone else's turn you can pick a card and a cell as usual: the move
+  is drafted, not sent. The card gets a "Queued" tag and the cell a dashed ring in your team's colour, and it is played
+  for you the moment your turn starts. If a move in the meantime rules it out (the cell is taken, or a chip you meant
+  to remove is locked), the draft is dropped and a message says why, so you can draft another. Pick another card to
+  change it, or "Cancel draft". Drafts live only on your device (`src/game/draft.ts`); the server never sees them.
 - **Messages float.** Success and error messages (moves, joining or leaving a seat, saving options, signing in,
   dialogs) appear as toasts at the top of the screen (`src/components/toast/`), so they never push the layout around.
   Errors stay 7 s, other messages 4 s; hovering or focusing one holds it. While a modal dialog is open the toasts
