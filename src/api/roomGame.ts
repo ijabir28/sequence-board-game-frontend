@@ -48,6 +48,15 @@ export interface RawRoundResult {
   } | null;
 }
 
+/** GET /room/:id/rounds/:round: a won round to look back on, with its final board and whole move log. */
+export interface RawRoundDetail extends RawRoundResult {
+  team_count: 2 | 3;
+  players: { handle: string; name: string; team: TeamIndex }[];
+  board: { name: string; team: TeamIndex | null }[][];
+  sequences: Sequence[];
+  log: LogEntry[];
+}
+
 /** Where the table is in its rounds (missing from older backends). */
 export interface RawRounds {
   round: number;
@@ -158,6 +167,11 @@ export async function passRoomTurn(roomId: string): Promise<RoomGameView> {
 /** POST /room/:id/rounds/next (host). Deals the next round once the current one is won. */
 export async function nextRoomRound(roomId: string): Promise<RoomGameView> {
   return readGame(await postJson(`${base(roomId)}/rounds/next`, {}));
+}
+
+/** GET /room/:id/rounds/:round. A won round's statistics, final board and move log. */
+export async function getRoomRound(roomId: string, round: number): Promise<RawRoundDetail> {
+  return (await readGame(await request(`${base(roomId)}/rounds/${round}`))) as unknown as RawRoundDetail;
 }
 
 /** POST /room/:id/rounds/end (host). Ends the rounds once the current one is won; the view then has the summary. */

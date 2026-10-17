@@ -112,6 +112,31 @@ describe('RoomGameAdapter', () => {
     old.dispose();
   });
 
+  it("loads a won round's details: statistics, final board and move log", async () => {
+    const board = layout.map((row) => row.map((cell) => ({ name: cell.name, team: null as 0 | 1 | null })));
+    board[0][1] = { name: '6-Diamond', team: 0 };
+    const log = [{ kind: 'place' as const, turn: 1, player: 'Jabir', team: 0 as const, card: '6-Diamond' as const, pos: { row: 0, column: 1 }, wild: false }];
+    const calls = stubFetch((url) =>
+      url.pathname === '/room/42/rounds/9'
+        ? { status: 404, body: { error: 'ROUND_NOT_FOUND', message: 'This table has no round 9.' } }
+        : {
+            status: 200,
+            body: {
+              round: 2, winner: 0, started_at: '2026-10-17T10:00:00.000Z', finished_at: '2026-10-17T10:01:00.000Z', stats: null,
+              team_count: 2, players: [{ handle: 'jabir', name: 'Jabir', team: 0 }], board, sequences: [], log,
+            },
+          },
+    );
+    const a = adapter();
+    const detail = await a.roundDetail(2);
+    expect(calls.at(-1)).toMatchObject({ path: '/room/42/rounds/2', method: 'GET' });
+    expect(detail.result).toEqual({ round: 2, winner: 0, durationMs: 60_000, stats: null });
+    expect(detail.board[0][1]).toEqual({ row: 0, column: 1, card: '6-Diamond', chip: 0, locked: false });
+    expect(detail.log).toEqual(log);
+    await expect(a.roundDetail(9)).rejects.toThrow('This table has no round 9.');
+    a.dispose();
+  });
+
   it('ends the rounds with the final summary, and reports a refusal', async () => {
     const summary = {
       rounds_played: 2,

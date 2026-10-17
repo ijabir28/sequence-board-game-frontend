@@ -4,11 +4,13 @@ import {
   exchangeRoomCard,
   GameRejectedError,
   getRoomGame,
+  getRoomRound,
   nextRoomRound,
   passRoomTurn,
   playRoomCard,
   type RawHint,
   type RawPlayerStats,
+  type RawRoundResult,
   type RawRounds,
   type RoomGameView,
 } from '../../api/roomGame';
@@ -27,8 +29,12 @@ import {
   type GameView,
   type PlayerStats,
   type PlayerView,
+  type CellView,
+  type RoundDetail,
+  type RoundResult,
   type RoundsView,
 } from '../types';
+import type { Sequence } from '../../engine/sequences';
 
 export interface RoomGameOptions {
   roomId: string;
@@ -126,6 +132,15 @@ export class RoomGameAdapter implements GameAdapter {
 
   endRounds(): Promise<ActionResult> {
     return this.act(() => endRoomRounds(this.options.roomId));
+  }
+
+  async roundDetail(round: number): Promise<RoundDetail> {
+    try {
+      const raw = await getRoomRound(this.options.roomId, round);
+      return { result: toRoundResult(raw), board: toBoard(raw.board, raw.sequences), sequences: raw.sequences, log: raw.log };
+    } catch (error) {
+      throw new Error(error instanceof GameRejectedError ? error.message : errorMessage(error));
+    }
   }
 
   stepAway(away: boolean): void {
@@ -265,12 +280,7 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     away: server.away ?? [],
     rounds: toRounds(server.rounds, server.host ?? null, server.viewer),
     notice: viewer ? undefined : "You don't have a seat in this game, so you're watching.",
-    board: server.board.map((row, r) =>
-      row.map((cell, c) => {
-        const card: BoardCardName = cell.name === BLANK || !isCardName(cell.name) ? BLANK : cell.name;
-        return { row: r, column: c, card, chip: cell.team, locked: cell.team !== null && isLocked(server.sequences, { row: r, column: c }) };
-      }),
-    ),
+    board: toBoard(server.board, server.sequences),
     teams: teamIndexes.map((index) => ({ index, sequences: server.sequences.filter((s) => s.team === index).length })),
     sequencesToWin: server.sequences_to_win,
     players,
@@ -303,6 +313,31 @@ function toPlayerStats(raw: RawPlayerStats): PlayerStats {
   };
 }
 
+function toBoard(board: RoomGameView['board'], sequences: Sequence[]): CellView[][] {
+  return board.map((row, r) =>
+    row.map((cell, c) => {
+      const card: BoardCardName = cell.name === BLANK || !isCardName(cell.name) ? BLANK : cell.name;
+      return { row: r, column: c, card, chip: cell.team, locked: cell.team !== null && isLocked(sequences, { row: r, column: c }) };
+    }),
+  );
+}
+
+function toRoundResult(result: RawRoundResult): RoundResult {
+  const started = result.started_at ? Date.parse(result.started_at) : NaN;
+  const finished = result.finished_at ? Date.parse(result.finished_at) : NaN;
+  return {
+    round: result.round,
+    winner: result.winner,
+    durationMs: Number.isNaN(started) || Number.isNaN(finished) ? null : Math.max(0, finished - started),
+    stats: result.stats && {
+      turns: result.stats.turns,
+      firstPlayerId: result.stats.first_player,
+      teams: result.stats.teams,
+      players: result.stats.players.map(toPlayerStats),
+    },
+  };
+}
+
 function toRounds(raw: RawRounds | undefined, hostId: string | null, viewer: string | null): RoundsView | null {
   if (!raw) return null;
   return {
@@ -310,21 +345,7 @@ function toRounds(raw: RawRounds | undefined, hostId: string | null, viewer: str
     over: raw.over,
     hostId,
     isHost: hostId !== null && hostId === viewer,
-    results: raw.results.map((result) => {
-      const started = result.started_at ? Date.parse(result.started_at) : NaN;
-      const finished = result.finished_at ? Date.parse(result.finished_at) : NaN;
-      return {
-        round: result.round,
-        winner: result.winner,
-        durationMs: Number.isNaN(started) || Number.isNaN(finished) ? null : Math.max(0, finished - started),
-        stats: result.stats && {
-          turns: result.stats.turns,
-          firstPlayerId: result.stats.first_player,
-          teams: result.stats.teams,
-          players: result.stats.players.map(toPlayerStats),
-        },
-      };
-    }),
+    results: raw.results.map(toRoundResult),
     summary: raw.summary && {
       roundsPlayed: raw.summary.rounds_played,
       turns: raw.summary.turns,
