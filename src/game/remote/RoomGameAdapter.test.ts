@@ -46,6 +46,103 @@ function adapter() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('RoomGameAdapter', () => {
+  it("maps the table's rounds, and only the host may deal the next one or end them", async () => {
+    const player = { handle: 'jabir', name: 'Jabir', team: 0 as const, plays: 3, wilds: 1, removals: 0, exchanges: 0, passes: 0, timed_out: 1 };
+    const rounds = {
+      round: 1,
+      over: false,
+      results: [
+        {
+          round: 1,
+          winner: 0 as const,
+          started_at: '2026-10-17T10:00:00.000Z',
+          finished_at: '2026-10-17T10:12:00.000Z',
+          stats: {
+            winner: 0 as const,
+            turns: 5,
+            first_player: 'sakib',
+            teams: [{ team: 0 as const, sequences: 2, chips: 3, placed: 3, removed: 0 }],
+            players: [player],
+          },
+        },
+      ],
+      summary: null,
+    };
+    const calls = stubFetch((url) => ({
+      status: 200,
+      body: serverView({ host: 'jabir', winner: 0, rounds: url.pathname.endsWith('/rounds/next') ? { ...rounds, round: 2, results: rounds.results } : rounds }),
+    }));
+    const a = adapter();
+    await a.refresh();
+    expect(a.getState().rounds).toEqual({
+      round: 1,
+      over: false,
+      hostId: 'jabir',
+      isHost: true,
+      summary: null,
+      results: [
+        {
+          round: 1,
+          winner: 0,
+          durationMs: 12 * 60_000,
+          stats: {
+            turns: 5,
+            firstPlayerId: 'sakib',
+            teams: [{ team: 0, sequences: 2, chips: 3, placed: 3, removed: 0 }],
+            players: [{ id: 'jabir', name: 'Jabir', team: 0, plays: 3, wilds: 1, removals: 0, exchanges: 0, passes: 0, timedOut: 1 }],
+          },
+        },
+      ],
+    });
+    expect(await a.nextRound()).toEqual({ ok: true });
+    expect(calls.at(-1)).toMatchObject({ path: '/room/42/rounds/next', method: 'POST' });
+    expect(a.getState().rounds?.round).toBe(2);
+    a.dispose();
+
+    stubFetch(() => ({ status: 200, body: serverView({ host: 'sakib', rounds }) }));
+    const guest = adapter();
+    await guest.refresh();
+    expect(guest.getState().rounds?.isHost).toBe(false);
+    guest.dispose();
+
+    stubFetch(() => ({ status: 200, body: serverView() }));
+    const old = adapter();
+    await old.refresh();
+    expect(old.getState().rounds).toBeNull();
+    old.dispose();
+  });
+
+  it('ends the rounds with the final summary, and reports a refusal', async () => {
+    const summary = {
+      rounds_played: 2,
+      turns: 40,
+      teams: [
+        { team: 0 as const, rounds_won: 1, sequences: 3, placed: 30, removed: 2 },
+        { team: 1 as const, rounds_won: 1, sequences: 3, placed: 28, removed: 4 },
+      ],
+      players: [],
+      verdict: { winner: null, leaders: [0 as const, 1 as const] },
+    };
+    stubFetch((url) =>
+      url.pathname.endsWith('/rounds/end')
+        ? { status: 200, body: serverView({ host: 'jabir', winner: 1, rounds: { round: 2, over: true, results: [], summary } }) }
+        : { status: 200, body: serverView({ host: 'jabir', winner: 1, rounds: { round: 2, over: false, results: [], summary: null } }) },
+    );
+    const a = adapter();
+    await a.refresh();
+    expect(await a.endRounds()).toEqual({ ok: true });
+    expect(a.getState().rounds).toMatchObject({
+      over: true,
+      summary: { roundsPlayed: 2, turns: 40, winner: null, leaders: [0, 1], teams: [{ team: 0, roundsWon: 1 }, { team: 1, roundsWon: 1 }] },
+    });
+    a.dispose();
+
+    stubFetch(() => ({ status: 409, body: { error: 'ROUND_IN_PROGRESS', message: 'This round is still being played.' } }));
+    const early = adapter();
+    expect(await early.nextRound()).toEqual({ ok: false, message: 'This round is still being played.' });
+    early.dispose();
+  });
+
   it('maps the server view, including turn order and the viewer', async () => {
     stubFetch(() => ({ status: 200, body: serverView() }));
     const a = adapter();
