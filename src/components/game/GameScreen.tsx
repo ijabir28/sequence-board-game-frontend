@@ -62,10 +62,10 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const [menuOpen, setMenuOpen] = useState(false);
   // Opening the menu drawer or the leave dialog counts as stepping away from the table, as if the player had already
   // left: their turn pauses until they close it.
-  // On a phone or tablet, a page hidden for a few seconds (the screen locked, another app) counts too. Desktop players
-  // may watch another tab while they wait: the tab title tells them when it is their turn.
+  // On a phone or tablet, a hidden page (the screen locked, another app) counts too, from the moment it is hidden.
+  // Desktop players may watch another tab while they wait: the tab title tells them when it is their turn.
   const touch = useMediaQuery('(pointer: coarse)');
-  const hiddenAway = useAwayWhileHidden(touch);
+  const hiddenAway = useAwayWhileHidden(touch, () => adapter.stepAway?.(true));
   const steppedAway = menuOpen || exitOpen || hiddenAway;
   useEffect(() => {
     adapter.stepAway?.(steppedAway);
