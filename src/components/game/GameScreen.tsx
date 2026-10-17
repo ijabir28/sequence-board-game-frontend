@@ -13,7 +13,7 @@ import { useMuted } from '../../game/sounds';
 import { sameHand, sameNumbers, useStableValue } from '../../game/stableValue';
 import { useGame } from '../../game/useGame';
 import { Board } from '../board/Board';
-import { DeckPicker } from '../cards/DeckPicker';
+import { BoardStylePicker, DeckPicker } from '../cards/DeckPicker';
 import { Chip } from '../Chip';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
@@ -547,7 +547,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             <button
               type="button"
               className={styles.drawerItem}
-              {...tipProps('Choose the design of the cards in your hand')}
+              {...tipProps('Choose your card deck and how the board looks')}
               onClick={() => {
                 setMenuOpen(false);
                 setDeckOpen(true);
@@ -555,8 +555,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             >
               <Icon name="cards" />
               <span>
-                <strong>Card deck</strong>
-                <small>The design of your hand's cards</small>
+                <strong>Cards and board</strong>
+                <small>Your deck design and the board's cells</small>
               </span>
             </button>
             {headerExtra && <div className={styles.drawerExtra}>{headerExtra}</div>}
@@ -600,8 +600,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
                 <Icon name={muted ? 'soundOff' : 'sound'} />
               </button>
             </Tooltip>
-            <Tooltip text="Choose the design of the cards in your hand" align="end">
-              <button type="button" className={styles.iconButton} onClick={() => setDeckOpen(true)} aria-label="Card deck" aria-haspopup="dialog">
+            <Tooltip text="Choose your card deck and how the board looks" align="end">
+              <button type="button" className={styles.iconButton} onClick={() => setDeckOpen(true)} aria-label="Cards and board" aria-haspopup="dialog">
                 <Icon name="cards" />
               </button>
             </Tooltip>
@@ -751,7 +751,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
 
       <Dialog
         open={deckOpen}
-        title="Card deck"
+        title="Cards and board"
         onClose={() => setDeckOpen(false)}
         actions={
           <Button variant="primary" onClick={() => setDeckOpen(false)} tip="Close this and go back to the board">
@@ -759,8 +759,10 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           </Button>
         }
       >
-        <p className={styles.deckNote}>Your hand changes at once. Only you see your deck, and it is remembered on this device.</p>
+        <p className={styles.deckNote}>Your hand and the board change at once. Only you see your choice, and it is remembered on this device.</p>
         <DeckPicker />
+        <h3 className={styles.deckSubtitle}>Board cells</h3>
+        <BoardStylePicker />
       </Dialog>
 
       <Dialog open={logOpen && history} title="Move log" onClose={() => setLogOpen(false)}>
