@@ -264,19 +264,6 @@ function RoomView({
         <ShareCode id={room.id} />
       </section>
 
-      <section className={[styles.card, own.options].join(' ')} aria-labelledby="table-options">
-        <h2 id="table-options">Table options</h2>
-        {editable && <RenameTable name={room.name} saving={saving} onSave={(name) => onSave({ name })} />}
-        <RoomOptions value={room.settings} onChange={editable ? (settings) => void onSave({ settings }) : undefined} disabled={saving} />
-        <p className={styles.help}>
-          {room.gameStarted
-            ? 'The game has started, so these are fixed.'
-            : editable
-              ? 'You opened this table, so you can change these until the game starts.'
-              : `Only ${hostName ?? 'the host'} can change these, until the game starts.`}
-        </p>
-      </section>
-
       {host && !room.gameStarted && taken >= 2 && (
         <div className={own.teamTools}>
           <Tooltip text="Deal everyone who is seated out to the teams at random" align="start">
@@ -409,6 +396,19 @@ function RoomView({
             )}
           </>
         )}
+      </section>
+
+      <section className={[styles.card, own.options].join(' ')} aria-labelledby="table-options">
+        <h2 id="table-options">Table options</h2>
+        {editable && <RenameTable name={room.name} saving={saving} onSave={(name) => onSave({ name })} />}
+        <RoomOptions value={room.settings} onChange={editable ? (settings) => void onSave({ settings }) : undefined} disabled={saving} />
+        <p className={styles.help}>
+          {room.gameStarted
+            ? 'The game has started, so these are fixed.'
+            : editable
+              ? 'You opened this table, so you can change these until the game starts.'
+              : `Only ${hostName ?? 'the host'} can change these, until the game starts.`}
+        </p>
       </section>
     </div>
   );
