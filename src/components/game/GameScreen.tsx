@@ -7,6 +7,7 @@ import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter } from '../../game/types';
 import { useHandOrder } from '../../game/useHandOrder';
 import { useMediaQuery } from '../../game/useMediaQuery';
+import { useMuted } from '../../game/sounds';
 import { useGame } from '../../game/useGame';
 import { Board } from '../board/Board';
 import { Chip } from '../Chip';
@@ -21,6 +22,7 @@ import { MoveLog } from './MoveLog';
 import { Scoreboard } from './Scoreboard';
 import { useToast } from '../toast/Toaster';
 import { TurnPanel } from './TurnPanel';
+import { TurnSounds } from './TurnSounds';
 import styles from './GameScreen.module.css';
 
 interface GameScreenProps {
@@ -80,6 +82,18 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const turnEdge = yourTurn
     ? { turn: view.turn, turnStartedAt: view.turnStartedAt, turnDeadline: view.turnDeadline, paused: view.turnPaused }
     : null;
+  // A chime when the turn passes to you (in hot-seat play, every new turn: the next person picks up the device), and
+  // the clock ticking over your turn's last 20 seconds.
+  const chimeKey =
+    gameOver || currentPlayer === null
+      ? null
+      : adapter.hotSeat
+        ? `${currentPlayer.id}:${view.turn}`
+        : viewer !== null && currentPlayer.id === viewer.id
+          ? `${view.turn}`
+          : null;
+  const [muted, setMuted] = useMuted();
+  const soundTip = muted ? 'Turn the game sounds back on' : 'Mute the game sounds: your-turn chime and the clock ticking';
   // How the viewer arranged their hand. Only the view changes; moves still use real hand indexes.
   const { order, setOrder } = useHandOrder(viewer?.id ?? null, view.hand.length, handOrderKey);
   const { highlights, history } = view.settings;
@@ -359,6 +373,13 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
                 </span>
               </button>
             )}
+            <button type="button" className={styles.drawerItem} {...tipProps(soundTip)} aria-pressed={!muted} onClick={() => setMuted(!muted)}>
+              <Icon name={muted ? 'soundOff' : 'sound'} />
+              <span>
+                <strong>Sounds {muted ? 'off' : 'on'}</strong>
+                <small>Your-turn chime and the clock ticking</small>
+              </span>
+            </button>
             {headerExtra && <div className={styles.drawerExtra}>{headerExtra}</div>}
             <button
               type="button"
@@ -395,6 +416,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           </div>
           <div className={styles.topActions}>
             {headerExtra}
+            <Tooltip text={soundTip} align="end">
+              <button type="button" className={styles.iconButton} onClick={() => setMuted(!muted)} aria-label="Game sounds" aria-pressed={!muted}>
+                <Icon name={muted ? 'soundOff' : 'sound'} />
+              </button>
+            </Tooltip>
             {history && (
               <Tooltip text="Every move so far" align="end">
                 <button type="button" className={[styles.iconButton, styles.logButton].join(' ')} onClick={() => setLogOpen(true)} aria-label="Move log">
@@ -534,6 +560,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             : `. ${currentPlayer.name}'s turn.`
           : ''}
       </div>
+
+      <TurnSounds chimeKey={chimeKey} ticking={!!turnEdge && !turnEdge.paused} turnDeadline={view.turnDeadline} />
 
       <Dialog open={logOpen && history} title="Move log" onClose={() => setLogOpen(false)}>
         <MoveLog entries={view.log} emptyText="No moves yet. Moves will appear here as they are played." />
