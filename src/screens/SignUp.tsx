@@ -167,7 +167,6 @@ export function SignUp() {
           autoComplete="new-password"
           {...fieldProps('confirm')}
         />
-        <span className={styles.help}>Type it once more, to catch typos.</span>
       </label>
 
       <Button type="submit" variant="primary" busy={busy} tip="Create the account and email you a link to confirm it">
