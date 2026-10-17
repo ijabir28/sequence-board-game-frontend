@@ -128,8 +128,9 @@ The game screen only talks to a `GameAdapter`: `getState`, `subscribe`, `legalTa
   passes and timed-out moves). The host then deals another round with the same teams (`POST /room/:id/rounds/next`)
   or ends the rounds there (`POST /room/:id/rounds/end`), which shows everyone the final result: every round added
   up, and the verdict (the team with the most round wins, or a draw). Other players see who they're waiting for.
-  Each round opens with the seat after the one that opened the round before, so the first turn alternates between
-  the teams; a toast says who moves first.
+  Round 1 opens with a player drawn at random (a toast says who while nobody has moved yet). Each later round opens
+  with the seat after the one that opened the round before, so the first turn alternates between the teams; a toast
+  says who moves first.
 - **`RemoteGameAdapter`** implements the legacy test game's contract: it polls `GET /board/deck` and `GET /game/hand_cards` (there
   are no game socket events) and sends `GET /game/play` with `board_card_index` as URL-encoded JSON. A
   `404 Invalid Move` becomes a readable message.
