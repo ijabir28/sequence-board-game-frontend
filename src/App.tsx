@@ -6,6 +6,9 @@ import { LocalGamePage } from './screens/LocalGamePage';
 import { Lobby } from './screens/Lobby';
 import { RoomGamePage } from './screens/RoomGamePage';
 import { RoomPage } from './screens/RoomPage';
+import { EmailVerified } from './screens/EmailVerified';
+import { ForgotPassword } from './screens/ForgotPassword';
+import { ResetPassword } from './screens/ResetPassword';
 import { ServerGamePage } from './screens/ServerGamePage';
 import { SignIn } from './screens/SignIn';
 import { SignUp } from './screens/SignUp';
@@ -18,6 +21,10 @@ export function App() {
         <Routes>
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
+          {/* Emailed links land on these two (the backend's auth.js names the paths). */}
+          <Route path="/email-verified" element={<EmailVerified />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route
             path="/lobby"
             element={

@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import { AccountError, type AccountField } from '../api/user';
 import { useAuth } from '../auth/AuthContext';
-import { Chip } from '../components/Chip';
 import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
 import { tipProps } from '../components/ui/TooltipLayer';
+import { AuthShell } from './AuthShell';
+import { CheckInbox } from './CheckInbox';
 import styles from './Forms.module.css';
 import own from './SignIn.module.css';
 
@@ -14,10 +15,10 @@ import own from './SignIn.module.css';
 const HANDLE_PATTERN = /^[a-z0-9_]{3,20}$/;
 /** Display names are short so they fit in turn panels and seat lists. */
 export const NAME_MAX = 10;
-const PASSWORD_MIN = 8;
-const PASSWORD_MAX = 200;
+export const PASSWORD_MIN = 8;
+export const PASSWORD_MAX = 200;
 // A light check for typos; the server validates the address and, later, whether it receives mail.
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type FormError = { text: string; field: AccountField | null };
 
@@ -39,9 +40,9 @@ export function validateSignUp(handle: string, name: string, email: string, pass
 
 export function SignUp() {
   const { profile, signUp } = useAuth();
-  const navigate = useNavigate();
   const fromState = useLocation().state as { from?: string } | null;
   const from = fromState?.from ?? '/lobby';
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const [handle, setHandle] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -67,7 +68,7 @@ export function SignUp() {
     setError(null);
     try {
       await signUp(handle.trim(), name.trim(), email.trim(), password);
-      navigate(from, { replace: true });
+      setSentTo(email.trim());
     } catch (e) {
       setError(e instanceof AccountError ? { text: e.message, field: e.field } : { text: errorMessage(e), field: null });
     } finally {
@@ -76,89 +77,89 @@ export function SignUp() {
   };
 
   if (profile) return <Navigate to={from} replace />;
+  if (sentTo) {
+    return (
+      <AuthShell>
+        <CheckInbox email={sentTo} />
+      </AuthShell>
+    );
+  }
 
   const fieldProps = (field: AccountField) => ({
     'aria-invalid': error?.field === field || undefined,
   });
 
   return (
-    <div className={styles.page}>
-      <div className={own.mark} aria-hidden="true">
-        <span><Chip team={0} /></span>
-        <span><Chip team={1} /></span>
-        <span><Chip team={2} /></span>
-      </div>
-      <form className={styles.card} onSubmit={submit} noValidate>
-        <header className={styles.header}>
-          <h1>Create your account</h1>
-          <p>Pick a handle your friends will recognise. You'll be signed in straight away.</p>
-        </header>
+    <AuthShell onSubmit={submit}>
+      <header className={styles.header}>
+        <h1>Create your account</h1>
+        <p>Pick a handle your friends will recognise. We'll email you a link to confirm your address.</p>
+      </header>
 
-        <label className={styles.field}>
-          <span className={styles.label}>Handle</span>
-          <input
-            className={styles.input}
-            value={handle}
-            onChange={(e) => setHandle(e.target.value)}
-            autoComplete="username"
-            autoCapitalize="none"
-            spellCheck={false}
-            maxLength={20}
-            autoFocus
-            {...fieldProps('handle')}
-          />
-          <span className={styles.help}>3–20 letters, digits or underscores. Used to sign in; not case-sensitive.</span>
-        </label>
-        <label className={styles.field}>
-          <span className={styles.label}>Display name</span>
-          <input
-            className={styles.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="nickname"
-            maxLength={NAME_MAX}
-            {...fieldProps('name')}
-          />
-          <span className={styles.help}>
-            Shown to other players at the table. Up to {NAME_MAX} characters ({name.length}/{NAME_MAX}).
-          </span>
-        </label>
-        <label className={styles.field}>
-          <span className={styles.label}>Email</span>
-          <input
-            className={styles.input}
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            autoCapitalize="none"
-            spellCheck={false}
-            {...fieldProps('email')}
-          />
-          <span className={styles.help}>Never shown to other players. Used to reset your password.</span>
-        </label>
-        <label className={styles.field}>
-          <span className={styles.label}>Password</span>
-          <input
-            className={styles.input}
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-            {...fieldProps('password')}
-          />
-          <span className={styles.help}>At least {PASSWORD_MIN} characters.</span>
-        </label>
+      <label className={styles.field}>
+        <span className={styles.label}>Handle</span>
+        <input
+          className={styles.input}
+          value={handle}
+          onChange={(e) => setHandle(e.target.value)}
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          maxLength={20}
+          autoFocus
+          {...fieldProps('handle')}
+        />
+        <span className={styles.help}>3–20 letters, digits or underscores. Used to sign in; not case-sensitive.</span>
+      </label>
+      <label className={styles.field}>
+        <span className={styles.label}>Display name</span>
+        <input
+          className={styles.input}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoComplete="nickname"
+          maxLength={NAME_MAX}
+          {...fieldProps('name')}
+        />
+        <span className={styles.help}>
+          Shown to other players at the table. Up to {NAME_MAX} characters ({name.length}/{NAME_MAX}).
+        </span>
+      </label>
+      <label className={styles.field}>
+        <span className={styles.label}>Email</span>
+        <input
+          className={styles.input}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
+          {...fieldProps('email')}
+        />
+        <span className={styles.help}>Never shown to other players. Used to reset your password.</span>
+      </label>
+      <label className={styles.field}>
+        <span className={styles.label}>Password</span>
+        <input
+          className={styles.input}
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          {...fieldProps('password')}
+        />
+        <span className={styles.help}>At least {PASSWORD_MIN} characters.</span>
+      </label>
 
-        <Button type="submit" variant="primary" busy={busy} tip="Create the account and sign you in">
-          Create account
-        </Button>
+      <Button type="submit" variant="primary" busy={busy} tip="Create the account and email you a link to confirm it">
+        Create account
+      </Button>
 
-        <p className={styles.divider}>or</p>
-        <Link to="/signin" state={fromState} className={own.altLink} {...tipProps('Go to sign in instead')}>
-          I already have an account
-        </Link>
-      </form>
-    </div>
+      <p className={styles.divider}>or</p>
+      <Link to="/signin" state={fromState} className={own.altLink} {...tipProps('Go to sign in instead')}>
+        I already have an account
+      </Link>
+    </AuthShell>
   );
 }
