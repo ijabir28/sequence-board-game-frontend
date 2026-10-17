@@ -234,7 +234,7 @@ Whoever opens a table (the host) picks its options, shown by `src/components/Roo
 |---|---|---|
 | Mode | Standard | Training: on your turn a Hint button suggests a move and says why, and card tips explain what the selected card does. Standard games never show hints or tips |
 | Highlight legal cells | off | Off: picking a card doesn't light up its cells, and wrong cells are explained by the rules |
-| Move history | off | Off: no move log; the server sends only the latest move |
+| Move history | off | Off: no move log, and the board doesn't ring the last move; the server sends only the latest move |
 | Turn timer | 90 s | 30 s, 1 min, 1 min 30 s, 2 min, 3 min, or a custom number of seconds (15–600) |
 | Dead cards | Players spot them | Players spot them: nothing marks dead cards; pick a card you think is dead and press **Exchange as dead**, and the rules check it ("That card still has an open cell…" if not). Mark them: dead cards are marked in the hand, as before |
 | Dead card exchanges per turn | Unlimited | 1, Unlimited, or a custom number (1–10) |
