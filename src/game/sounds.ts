@@ -51,14 +51,18 @@ const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown
  */
 type AudioSessionType = 'auto' | 'playback' | 'transient' | 'transient-solo' | 'ambient' | 'play-and-record';
 
-function applyAudioSession() {
+function setAudioSession(type: AudioSessionType) {
   const session = typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { audioSession?: { type: AudioSessionType } }).audioSession;
   if (!session) return;
   try {
-    session.type = muted ? 'auto' : 'playback';
+    session.type = type;
   } catch {
     // An unknown type or a locked session: keep the default.
   }
+}
+
+function applyAudioSession() {
+  setAudioSession(muted || (typeof document !== 'undefined' && document.visibilityState === 'hidden') ? 'auto' : 'playback');
 }
 
 applyAudioSession();
@@ -80,9 +84,17 @@ function unlock() {
 
 if (typeof window !== 'undefined') {
   UNLOCK_EVENTS.forEach((type) => window.addEventListener(type, unlock, { capture: true, passive: true }));
-  // Back from another tab or a locked screen: some browsers allow resuming without a new gesture.
+  // Hidden (a locked phone, another tab or app): stop the audio and hand the playback session back, so an iPhone stops
+  // keeping the page running for it and nothing plays from a pocket. Back: ask for it again (some browsers allow
+  // resuming without a new gesture; otherwise the next tap does it).
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && context && context.state !== 'running') void context.resume().catch(() => {});
+    if (document.visibilityState === 'hidden') {
+      setAudioSession('auto');
+      if (context?.state === 'running') void context.suspend().catch(() => {});
+      return;
+    }
+    applyAudioSession();
+    if (context && context.state !== 'running') void context.resume().catch(() => {});
   });
 }
 
