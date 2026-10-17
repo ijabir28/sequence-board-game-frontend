@@ -21,37 +21,36 @@
 }
 
 /*
- * Your turn: the turn timer glows round the outside of the board (TurnGlow.tsx). A full ring when the turn starts, it
- * shrinks back along the edge towards the top centre as time runs out, green until the last 20 seconds and then
- * turning red (--edge-color). It is drawn outside the board, into the space around it (the board area lets it
- * overflow), so the board keeps its full size.
+ * Your turn: the turn timer is a progress bar round the board's whole perimeter (TurnBar.tsx). Full when the turn
+ * starts, it empties clockwise from the top-left corner as time runs out, green until the last 20 seconds and then
+ * turning red (--edge-color). The SVG is half a bar wider than the board on every side, so the bar's centre line runs
+ * round it and the bar lies just outside the board's edge: in the space around it (the board area lets it overflow),
+ * so the board keeps its full size and no cell is covered.
  */
-.turnGlow {
+.turnBar {
   position: absolute;
-  inset: -6px;
-  width: calc(100% + 12px);
-  height: calc(100% + 12px);
+  inset: calc(var(--bar-px) / -2);
+  width: calc(100% + var(--bar-px));
+  height: calc(100% + var(--bar-px));
   overflow: visible;
   pointer-events: none;
   z-index: 1;
-  filter: drop-shadow(0 0 5px var(--edge-color));
+  filter: drop-shadow(0 0 3px var(--edge-color));
 }
 
-.turnGlow path {
+.turnBar rect {
   fill: none;
-  stroke-linecap: round;
+  stroke-width: var(--bar-px);
 }
 
-/* The whole way round, faintly, so the part already used up still reads as the clock face. */
-.glowTrack {
+/* The empty part of the bar, so the whole perimeter always reads as the clock. */
+.barTrack {
   stroke: var(--edge-color);
-  stroke-width: 4px;
-  opacity: 0.14;
+  opacity: 0.18;
   transition: stroke 1s linear;
 }
 
-.glowLine,
-.glowHalo {
+.barFill {
   stroke: var(--edge-color);
   stroke-dasharray: 1 1;
   transition:
@@ -59,45 +58,29 @@
     stroke 1s linear;
 }
 
-.glowLine {
-  stroke-width: 4px;
+/* The last seconds: the bar pulses. */
+.barHot .barFill {
+  animation: turn-bar-pulse 0.8s ease-in-out infinite;
 }
 
-/* A soft halo that breathes, so it can't be missed. */
-.glowHalo {
-  stroke-width: 12px;
-  opacity: 0.3;
-  animation: turn-glow-breathe 1.6s ease-in-out infinite;
-}
-
-/* The last seconds: it breathes faster. */
-.glowHot .glowHalo {
-  animation-duration: 0.8s;
-}
-
-@keyframes turn-glow-breathe {
+@keyframes turn-bar-pulse {
   50% {
-    opacity: 0.1;
+    opacity: 0.55;
   }
 }
 
-/* The turn is paused: the glow holds still and dims. */
-.glowPaused {
+/* The turn is paused: the bar holds still and dims. */
+.barPaused {
   opacity: 0.6;
 }
 
-.glowPaused .glowHalo {
-  animation: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .glowLine,
-  .glowHalo,
-  .glowTrack {
+  .barTrack,
+  .barFill {
     transition: none;
   }
 
-  .glowHalo {
+  .barHot .barFill {
     animation: none;
   }
 }
