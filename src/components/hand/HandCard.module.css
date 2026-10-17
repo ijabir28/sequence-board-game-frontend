@@ -127,3 +127,16 @@
   background: #334155;
   color: #f1f5f9;
 }
+
+/* Drafted for your next turn: a dashed ring in your team's colour and a "Queued" tag along the top. */
+.drafted {
+  outline: 2px dashed var(--draft-team, var(--primary));
+  outline-offset: 2px;
+}
+
+.badgeQueued {
+  top: 6%;
+  bottom: auto;
+  background: var(--draft-team, var(--primary));
+  color: #04120c;
+}
