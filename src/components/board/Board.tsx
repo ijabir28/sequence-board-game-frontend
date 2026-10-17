@@ -8,6 +8,7 @@ import { tipProps } from '../ui/TooltipLayer';
 import type { CellView } from '../../game/types';
 import { Chip } from '../Chip';
 import { cellCentre } from './geometry';
+import { TurnGlow, type TurnGlowProps } from './TurnGlow';
 import styles from './Board.module.css';
 
 export type TargetMode = 'place' | 'remove';
@@ -25,10 +26,10 @@ interface BoardProps {
   hint?: Pos | null;
   disabled?: boolean;
   /**
-   * The viewer's own turn: the edge glows in their team's colour, `strength` from 1 (turn just started, thick) to 0
-   * (time up, thin); `paused` holds it still. Null on everyone else's turn: the plain board.
+   * The viewer's own turn: the turn timer glows round the board's edge (see TurnGlow), keyed by `turn` so each turn
+   * starts with a full ring. Null on everyone else's turn: the plain board.
    */
-  turnEdge?: { strength: number; paused: boolean } | null;
+  turnEdge?: (TurnGlowProps & { turn: number | null }) | null;
   onActivate: (pos: Pos) => void;
 }
 
@@ -90,19 +91,12 @@ export function Board({
     <div
       className={[
         styles.board,
-        turnEdge && styles.turnEdge,
-        turnEdge?.paused && styles.edgePaused,
         hasSelection && styles.selecting,
         targetMode === 'remove' && styles.removing,
       ]
         .filter(Boolean)
         .join(' ')}
-      style={
-        {
-          ...(teamStyle ? { '--active-team': teamStyle.color, '--active-glow': teamStyle.glow } : {}),
-          ...(turnEdge ? { '--edge-strength': turnEdge.strength.toFixed(3) } : {}),
-        } as React.CSSProperties
-      }
+      style={teamStyle ? ({ '--active-team': teamStyle.color, '--active-glow': teamStyle.glow } as React.CSSProperties) : undefined}
     >
       <div
         role="grid"
@@ -138,6 +132,14 @@ export function Board({
         ))}
       </div>
       <SequenceBeams sequences={sequences} />
+      {turnEdge && (
+        <TurnGlow
+          key={turnEdge.turn ?? 'turn'}
+          turnStartedAt={turnEdge.turnStartedAt}
+          turnDeadline={turnEdge.turnDeadline}
+          paused={turnEdge.paused}
+        />
+      )}
     </div>
   );
 }

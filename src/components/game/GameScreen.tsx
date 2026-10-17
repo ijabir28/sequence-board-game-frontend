@@ -8,8 +8,6 @@ import type { GameAdapter } from '../../game/types';
 import { useHandOrder } from '../../game/useHandOrder';
 import { useMediaQuery } from '../../game/useMediaQuery';
 import { useGame } from '../../game/useGame';
-import { useNow } from '../../game/turnClock';
-import { turnEdgeStrength } from '../../game/turnEdge';
 import { Board } from '../board/Board';
 import { Chip } from '../Chip';
 import { Button } from '../ui/Button';
@@ -77,18 +75,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   // The viewer is the one to move (in hot-seat play, whoever has their hand showing).
   const yourTurn =
     !gameOver && currentPlayer !== null && (adapter.hotSeat ? handVisible : viewer !== null && currentPlayer.id === viewer.id);
-  // On your own turn (not a teammate's) the board's edge glows in your team's colour, thick when the turn starts and
-  // thinner as its time runs down. A paused turn holds where it was.
-  const edgeRunning = yourTurn && !view.turnPaused && view.turnStartedAt !== null;
-  const now = useNow(edgeRunning, 1000);
-  const liveEdge = edgeRunning ? turnEdgeStrength({ now, turnStartedAt: view.turnStartedAt, turnDeadline: view.turnDeadline }) : null;
-  const lastEdge = useRef(1);
-  if (liveEdge !== null) lastEdge.current = liveEdge;
-  // A new turn of yours starts thick again.
-  useEffect(() => {
-    lastEdge.current = 1;
-  }, [view.turn]);
-  const turnEdge = yourTurn ? { strength: liveEdge ?? lastEdge.current, paused: view.turnPaused } : null;
+  // On your own turn (not a teammate's) the turn timer glows round the board, shrinking as its time runs down. The
+  // board's glow keeps its own clock, so this screen doesn't re-render every second.
+  const turnEdge = yourTurn
+    ? { turn: view.turn, turnStartedAt: view.turnStartedAt, turnDeadline: view.turnDeadline, paused: view.turnPaused }
+    : null;
   // How the viewer arranged their hand. Only the view changes; moves still use real hand indexes.
   const { order, setOrder } = useHandOrder(viewer?.id ?? null, view.hand.length, handOrderKey);
   const { highlights, history } = view.settings;
