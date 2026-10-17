@@ -29,6 +29,9 @@ const ERRORS: Record<string, { field: AccountField | null; message?: string }> =
   PASSWORD_TOO_LONG: { field: 'password', message: 'Passwords can be at most 200 characters.' },
   INVALID_USERNAME_OR_PASSWORD: { field: 'credentials', message: "That handle and password don't match." },
   TOO_MANY_ATTEMPTS: { field: null },
+  // The server's message says where the new link went.
+  EMAIL_NOT_VERIFIED: { field: null },
+  INVALID_TOKEN: { field: null, message: 'This link has expired or was already used. Ask for a new one.' },
 };
 
 /** The server refused a sign-in or sign-up, for example a taken handle. `message` is written for players. */
@@ -94,10 +97,31 @@ export async function signIn(handle: string, password: string): Promise<Profile>
   return signedInProfile();
 }
 
-/** Creates the account and signs it in. */
-export async function signUp(handle: string, name: string, email: string, password: string): Promise<Profile> {
+/**
+ * Creates the account and emails a link to confirm the address; the account can sign in once that link is opened.
+ * Resolves the same way when the email is already registered (the server tells that address's owner instead), so
+ * the screen after it must not claim the account was created.
+ */
+export async function signUp(handle: string, name: string, email: string, password: string): Promise<void> {
   await authAction('/sign-up/email', { username: handle, name, email, password });
-  return signedInProfile();
+}
+
+/** Emails a new confirmation link to an address that hasn't been confirmed yet. */
+export async function resendVerification(email: string): Promise<void> {
+  await authAction('/send-verification-email', { email });
+}
+
+/** Where the reset link sends the player, with the token: the ResetPassword screen. */
+export const RESET_PASSWORD_PATH = '/reset-password';
+
+/** Emails a password reset link if an account uses this address. Resolves the same way either way. */
+export async function requestPasswordReset(email: string): Promise<void> {
+  await authAction('/request-password-reset', { email, redirectTo: RESET_PASSWORD_PATH });
+}
+
+/** Sets a new password with the token from a reset link. Every device is signed out. */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await authAction('/reset-password', { token, newPassword });
 }
 
 /** Ends the session on the server. */

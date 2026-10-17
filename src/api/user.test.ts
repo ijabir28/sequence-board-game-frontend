@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from './http';
-import { AccountError, getProfile, signIn, signOut, signUp } from './user';
+import { AccountError, getProfile, requestPasswordReset, resendVerification, resetPassword, signIn, signOut, signUp } from './user';
 
 const PROFILE_BODY = { handle: 'jabir', name: 'Jabir', email: 'jabir@example.com', email_verified: true, image: null };
 const PROFILE = { handle: 'jabir', name: 'Jabir', email: 'jabir@example.com', emailVerified: true, image: null };
@@ -51,9 +51,10 @@ describe('signIn', () => {
 });
 
 describe('signUp', () => {
-  it('sends the new account and returns its profile', async () => {
-    const calls = respond([200, { token: 't', user: {} }], [200, PROFILE_BODY]);
-    await expect(signUp('New_Player', 'New', 'new@example.com', 'long enough')).resolves.toEqual(PROFILE);
+  it('sends the new account, and does not sign in: the email must be confirmed first', async () => {
+    const calls = respond([200, { token: null, user: {} }]);
+    await expect(signUp('New_Player', 'New', 'new@example.com', 'long enough')).resolves.toBeUndefined();
+    expect(calls).toHaveLength(1);
     expect(calls[0].url).toBe('/api/auth/sign-up/email');
     expect(JSON.parse(String(calls[0].init?.body))).toEqual({
       username: 'New_Player',
@@ -78,6 +79,48 @@ describe('signUp', () => {
   it("keeps the server's message for codes it has no wording for", async () => {
     respond([400, { code: 'INVALID_NAME', message: 'Enter a display name of up to 10 characters.' }]);
     await expect(signUp('a', 'b', 'c@d.e', 'f')).rejects.toMatchObject({ message: 'Enter a display name of up to 10 characters.' });
+  });
+});
+
+describe('email confirmation', () => {
+  it('signing in before confirming keeps the server message, which says where the link went', async () => {
+    respond([403, { code: 'EMAIL_NOT_VERIFIED', message: 'Confirm your email first: open the link we sent to j••••@example.com.' }]);
+    await expect(signIn('jabir', 'pw')).rejects.toMatchObject({
+      code: 'EMAIL_NOT_VERIFIED',
+      field: null,
+      message: 'Confirm your email first: open the link we sent to j••••@example.com.',
+    });
+  });
+
+  it('asks for the link again', async () => {
+    const calls = respond([200, { status: true }]);
+    await resendVerification('new@example.com');
+    expect(calls[0].url).toBe('/api/auth/send-verification-email');
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({ email: 'new@example.com' });
+  });
+});
+
+describe('password reset', () => {
+  it('asks for a link that comes back to the reset screen', async () => {
+    const calls = respond([200, { status: true }]);
+    await requestPasswordReset('jabir@example.com');
+    expect(calls[0].url).toBe('/api/auth/request-password-reset');
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({ email: 'jabir@example.com', redirectTo: '/reset-password' });
+  });
+
+  it('sets the new password with the token', async () => {
+    const calls = respond([200, { status: true }]);
+    await resetPassword('tok', 'new password');
+    expect(calls[0].url).toBe('/api/auth/reset-password');
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({ token: 'tok', newPassword: 'new password' });
+  });
+
+  it('explains an expired or used link', async () => {
+    respond([400, { code: 'INVALID_TOKEN', message: 'Invalid token' }]);
+    await expect(resetPassword('old', 'new password')).rejects.toMatchObject({
+      code: 'INVALID_TOKEN',
+      message: 'This link has expired or was already used. Ask for a new one.',
+    });
   });
 });
 
