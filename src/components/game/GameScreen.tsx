@@ -7,6 +7,7 @@ import { describeLog } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter } from '../../game/types';
 import { useHandOrder } from '../../game/useHandOrder';
+import { useAwayWhileHidden } from '../../game/useAwayWhileHidden';
 import { useMediaQuery } from '../../game/useMediaQuery';
 import { useMuted } from '../../game/sounds';
 import { sameHand, sameNumbers, useStableValue } from '../../game/stableValue';
@@ -61,7 +62,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const [menuOpen, setMenuOpen] = useState(false);
   // Opening the menu drawer or the leave dialog counts as stepping away from the table, as if the player had already
   // left: their turn pauses until they close it.
-  const steppedAway = menuOpen || exitOpen;
+  // On a phone or tablet, a page hidden for a few seconds (the screen locked, another app) counts too. Desktop players
+  // may watch another tab while they wait: the tab title tells them when it is their turn.
+  const touch = useMediaQuery('(pointer: coarse)');
+  const hiddenAway = useAwayWhileHidden(touch);
+  const steppedAway = menuOpen || exitOpen || hiddenAway;
   useEffect(() => {
     adapter.stepAway?.(steppedAway);
   }, [adapter, steppedAway]);
