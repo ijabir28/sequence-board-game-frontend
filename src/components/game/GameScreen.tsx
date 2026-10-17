@@ -45,6 +45,8 @@ interface GameScreenProps {
 
 /** Game messages share one toast, so a new one replaces the last instead of piling up. */
 const FEEDBACK_TOAST = 'game-feedback';
+/** A new round's notice has its own toast, so the host's next action (which clears feedback) doesn't hide it. */
+const ROUND_TOAST = 'game-round';
 
 export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, handOrderKey }: GameScreenProps) {
   const view = useGame(adapter);
@@ -169,14 +171,16 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     setResultsOpen(true);
   }, [resultsKey]);
 
-  // Everyone hears when the host deals the next round.
+  // Everyone hears when the host deals the next round, and who opens it: the first turn passes to the next seat
+  // every round, so another team leads.
   const roundNumber = rounds?.round ?? null;
   const seenRound = useRef(roundNumber);
   useEffect(() => {
     if (roundNumber === null) return;
     if (seenRound.current !== null && roundNumber > seenRound.current) {
       setResultsOpen(false);
-      toast.success(`Round ${roundNumber} has started. Same teams, a fresh deal.`, { id: FEEDBACK_TOAST });
+      const opener = currentPlayer === null ? '' : currentPlayer.id === viewer?.id ? ' You move first.' : ` ${currentPlayer.name} moves first.`;
+      toast.success(`Round ${roundNumber} has started: same teams, a fresh deal.${opener}`, { id: ROUND_TOAST });
     }
     seenRound.current = roundNumber;
   }, [roundNumber]);
