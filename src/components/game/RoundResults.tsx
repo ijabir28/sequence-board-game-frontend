@@ -1,8 +1,14 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Pos } from '../../engine/board';
 import { TEAM_STYLES, teamName } from '../../game/teams';
-import type { PlayerStats, RoundResult, RoundsView, SeriesSummary } from '../../game/types';
+import type { PlayerStats, RoundDetail, RoundResult, RoundsView, SeriesSummary } from '../../game/types';
 import type { TeamIndex } from '../../engine/setup';
+import { Board } from '../board/Board';
 import { Chip } from '../Chip';
+import { Button } from '../ui/Button';
+import { Icon } from '../ui/Icon';
 import { tipProps } from '../ui/TooltipLayer';
+import { MoveLog } from './MoveLog';
 import styles from './RoundResults.module.css';
 
 /** "45 s", "12 min", "1 h 5 min". */
@@ -190,7 +196,7 @@ function RoundBody({ result, results, playerName }: { result: RoundResult; resul
   );
 }
 
-function SeriesBody({ summary, results }: { summary: SeriesSummary; results: RoundResult[] }) {
+function SeriesBody({ summary, results, onOpenRound }: { summary: SeriesSummary; results: RoundResult[]; onOpenRound?: (round: number) => void }) {
   return (
     <div className={styles.body}>
       <div className={styles.headline}>
@@ -207,16 +213,36 @@ function SeriesBody({ summary, results }: { summary: SeriesSummary; results: Rou
         </div>
       </div>
       <ol className={styles.roundList} aria-label="Every round">
-        {results.map((r) => (
-          <li key={r.round}>
-            <span className={styles.roundNumber}>Round {r.round}</span>
-            {r.winner !== null ? <TeamCell team={r.winner} /> : <span>No winner</span>}
-            <span className={styles.facts}>
-              {[r.stats && plural(r.stats.turns, 'turn'), r.durationMs !== null && formatDuration(r.durationMs)].filter(Boolean).join(' · ')}
-            </span>
-          </li>
-        ))}
+        {results.map((r) => {
+          const content = (
+            <>
+              <span className={styles.roundNumber}>Round {r.round}</span>
+              {r.winner !== null ? <TeamCell team={r.winner} /> : <span>No winner</span>}
+              <span className={styles.facts}>
+                {[r.stats && plural(r.stats.turns, 'turn'), r.durationMs !== null && formatDuration(r.durationMs)].filter(Boolean).join(' · ')}
+              </span>
+            </>
+          );
+          return (
+            <li key={r.round}>
+              {onOpenRound ? (
+                <button
+                  type="button"
+                  className={styles.roundButton}
+                  onClick={() => onOpenRound(r.round)}
+                  {...tipProps(`See round ${r.round} in detail: its statistics, final board and move log`)}
+                >
+                  {content}
+                  <Icon name="chevronRight" size={16} />
+                </button>
+              ) : (
+                content
+              )}
+            </li>
+          );
+        })}
       </ol>
+      {onOpenRound && <p className={styles.facts}>Pick a round to see its statistics, final board and move log.</p>}
       <StatsTable
         caption="Teams, every round"
         rows={summary.teams}
@@ -234,15 +260,124 @@ function SeriesBody({ summary, results }: { summary: SeriesSummary; results: Rou
   );
 }
 
+/** One round looked back on from the final results: its statistics, the board as it ended and every move. */
+function RoundDetailBody({
+  round,
+  load,
+  playerName,
+  onBack,
+}: {
+  round: number;
+  load: (round: number) => Promise<RoundDetail>;
+  playerName: (id: string) => string;
+  onBack: () => void;
+}) {
+  const [state, setState] = useState<{ status: 'loading' } | { status: 'ready'; detail: RoundDetail } | { status: 'error'; message: string }>({
+    status: 'loading',
+  });
+  const [attempt, setAttempt] = useState(0);
+  // Opened from further down the results, so start the round at the top of the dialog.
+  const top = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    top.current?.scrollIntoView?.({ block: 'start' });
+  }, [round]);
+  useEffect(() => {
+    let current = true;
+    setState({ status: 'loading' });
+    load(round).then(
+      (detail) => current && setState({ status: 'ready', detail }),
+      (error: unknown) => current && setState({ status: 'error', message: error instanceof Error ? error.message : String(error) }),
+    );
+    return () => {
+      current = false;
+    };
+  }, [load, round, attempt]);
+
+  const detail = state.status === 'ready' ? state.detail : null;
+  // The winning move is ringed, as the last move is during play.
+  const lastMove = useMemo<Pos | null>(() => {
+    const log = detail?.log ?? [];
+    for (let i = log.length - 1; i >= 0; i--) {
+      const entry = log[i];
+      if (entry.kind === 'place' || entry.kind === 'remove') return entry.pos;
+    }
+    return null;
+  }, [detail]);
+
+  return (
+    <div className={styles.body}>
+      <div ref={top}>
+        <Button size="sm" variant="ghost" onClick={onBack} tip="Back to the final results of every round">
+          <Icon name="chevronLeft" size={16} />
+          All rounds
+        </Button>
+      </div>
+      {state.status === 'loading' && (
+        <p className={styles.facts} role="status">
+          Loading round {round}…
+        </p>
+      )}
+      {state.status === 'error' && (
+        <div className={styles.body} role="alert">
+          <p className={styles.facts}>{state.message}</p>
+          <div>
+            <Button size="sm" onClick={() => setAttempt((n) => n + 1)} tip={`Try to load round ${round} again`}>
+              <Icon name="refresh" size={16} />
+              Try again
+            </Button>
+          </div>
+        </div>
+      )}
+      {detail && (
+        <>
+          <RoundBody result={detail.result} results={[detail.result]} playerName={playerName} />
+          <section className={styles.section} aria-label={`Round ${round}'s final board`}>
+            <h3 className={styles.caption}>Final board</h3>
+            <div className={styles.boardFrame}>
+              <Board
+                board={detail.board}
+                sequences={detail.sequences}
+                targets={null}
+                targetMode="place"
+                activeTeam={null}
+                lastMove={lastMove}
+                disabled
+                onActivate={() => {}}
+              />
+            </div>
+          </section>
+          <section className={styles.section} aria-label={`Round ${round}'s move log`}>
+            <h3 className={styles.caption}>Move log</h3>
+            <p className={styles.facts}>Newest first.</p>
+            <div className={styles.logScroll}>
+              <MoveLog entries={detail.log} emptyText="No moves were recorded in this round." />
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+
 interface RoundResultsProps {
   rounds: RoundsView;
   /** A player's display name, for "who moved first". */
   playerName: (id: string) => string;
+  /** Loads a won round's details; with it, the final results let players open each round. */
+  loadRound?: (round: number) => Promise<RoundDetail>;
+  /** The round being looked at in detail (null: the results), held by the caller so it survives refreshes. */
+  openRound?: number | null;
+  onOpenRound?: (round: number | null) => void;
 }
 
 /** The latest won round's statistics, or once the host ended the rounds, the final result of them all. */
-export function RoundResults({ rounds, playerName }: RoundResultsProps) {
-  if (rounds.over && rounds.summary) return <SeriesBody summary={rounds.summary} results={rounds.results} />;
+export function RoundResults({ rounds, playerName, loadRound, openRound = null, onOpenRound }: RoundResultsProps) {
+  if (rounds.over && rounds.summary) {
+    if (loadRound && onOpenRound && openRound !== null) {
+      return <RoundDetailBody round={openRound} load={loadRound} playerName={playerName} onBack={() => onOpenRound(null)} />;
+    }
+    return <SeriesBody summary={rounds.summary} results={rounds.results} onOpenRound={loadRound && onOpenRound ? (r) => onOpenRound(r) : undefined} />;
+  }
   const latest = rounds.results.at(-1);
   if (!latest) return <p className={styles.facts}>No round has been won yet.</p>;
   return <RoundBody result={latest} results={rounds.results} playerName={playerName} />;

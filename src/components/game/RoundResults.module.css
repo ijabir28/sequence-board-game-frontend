@@ -138,3 +138,65 @@
   font-family: var(--font-display);
   font-weight: 600;
 }
+
+/* A round in the final results opens its details. */
+.roundButton {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--outline-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-high);
+  color: var(--on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.roundButton:hover {
+  background: var(--surface-highest);
+  border-color: var(--outline-strong);
+}
+
+.roundButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.roundButton > svg {
+  margin-left: auto;
+  color: var(--on-surface-muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.section .caption {
+  margin: 0;
+  padding: 0;
+}
+
+/* The board sizes itself from its container (see Board.module.css), so it gets a square one. */
+.boardFrame {
+  width: min(100%, 26rem);
+  aspect-ratio: 1;
+  margin-inline: auto;
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+
+.logScroll {
+  max-height: 16rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: var(--space-1);
+}
