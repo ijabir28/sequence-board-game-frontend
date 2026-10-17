@@ -24,7 +24,7 @@ function SampleCard({ deck, card }: { deck: Deck; card: CardName }) {
 
 /**
  * Chooses the design of the cards in your hand. The change applies at once, also to a game in progress, and is
- * remembered on this device.
+ * remembered on this device and on a signed-in player's account.
  */
 export function DeckPicker({ onPicked }: { onPicked?: (deck: Deck) => void }) {
   const [current, setDeck] = useDeck();

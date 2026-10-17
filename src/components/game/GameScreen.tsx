@@ -759,7 +759,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           </Button>
         }
       >
-        <p className={styles.deckNote}>Your hand and the board change at once. Only you see your choice, and it is remembered on this device.</p>
+        <p className={styles.deckNote}>Your hand and the board change at once. Only you see your choice. Your deck is saved to your account when you're signed in; the board style stays on this device.</p>
         <DeckPicker />
         <h3 className={styles.deckSubtitle}>Board cells</h3>
         <BoardStylePicker />

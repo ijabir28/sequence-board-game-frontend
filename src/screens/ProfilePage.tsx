@@ -216,7 +216,7 @@ function DeckCard() {
         </h2>
         <p>
           The design of the cards in your hand. Only you see it, and you can change it any time, also from the game menu
-          in the middle of a game. It is remembered on this device.
+          in the middle of a game. It is saved to your account, so it follows you to every device.
         </p>
       </header>
       <DeckPicker />
