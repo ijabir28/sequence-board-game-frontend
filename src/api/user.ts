@@ -219,8 +219,3 @@ export async function currentSessionToken(): Promise<string | null> {
   const body = (await response.json().catch(() => null)) as { session?: { token?: unknown } } | null;
   return typeof body?.session?.token === 'string' ? body.session.token : null;
 }
-
-/** Signs out every device but this one. */
-export async function signOutOtherDevices(): Promise<void> {
-  await authAction('/revoke-other-sessions', {});
-}

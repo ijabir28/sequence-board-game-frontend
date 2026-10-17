@@ -55,6 +55,21 @@ export function onTeamsShuffled(roomId: string, listener: (event: TeamsShuffled)
   };
 }
 
+/**
+ * `signed_in_elsewhere {handle}`: that account just signed in on another device, which signed out its other sessions
+ * (one device at a time). Every client hears it; the listener checks its own session before acting on it.
+ */
+export function onSignedInElsewhere(listener: (handle: string) => void): () => void {
+  const s = getSocket();
+  const handler = (data?: { handle?: unknown }) => {
+    if (typeof data?.handle === 'string') listener(data.handle);
+  };
+  s.on('signed_in_elsewhere', handler);
+  return () => {
+    s.off('signed_in_elsewhere', handler);
+  };
+}
+
 export type ConnectionState = 'connecting' | 'live' | 'offline';
 
 export function onConnectionChange(listener: (state: ConnectionState) => void): () => void {
