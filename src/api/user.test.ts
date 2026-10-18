@@ -7,6 +7,7 @@ import {
   getProfile,
   listSessions,
   removeAvatar,
+  saveBoardStyle,
   saveCardDeck,
   requestPasswordReset,
   resendVerification,
@@ -25,6 +26,7 @@ const PROFILE_BODY = {
   email_verified: true,
   image: null,
   card_deck: 'jumbo',
+  board_style: 'cards',
   created_at: '2026-10-01T10:00:00.000Z',
   stats: { played: 5, won: 3, playing: 1 },
 };
@@ -35,6 +37,7 @@ const PROFILE = {
   emailVerified: true,
   image: null,
   cardDeck: 'jumbo',
+  boardStyle: 'cards',
   createdAt: '2026-10-01T10:00:00.000Z',
   stats: { played: 5, won: 3, playing: 1 },
 };
@@ -264,5 +267,15 @@ describe('saveCardDeck', () => {
   it('reports a refused deck', async () => {
     respond([400, { error: 'INVALID_CARD_DECK', message: 'Choose one of the card decks.' }]);
     await expect(saveCardDeck('nope')).rejects.toBeInstanceOf(AccountError);
+  });
+});
+
+describe('saveBoardStyle', () => {
+  it('puts the board style on the account', async () => {
+    const calls = respond([200, { board_style: 'cards' }]);
+    await saveBoardStyle('cards');
+    expect(calls[0].url).toBe('/user/board-style');
+    expect(calls[0].init?.method).toBe('PUT');
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({ board_style: 'cards' });
   });
 });
