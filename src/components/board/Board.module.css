@@ -130,6 +130,19 @@
   --cell-suit: var(--cell-ink-green);
 }
 
+/* The Numbered deck: violet 1–12, amber 13–24, fuchsia 25–36, black 37–48, none of them a team colour. */
+.board[data-suits='numbers'] .cell[data-suit='Heart'] {
+  --cell-suit: var(--cell-ink-violet);
+}
+
+.board[data-suits='numbers'] .cell[data-suit='Club'] {
+  --cell-suit: var(--cell-ink-amber);
+}
+
+.board[data-suits='numbers'] .cell[data-suit='Diamond'] {
+  --cell-suit: var(--cell-ink-fuchsia);
+}
+
 /*
  * Card faces: light cells in the deck's face colour with dark ink, like the little cards printed on a real Sequence
  * board, so the board matches the hand.
@@ -141,6 +154,9 @@
   --cell-ink-red: var(--card-ink-red);
   --cell-ink-blue: #1d4ed8;
   --cell-ink-green: #15803d;
+  --cell-ink-violet: var(--card-ink-violet);
+  --cell-ink-amber: var(--card-ink-amber);
+  --cell-ink-fuchsia: var(--card-ink-fuchsia);
 }
 
 .board[data-cells='cards'] .grid {

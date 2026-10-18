@@ -178,7 +178,8 @@ invariants.
   - **Minimal**, drawn by the app (`src/components/cards/DrawnCard.tsx`) with vector suits, so nothing is downloaded.
   - **Numbered**, drawn by the app (`src/components/cards/NumberedCard.tsx`): the cards are numbered 1 to 48 instead of
     by rank and suit. Hearts 2 to Ace are 1–12, clubs 13–24, diamonds 25–36 and spades 37–48 (`cardNumber` in
-    `src/engine/cards.ts`), each run in its own colour. The jacks are named after what they do: the two-eyed jacks
+    `src/engine/cards.ts`), each run in its own colour: violet, amber, fuchsia and black, kept clear of the
+    team colours (green, blue, red) so a number never looks like a team. The jacks are named after what they do: the two-eyed jacks
     (clubs, diamonds) are **Wild** and the one-eyed jacks (hearts, spades) are **Remove**. The board's cells and the
     game's messages ("Ana played #6") follow it too.
 

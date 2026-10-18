@@ -162,11 +162,27 @@
   --cell-suit: var(--cell-ink-green);
 }
 
+/* The Numbered deck: violet 1–12, amber 13–24, fuchsia 25–36, black 37–48, none of them a team colour. */
+.cells[data-suits='numbers'] .cell[data-suit='Heart'] {
+  --cell-suit: var(--cell-ink-violet);
+}
+
+.cells[data-suits='numbers'] .cell[data-suit='Club'] {
+  --cell-suit: var(--cell-ink-amber);
+}
+
+.cells[data-suits='numbers'] .cell[data-suit='Diamond'] {
+  --cell-suit: var(--cell-ink-fuchsia);
+}
+
 .cells[data-cells='cards'] {
   --cell-face: var(--deck-face, #ffffff);
   --cell-ink-black: var(--card-ink-black);
   --cell-ink-red: var(--card-ink-red);
   --cell-ink-blue: #1d4ed8;
   --cell-ink-green: #15803d;
+  --cell-ink-violet: var(--card-ink-violet);
+  --cell-ink-amber: var(--card-ink-amber);
+  --cell-ink-fuchsia: var(--card-ink-fuchsia);
   --outline-subtle: rgba(15, 23, 42, 0.16);
 }

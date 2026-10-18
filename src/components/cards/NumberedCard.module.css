@@ -12,17 +12,20 @@
   overflow: hidden;
 }
 
-/* A colour per suit, as on the board's cells with this deck: red 1–12, green 13–24, blue 25–36, black 37–48. */
+/*
+ * A colour per suit, as on the board's cells with this deck: violet 1–12, amber 13–24, fuchsia 25–36, black 37–48.
+ * None of them is a team colour (green, blue, red), so a number never reads as a team.
+ */
 .face[data-suit='Heart'] {
-  --number-color: var(--card-ink-red);
+  --number-color: var(--card-ink-violet);
 }
 
 .face[data-suit='Club'] {
-  --number-color: #15803d;
+  --number-color: var(--card-ink-amber);
 }
 
 .face[data-suit='Diamond'] {
-  --number-color: #1d4ed8;
+  --number-color: var(--card-ink-fuchsia);
 }
 
 .face[data-suit='Spade'] {

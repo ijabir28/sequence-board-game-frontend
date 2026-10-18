@@ -20,8 +20,11 @@ export interface Deck {
   credit: string;
   /** Width over height of its cards, so they are never cropped. */
   aspect: number;
-  /** Its suit colours, which the board's cells follow: red and black, or a colour per suit. */
-  suits: 'two' | 'four';
+  /**
+   * Its suit colours, which the board's cells follow: red and black, a colour per suit, or the Numbered deck's own
+   * four, which stay clear of the team colours.
+   */
+  suits: 'two' | 'four' | 'numbers';
   /** The colour of its card faces, which the board's light cells take on. */
   face: string;
   /** How it names cards, on the cards, the board's cells and in the game's messages: rank and suit, or 1 to 48. */
@@ -96,7 +99,7 @@ export const DECKS: readonly Deck[] = [
     description: 'Cards numbered 1 to 48 instead of suits, and jacks named Wild and Remove. The board shows the numbers too.',
     credit: 'Drawn by this app',
     aspect: 5 / 7,
-    suits: 'four',
+    suits: 'numbers',
     face: '#ffffff',
     notation: 'numbers',
     image: null,
