@@ -43,14 +43,13 @@
   --cell-ink-green: #7ee2a8;
   /*
    * The Numbered deck's four runs of numbers (hearts, clubs, diamonds, spades), kept clear of the team colours
-   * (green, blue, red) so a number never looks like a team. Light for dark cells, dark for card faces.
+   * (green, blue, red) so a number never looks like a team. One mid tone each, readable on the white cards and on
+   * the dark cells alike, so a number in the hand is exactly the colour of its cell on the board.
    */
-  --cell-ink-violet: #a78bfa;
-  --cell-ink-amber: #fbbf24;
-  --cell-ink-fuchsia: #e879f9;
-  --card-ink-violet: #6d28d9;
-  --card-ink-amber: #b45309;
-  --card-ink-fuchsia: #a21caf;
+  --number-violet: #8b5cf6;
+  --number-amber: #d97706;
+  --number-fuchsia: #d946ef;
+  --number-slate: #71809a;
   --card-face: #ffffff;
   --card-ink-black: #0f172a;
   --card-ink-red: #dc2626;
