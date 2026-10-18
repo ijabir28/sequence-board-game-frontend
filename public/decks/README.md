@@ -10,7 +10,8 @@ named after the game's cards (`7-Heart.svg`, `Q-Spade.svg`, as in src/engine/car
 | `four-colour` | [saulspatz/SVGCards](https://github.com/saulspatz/SVGCards), `Decks/Accessible/Vertical/svgs` | Public domain |
 
 The deck called Original is the one the backend serves at `/images/card_deck/`, and Minimal is drawn by the app
-(src/components/cards/DrawnCard.tsx), so neither has a folder here.
+(src/components/cards/DrawnCard.tsx), as is Numbered (src/components/cards/NumberedCard.tsx), so none of them has a
+folder here.
 
 ## Regenerating
 

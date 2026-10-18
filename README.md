@@ -170,18 +170,27 @@ invariants.
   (`PUT /user/card-deck`, `src/decks/useAccountChoice.ts`), so it follows them to every device: signing in shows the
   account's deck, and an account that never chose one takes the deck already picked on the device. Signed out it is
   remembered on the device, so in a hot-seat game everyone shares it. The board style (below) is kept the same way.
-  There are five decks:
+  There are six decks:
   - **Original**, the backend's deck, served from `/images/card_deck/` (the default).
   - **Classic**, Byron Knoll's public-domain cards (via MattCain/svg-playing-cards).
   - **Jumbo index** and **Four colour** (black spades, red hearts, blue diamonds, green clubs), with big corner letters
     that stay readable on a phone, from the public-domain saulspatz/SVGCards.
   - **Minimal**, drawn by the app (`src/components/cards/DrawnCard.tsx`) with vector suits, so nothing is downloaded.
+  - **Numbered**, drawn by the app (`src/components/cards/NumberedCard.tsx`): the cards are numbered 1 to 48 instead of
+    by rank and suit. Hearts 2 to Ace are 1–12, clubs 13–24, diamonds 25–36 and spades 37–48 (`cardNumber` in
+    `src/engine/cards.ts`), each run in its own colour: violet, amber, fuchsia and black, kept clear of the
+    team colours (green, blue, red) so a number never looks like a team. The jacks are named after what they do: the two-eyed jacks
+    (clubs, diamonds) are **Wild** and the one-eyed jacks (hearts, spades) are **Remove**. The board's cells and the
+    game's messages ("Ana played #6") follow it too.
+
+  The deck is a per-player display choice, not a table setting: every player and the server still play with the same
+  cards (`7-Heart` is card 6 on every screen), so players with different decks play exactly the same game.
 
   The three image decks are SVGO-optimised copies in `public/decks/`, served with the app. Cards keep each deck's own
   proportions, so the art is never cropped, and a deck whose images can't be loaded falls back to drawn faces.
 - **The board matches your deck.** Full card art doesn't fit the board: a cell is about 33 px on a phone, its middle
   is covered by a chip, and 100 images would be heavy (the court cards are up to 450 KB each). So the cells keep their
-  corner rank and suit, but draw the suits with the same vector pips as the Minimal deck (text suit characters turn
+  corner rank and suit (or just the number, with the Numbered deck), but draw the suits with the same vector pips as the Minimal deck (text suit characters turn
   into emoji on some phones) in your deck's colours, so a blue diamond in your hand is a blue diamond on the board.
   Under the deck you also choose the **board cells**: **Dark tiles** (the default) or **Card faces**, light cells in
   your deck's face colour with dark ink, like a printed Sequence board. Like the deck, it is saved to a signed-in

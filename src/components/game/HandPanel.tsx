@@ -54,9 +54,10 @@ export function HandPanel({
   summary: summaryOverride,
   barAction,
 }: HandPanelProps) {
+  const [deck] = useDeck();
   const selectedCard = selected !== null ? hand[selected]?.card : undefined;
   // Just what matters right now: whose turn it is on a covered hand, or the selected card. Never a card count.
-  const summary = summaryOverride ? summaryOverride : cover ? `${cover.playerName}'s turn` : selectedCard ? `${cardShort(selectedCard)} selected` : null;
+  const summary = summaryOverride ? summaryOverride : cover ? `${cover.playerName}'s turn` : selectedCard ? `${cardShort(selectedCard, deck.notation)} selected` : null;
 
   return (
     <section className={styles.panel} aria-label={title}>

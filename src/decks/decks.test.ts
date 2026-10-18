@@ -30,3 +30,15 @@ describe('DECKS', () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe('the numbered deck', () => {
+  it('names cards by number and is drawn by the app', () => {
+    const deck = deckById('numbered');
+    expect(deck.notation).toBe('numbers');
+    expect(deck.image).toBeNull();
+  });
+
+  it('is the only deck that does', () => {
+    expect(DECKS.filter((deck) => deck.notation === 'numbers').map((deck) => deck.id)).toEqual(['numbered']);
+  });
+});

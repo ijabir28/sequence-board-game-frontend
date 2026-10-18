@@ -20,3 +20,15 @@ describe('describeLog', () => {
     expect(describeLog({ kind: 'win', turn: 9, team: 2 })).toBe('Team Red won the game');
   });
 });
+
+describe('describeLog with the Numbered deck', () => {
+  it('names cards and cells by number', () => {
+    expect(describeLog({ kind: 'place', turn: 1, player: 'Ana', team: 0, card: '7-Heart', pos: { row: 4, column: 6 }, wild: false }, 'numbers')).toBe('Ana played #6');
+    expect(describeLog({ kind: 'place', turn: 1, player: 'Ana', team: 0, card: 'J-Club', pos: { row: 0, column: 1 }, wild: true }, 'numbers')).toBe(
+      'Ana played a Wild card on #29',
+    );
+    expect(describeLog({ kind: 'remove', turn: 2, player: 'Ben', team: 1, card: 'J-Spade', pos: { row: 0, column: 1 }, removedTeam: 0 }, 'numbers')).toBe(
+      "Ben used Remove card to remove Team Green's chip from #29",
+    );
+  });
+});

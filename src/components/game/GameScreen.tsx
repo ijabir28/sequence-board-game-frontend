@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Pos } from '../../engine/board';
-import { cardKind, cardShort, type CardName } from '../../engine/cards';
+import { cardKind, cardShort, type CardName, type CardNotation } from '../../engine/cards';
+import { useDeck } from '../../decks/decks';
 import { describeHint } from '../../game/describeHint';
 import { describeDraft, draftLostMessage, draftProblem, type Draft } from '../../game/draft';
 import { describeLog } from '../../game/describeLog';
@@ -51,6 +52,8 @@ const ROUND_TOAST = 'game-round';
 
 export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, handOrderKey }: GameScreenProps) {
   const view = useGame(adapter);
+  // The viewer's deck decides how cards are named in messages: "7♥", or "#7" with the Numbered deck.
+  const [{ notation }] = useDeck();
   const [selected, setSelected] = useState<number | null>(null);
   const toast = useToast();
   // A new selection or move clears a stale error or tip, but lets good news run its course.
@@ -253,16 +256,16 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     const problem = draftProblem(draft, hand, adapter.legalTargets(draft.handIndex));
     if (problem) {
       setDraft(null);
-      setFeedback({ tone: 'error', text: draftLostMessage(draft, problem) });
+      setFeedback({ tone: 'error', text: draftLostMessage(draft, problem, notation) });
       return;
     }
     if (!yourTurn || view.turnPaused) return;
     setDraft(null);
     void run(() => adapter.playCard(draft.handIndex, draft.target)).then((played) => {
-      if (played) setFeedback({ tone: 'success', text: `Your drafted move was played: ${describeDraft(draft)}.` });
+      if (played) setFeedback({ tone: 'success', text: `Your drafted move was played: ${describeDraft(draft, notation)}.` });
     });
     // `view` changes with every move, which is when the draft needs checking again.
-  }, [adapter, draft, view, hand, yourTurn, gameOver, busy]);
+  }, [adapter, draft, view, hand, yourTurn, gameOver, busy, notation]);
 
   const onCell = async (pos: Pos) => {
     if (gameOver || busy) return;
@@ -277,19 +280,19 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     // Without highlights the player finds the cell themselves, so the rules engine explains a wrong pick.
     if (highlights && !targets?.some((t) => t.row === pos.row && t.column === pos.column)) {
       const what = cardKind(selectedCard) === 'one-eyed-jack' ? "a chip you can remove" : 'a legal move';
-      setFeedback({ tone: 'error', text: `That cell isn't ${what} for ${cardShort(selectedCard)}. Pick a highlighted cell.` });
+      setFeedback({ tone: 'error', text: `That cell isn't ${what} for ${cardShort(selectedCard, notation)}. Pick a highlighted cell.` });
       return;
     }
     if (waiting) {
       // Not your turn yet: draft the move instead. The engine checks it now, since the server won't until it is played.
       if (!adapter.legalTargets(selected).some((t) => t.row === pos.row && t.column === pos.column)) {
-        setFeedback({ tone: 'error', text: `That cell isn't a legal move for ${cardShort(selectedCard)}, so it can't be drafted.` });
+        setFeedback({ tone: 'error', text: `That cell isn't a legal move for ${cardShort(selectedCard, notation)}, so it can't be drafted.` });
         return;
       }
       const next = { handIndex: selected, card: selectedCard, target: pos };
       setDraft(next);
       setSelected(null);
-      setFeedback({ tone: 'info', text: `Move drafted: ${describeDraft(next)}. It is played as soon as your turn comes.` });
+      setFeedback({ tone: 'info', text: `Move drafted: ${describeDraft(next, notation)}. It is played as soon as your turn comes.` });
       return;
     }
     const played = await run(() => adapter.playCard(selected, pos));
@@ -316,7 +319,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (selected === null || !selectedCard) return;
     const card = selectedCard;
     if (await run(() => adapter.exchangeDeadCard(selected))) {
-      setFeedback({ tone: 'success', text: `${cardShort(card)} was dead: you drew a new card.` });
+      setFeedback({ tone: 'success', text: `${cardShort(card, notation)} was dead: you drew a new card.` });
     }
   };
   const onPass = async () => {
@@ -337,7 +340,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       ? `Pick a card whose two cells are both taken, then exchange it for a new one. ${exchangesNote}`
       : `Pick the dead card in your hand, then exchange it for a new one. ${exchangesNote}`
     : manualDead
-      ? `If both of ${cardShort(selectedCard!)}'s cells are taken, swap it for a new card. ${exchangesNote}`
+      ? `If both of ${cardShort(selectedCard!, notation)}'s cells are taken, swap it for a new card. ${exchangesNote}`
       : `Discard it and draw a new card, before you play. ${exchangesNote}`;
 
   const barExchange = offerExchange ? (
@@ -365,6 +368,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     manualDead,
     waiting,
     draft,
+    notation,
   });
 
   const footer = (
@@ -372,7 +376,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       {hint && hintShown ? (
         <p className={[styles.hint, styles.hintShown].join(' ')} role="status">
           <Icon name="bulb" size={16} />
-          <span>{describeHint(hint, view.hand.map((h) => h.card))}</span>
+          <span>{describeHint(hint, view.hand.map((h) => h.card), notation)}</span>
         </p>
       ) : (
         <p className={styles.hint}>{prompt}</p>
@@ -656,7 +660,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         </div>
         {/* Messages float as toasts, so this line only ever shows the latest move. */}
         <p className={[styles.line, styles.ticker].join(' ')} aria-hidden="true">
-          {lastEntry ? describeLog(lastEntry) : 'No moves yet.'}
+          {lastEntry ? describeLog(lastEntry, notation) : 'No moves yet.'}
         </p>
         {view.notice && (
           <p className={styles.notice}>
@@ -739,7 +743,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       </aside>
 
       <div className="visually-hidden" aria-live="polite">
-        {lastEntry ? describeLog(lastEntry) : ''}
+        {lastEntry ? describeLog(lastEntry, notation) : ''}
         {!gameOver && currentPlayer
           ? !adapter.hotSeat && currentPlayer.id === viewer?.id
             ? '. Your turn.'
@@ -868,6 +872,7 @@ function handHint({
   manualDead,
   waiting,
   draft,
+  notation,
 }: {
   selectedCard: CardName | undefined;
   dead: boolean;
@@ -881,10 +886,11 @@ function handHint({
   /** Someone else's turn: a move made now is drafted for the viewer's next turn. */
   waiting: boolean;
   draft: Draft | null;
+  notation: CardNotation;
 }): string {
   if (waiting && !selectedCard) {
     return draft
-      ? `Drafted: ${describeDraft(draft)}. It is played as soon as your turn comes. Pick another card to change it.`
+      ? `Drafted: ${describeDraft(draft, notation)}. It is played as soon as your turn comes. Pick another card to change it.`
       : `Not your turn yet. Draft your next move: pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}, and it is played when your turn comes.`;
   }
   if (!selectedCard) {
@@ -894,19 +900,19 @@ function handHint({
   }
   const card = selectedCard;
   if (manualDead && canExchange && cardKind(card) === 'normal' && !tips) {
-    return `${cardShort(card)} selected. If both its cells are taken, it's dead: exchange it.`;
+    return `${cardShort(card, notation)} selected. If both its cells are taken, it's dead: exchange it.`;
   }
   if (!tips) {
-    if (dead) return canExchange ? `${cardShort(card)} is dead. You can exchange it.` : `${cardShort(card)} is dead.`;
-    return `${cardShort(card)} selected.`;
+    if (dead) return canExchange ? `${cardShort(card, notation)} is dead. You can exchange it.` : `${cardShort(card, notation)} is dead.`;
+    return `${cardShort(card, notation)} selected.`;
   }
   if (dead) {
     return canExchange
-      ? `${cardShort(card)} is dead: both of its cells are taken. Exchange it for a new card.`
-      : `${cardShort(card)} is dead. You already exchanged a card this turn, so play another card.`;
+      ? `${cardShort(card, notation)} is dead: both of its cells are taken. Exchange it for a new card.`
+      : `${cardShort(card, notation)} is dead. You already exchanged a card this turn, so play another card.`;
   }
   if (highlights && targets && targets.length === 0) {
-    return cardKind(card) === 'one-eyed-jack' ? 'No opponent chip can be removed right now.' : `${cardShort(card)} has no open cell.`;
+    return cardKind(card) === 'one-eyed-jack' ? 'No opponent chip can be removed right now.' : `${cardShort(card, notation)} has no open cell.`;
   }
   switch (cardKind(card)) {
     case 'two-eyed-jack':
@@ -914,6 +920,6 @@ function handHint({
     case 'one-eyed-jack':
       return "One-eyed jack: remove an opponent's chip that isn't in a sequence.";
     default:
-      return highlights ? `Place ${cardShort(card)} on one of its highlighted cells.` : `Place ${cardShort(card)} on one of its two cells.`;
+      return highlights ? `Place ${cardShort(card, notation)} on one of its highlighted cells.` : `Place ${cardShort(card, notation)} on one of its two cells.`;
   }
 }
