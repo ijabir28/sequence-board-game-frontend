@@ -1,0 +1,27 @@
+.back {
+  width: min(100%, 60rem);
+  margin-bottom: var(--space-3);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 40px;
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--outline-strong);
+  color: var(--on-surface);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.link:hover {
+  background: var(--surface-high);
+}
+
+.link:focus-visible {
+  box-shadow: var(--focus-ring);
+}

@@ -6,6 +6,10 @@
   width: min(100%, 44rem);
 }
 
+.back {
+  width: min(100%, 44rem);
+}
+
 .grid > * {
   width: 100%;
 }

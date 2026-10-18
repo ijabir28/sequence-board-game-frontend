@@ -6,6 +6,7 @@ import { isFull, isSeated, joinRoom, leaveSeat, sanitizeRoom, shuffleSeats, upda
 import { onTeamsShuffled } from '../api/socket';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
+import { BackToDashboard } from '../components/BackToDashboard';
 import { Chip } from '../components/Chip';
 import { useToast, type ToastOptions } from '../components/toast/Toaster';
 import { RoomOptions } from '../components/RoomOptions';
@@ -150,12 +151,7 @@ export function RoomPage() {
     <>
       <AppHeader />
       <div className={styles.page}>
-        <nav className={own.back} aria-label="Back">
-          <Link to="/lobby" className={own.backLink} {...tipProps('Go back to the dashboard. Your seat here is kept.', 'bottom', 'start')}>
-            <Icon name="chevronLeft" size={18} />
-            Back to dashboard
-          </Link>
-        </nav>
+        <BackToDashboard tip="Go back to the dashboard. Your seat here is kept." />
         {state.status === 'loading' && (
           <div className={own.state} role="status">
             <span className={own.spinner} aria-hidden="true" />

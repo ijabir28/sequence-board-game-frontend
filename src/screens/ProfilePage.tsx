@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { Avatar } from '../components/Avatar';
+import { BackToDashboard } from '../components/BackToDashboard';
 import { BoardStylePicker, DeckPicker } from '../components/cards/DeckPicker';
 import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
@@ -41,6 +42,7 @@ export function ProfilePage() {
     <>
       <AppHeader />
       <div className={styles.page}>
+        <BackToDashboard className={own.back} tip="Go back to the dashboard: your tables and games" />
         <div className={own.grid}>
           <IdentityCard profile={profile} refresh={refresh} />
           <NameCard profile={profile} refresh={refresh} />
