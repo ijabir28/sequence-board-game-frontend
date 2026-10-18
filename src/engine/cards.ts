@@ -79,10 +79,10 @@ export function cardLabel(name: BoardCardName, notation: CardNotation = 'suits')
   return `${RANK_WORD[rank]} of ${suit}s`;
 }
 
-/** Short label for logs, e.g. "7♥", or "#25", "Wild" in numbers. */
+/** Short label for logs, e.g. "7♥", or "#25", "Wild card" in numbers. */
 export function cardShort(name: BoardCardName, notation: CardNotation = 'suits'): string {
   if (name === BLANK) return 'corner';
-  if (notation === 'numbers') return cardNumber(name) === null ? numberedLabel(name) : `#${cardNumber(name)}`;
+  if (notation === 'numbers') return cardNumber(name) === null ? `${numberedLabel(name)} card` : `#${cardNumber(name)}`;
   const { rank, suit } = parseCard(name);
   return `${rank}${SUIT_SYMBOL[suit]}`;
 }

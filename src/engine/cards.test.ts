@@ -32,7 +32,7 @@ describe('numbered deck', () => {
   it('labels cards in either notation', () => {
     expect(cardShort('2-Diamond')).toBe('2♦');
     expect(cardShort('2-Diamond', 'numbers')).toBe('#25');
-    expect(cardShort('J-Club', 'numbers')).toBe('Wild');
+    expect(cardShort('J-Club', 'numbers')).toBe('Wild card');
     expect(cardShort('Blank', 'numbers')).toBe('corner');
     expect(cardLabel('A-Spade', 'numbers')).toBe('Card 48');
     expect(cardLabel('J-Heart', 'numbers')).toBe('Remove jack');

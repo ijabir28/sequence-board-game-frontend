@@ -1,10 +1,12 @@
 import type { LogEntry } from '../../engine/game';
+import { useDeck } from '../../decks/decks';
 import { describeLog } from '../../game/describeLog';
 import { Chip } from '../Chip';
 import styles from './MoveLog.module.css';
 
 /** Newest-first list of moves. */
 export function MoveLog({ entries, emptyText }: { entries: LogEntry[]; emptyText: string }) {
+  const [{ notation }] = useDeck();
   if (entries.length === 0) return <p className={styles.empty}>{emptyText}</p>;
   return (
     <ol className={styles.log} reversed>
@@ -16,7 +18,7 @@ export function MoveLog({ entries, emptyText }: { entries: LogEntry[]; emptyText
           <span className={styles.chip}>
             <Chip team={entry.team} />
           </span>
-          <span>{describeLog(entry)}</span>
+          <span>{describeLog(entry, notation)}</span>
         </li>
       ))}
     </ol>

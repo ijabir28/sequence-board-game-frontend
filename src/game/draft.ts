@@ -1,5 +1,5 @@
 import { BOARD_LAYOUT, type Pos } from '../engine/board';
-import { cardKind, cardShort, type CardName } from '../engine/cards';
+import { cardKind, cardShort, type CardName, type CardNotation } from '../engine/cards';
 import type { HandCardView } from './types';
 
 /**
@@ -25,18 +25,18 @@ export function draftProblem(draft: Draft, hand: readonly HandCardView[], target
 }
 
 /** "9♥ on 9♥", "J♣ on 7♦": the card, and the cell (by the card printed on it). */
-export function describeDraft(draft: Draft): string {
-  return `${cardShort(draft.card)} on ${cardShort(BOARD_LAYOUT[draft.target.row][draft.target.column])}`;
+export function describeDraft(draft: Draft, notation: CardNotation = 'suits'): string {
+  return `${cardShort(draft.card, notation)} on ${cardShort(BOARD_LAYOUT[draft.target.row][draft.target.column], notation)}`;
 }
 
 /** What to tell the player when another move rules their draft out. */
-export function draftLostMessage(draft: Draft, problem: DraftProblem): string {
-  const cell = cardShort(BOARD_LAYOUT[draft.target.row][draft.target.column]);
+export function draftLostMessage(draft: Draft, problem: DraftProblem, notation: CardNotation = 'suits'): string {
+  const cell = cardShort(BOARD_LAYOUT[draft.target.row][draft.target.column], notation);
   const why =
     problem === 'card-gone'
-      ? `${cardShort(draft.card)} is no longer in your hand`
+      ? `${cardShort(draft.card, notation)} is no longer in your hand`
       : cardKind(draft.card) === 'one-eyed-jack'
         ? `the chip on ${cell} can't be removed any more`
         : `${cell} has been taken`;
-  return `Your drafted move (${describeDraft(draft)}) can't be played: ${why}. Draft another move.`;
+  return `Your drafted move (${describeDraft(draft, notation)}) can't be played: ${why}. Draft another move.`;
 }
