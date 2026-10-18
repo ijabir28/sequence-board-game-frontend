@@ -1,15 +1,11 @@
 /*
- * The profile: on wide screens a two-column grid. Row 1 is the picture and display name with the password beside
- * them; row 2 is email and the signed-in device with the cards and board beside them. Phones get one column.
+ * The profile: on wide screens two columns that fill independently. Left: picture, display name, email and the
+ * signed-in device. Right: the password at its own height, then the cards and board straight under it. The last card
+ * of each column grows so both end level. Phones get one column.
  */
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    'person'
-    'password'
-    'account'
-    'deck';
   gap: var(--space-4);
   width: 100%;
 }
@@ -18,54 +14,23 @@
   width: 100%;
 }
 
-.person {
-  grid-area: person;
-}
-
-.password {
-  grid-area: password;
-}
-
-.account {
-  grid-area: account;
-}
-
-.deck {
-  grid-area: deck;
-}
-
-/* A column of cards in one grid cell; the last one grows so both columns end level. */
-.stack {
+.column {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
 }
 
-.grid > *,
-.stack > *,
-.password > *,
-.deck > * {
+.column > * {
   width: 100%;
-}
-
-.password,
-.deck {
-  display: flex;
-  min-width: 0;
 }
 
 @media (min-width: 900px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      'person password'
-      'account deck';
   }
 
-  .stack > :last-child,
-  .password > *,
-  .deck > * {
+  .column > :last-child {
     flex: 1;
   }
 }
