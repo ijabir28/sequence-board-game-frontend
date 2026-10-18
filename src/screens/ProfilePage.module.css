@@ -1,17 +1,73 @@
-/* The profile: one column of cards, like the dashboard. */
+/*
+ * The profile: on wide screens a two-column grid. Row 1 is the picture and display name with the password beside
+ * them; row 2 is email and the signed-in device with the cards and board beside them. Phones get one column.
+ */
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'person'
+    'password'
+    'account'
+    'deck';
   gap: var(--space-4);
-  width: min(100%, 44rem);
+  width: min(100%, 72rem);
 }
 
 .back {
-  width: min(100%, 44rem);
+  width: min(100%, 72rem);
 }
 
-.grid > * {
+.person {
+  grid-area: person;
+}
+
+.password {
+  grid-area: password;
+}
+
+.account {
+  grid-area: account;
+}
+
+.deck {
+  grid-area: deck;
+}
+
+/* A column of cards in one grid cell; the last one grows so both columns end level. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.grid > *,
+.stack > *,
+.password > *,
+.deck > * {
   width: 100%;
+}
+
+.password,
+.deck {
+  display: flex;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-areas:
+      'person password'
+      'account deck';
+  }
+
+  .stack > :last-child,
+  .password > *,
+  .deck > * {
+    flex: 1;
+  }
 }
 
 .title {

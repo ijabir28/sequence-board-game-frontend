@@ -44,12 +44,20 @@ export function ProfilePage() {
       <div className={styles.page}>
         <BackToDashboard className={own.back} tip="Go back to the dashboard: your tables and games" />
         <div className={own.grid}>
-          <IdentityCard profile={profile} refresh={refresh} />
-          <NameCard profile={profile} refresh={refresh} />
-          <DeckCard />
-          <EmailCard profile={profile} />
-          <PasswordCard />
-          <DevicesCard />
+          <div className={[own.stack, own.person].join(' ')}>
+            <IdentityCard profile={profile} refresh={refresh} />
+            <NameCard profile={profile} refresh={refresh} />
+          </div>
+          <div className={own.password}>
+            <PasswordCard />
+          </div>
+          <div className={[own.stack, own.account].join(' ')}>
+            <EmailCard profile={profile} />
+            <DevicesCard />
+          </div>
+          <div className={own.deck}>
+            <DeckCard />
+          </div>
         </div>
       </div>
     </>
