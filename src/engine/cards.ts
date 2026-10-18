@@ -46,16 +46,43 @@ const RANK_WORD: Record<Rank, string> = {
   J: 'Jack', Q: 'Queen', K: 'King', A: 'Ace',
 };
 
-/** Human-readable name, e.g. "7 of Hearts", "Queen of Spades", "Corner". */
-export function cardLabel(name: BoardCardName): string {
+/**
+ * How a deck names its cards: by rank and suit, or (the Numbered deck) by a number from 1 to 48, with the jacks named
+ * after what they do.
+ */
+export type CardNotation = 'suits' | 'numbers';
+
+// The numbered deck counts through the hearts, clubs, diamonds and spades in turn, 2 to Ace, skipping the jacks.
+const NUMBERED_SUITS: readonly Suit[] = ['Heart', 'Club', 'Diamond', 'Spade'];
+const NUMBERED_RANKS: readonly Rank[] = RANKS.filter((rank) => rank !== 'J');
+
+/** The card's number in the Numbered deck (2♥ = 1 … A♠ = 48), or null for a jack. */
+export function cardNumber(name: CardName): number | null {
+  const { rank, suit } = parseCard(name);
+  if (rank === 'J') return null;
+  return NUMBERED_SUITS.indexOf(suit) * NUMBERED_RANKS.length + NUMBERED_RANKS.indexOf(rank) + 1;
+}
+
+/** What the Numbered deck prints on the card: its number, or "Wild" or "Remove" for a jack. */
+export function numberedLabel(name: CardName): string {
+  const kind = cardKind(name);
+  if (kind === 'two-eyed-jack') return 'Wild';
+  if (kind === 'one-eyed-jack') return 'Remove';
+  return String(cardNumber(name));
+}
+
+/** Human-readable name, e.g. "7 of Hearts", "Queen of Spades", "Corner", or "Card 25", "Wild jack" in numbers. */
+export function cardLabel(name: BoardCardName, notation: CardNotation = 'suits'): string {
   if (name === BLANK) return 'Free corner';
+  if (notation === 'numbers') return cardNumber(name) === null ? `${numberedLabel(name)} jack` : `Card ${cardNumber(name)}`;
   const { rank, suit } = parseCard(name);
   return `${RANK_WORD[rank]} of ${suit}s`;
 }
 
-/** Short label for logs, e.g. "7♥". */
-export function cardShort(name: BoardCardName): string {
+/** Short label for logs, e.g. "7♥", or "#25", "Wild" in numbers. */
+export function cardShort(name: BoardCardName, notation: CardNotation = 'suits'): string {
   if (name === BLANK) return 'corner';
+  if (notation === 'numbers') return cardNumber(name) === null ? numberedLabel(name) : `#${cardNumber(name)}`;
   const { rank, suit } = parseCard(name);
   return `${rank}${SUIT_SYMBOL[suit]}`;
 }
