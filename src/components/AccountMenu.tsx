@@ -9,19 +9,17 @@ import { Icon, type IconName } from './ui/Icon';
 import { tipProps } from './ui/TooltipLayer';
 import styles from './AccountMenu.module.css';
 
-type Item = { key: string; icon: IconName; label: string; hint: string; tip: string } & ({ to: string } | { onSelect: () => void });
+type Item = { key: string; icon: IconName; label: string; tip: string } & ({ to: string } | { onSelect: () => void });
 
 /** The account's places and actions, the same list in the desktop dropdown and the phone drawer. */
 function useItems(): Item[] {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   return [
-    { key: 'dashboard', icon: 'home', label: 'Dashboard', hint: 'Your tables and games', tip: 'Go to the dashboard', to: '/lobby' },
     {
       key: 'profile',
       icon: 'user',
       label: 'Profile settings',
-      hint: 'Picture, name, email, password',
       tip: 'Your profile: picture, name, email, password and devices',
       to: '/profile',
     },
@@ -29,7 +27,6 @@ function useItems(): Item[] {
       key: 'signout',
       icon: 'exit',
       label: 'Sign out',
-      hint: 'Your tables and games stay saved',
       tip: 'Sign out on this device. Your tables and games stay saved.',
       onSelect: () => void signOut().finally(() => navigate('/signin')),
     },
@@ -190,10 +187,7 @@ function AccountDrawer({ profile }: { profile: Profile }) {
           const content = (
             <>
               <Icon name={item.icon} />
-              <span>
-                <strong>{item.label}</strong>
-                <small>{item.hint}</small>
-              </span>
+              <span>{item.label}</span>
             </>
           );
           const className = [styles.drawerItem, item.key === 'signout' && styles.drawerSignOut].filter(Boolean).join(' ');
