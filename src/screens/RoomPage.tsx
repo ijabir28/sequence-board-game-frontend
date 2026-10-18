@@ -320,7 +320,7 @@ function RoomView({
                       <>
                         <span>
                           {seat.name}
-                          {seat.handle === you && <span className={own.you}>you</span>}
+                          {seat.handle === you && <span className={own.you}>You</span>}
                         </span>
                         {seat.handle === you && !room.gameStarted && (
                           <Tooltip text="Free your seat, so you can take another or the host can reshuffle the teams" align="end">
