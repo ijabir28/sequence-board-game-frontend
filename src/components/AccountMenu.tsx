@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { Profile } from '../api/user';
 import { useAuth } from '../auth/AuthContext';
@@ -7,6 +7,8 @@ import { Avatar } from './Avatar';
 import { Drawer } from './ui/Drawer';
 import { Icon, type IconName } from './ui/Icon';
 import { tipProps } from './ui/TooltipLayer';
+import { useMenu } from './ui/useMenu';
+import menuStyles from './ui/Menu.module.css';
 import styles from './AccountMenu.module.css';
 
 type Item = { key: string; icon: IconName; label: string; tip: string } & ({ to: string } | { onSelect: () => void });
@@ -42,62 +44,14 @@ export function AccountMenu({ profile }: { profile: Profile }) {
 function AccountDropdown({ profile }: { profile: Profile }) {
   const items = useItems();
   const { pathname } = useLocation();
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const menu = useRef<HTMLDivElement>(null);
-  const menuId = useId();
-
-  const entries = () => Array.from(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
-  const close = (refocus: boolean) => {
-    setOpen(false);
-    if (refocus) trigger.current?.focus();
-  };
-
-  // Opening moves focus to the first entry; a press anywhere outside closes the menu.
-  useEffect(() => {
-    if (!open) return;
-    entries()[0]?.focus();
-    const onPointerDown = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [open]);
-
-  const onMenuKeyDown = (event: KeyboardEvent) => {
-    const list = entries();
-    const at = list.indexOf(document.activeElement as HTMLElement);
-    const move = (to: number) => {
-      event.preventDefault();
-      list[(to + list.length) % list.length]?.focus();
-    };
-    if (event.key === 'ArrowDown') move(at + 1);
-    else if (event.key === 'ArrowUp') move(at - 1);
-    else if (event.key === 'Home') move(0);
-    else if (event.key === 'End') move(list.length - 1);
-    else if (event.key === 'Escape') {
-      event.preventDefault();
-      close(true);
-    } else if (event.key === 'Tab') setOpen(false);
-  };
+  const { open, close, rootRef, triggerProps, menuProps } = useMenu();
 
   return (
-    <div ref={root} className={styles.root}>
+    <div ref={rootRef} className={styles.root}>
       <button
-        ref={trigger}
         type="button"
         className={styles.trigger}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        onClick={() => setOpen((was) => !was)}
-        onKeyDown={(event) => {
-          if (event.key === 'ArrowDown' && !open) {
-            event.preventDefault();
-            setOpen(true);
-          }
-        }}
+        {...triggerProps}
         {...(open ? {} : tipProps('Your account: profile settings and sign out', 'bottom', 'end'))}
       >
         <Avatar name={profile.name} handle={profile.handle} image={profile.image} size={32} />
@@ -105,8 +59,8 @@ function AccountDropdown({ profile }: { profile: Profile }) {
         <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} className={styles.caret} />
       </button>
       {open && (
-        <div ref={menu} id={menuId} role="menu" aria-label="Account" className={styles.menu} onKeyDown={onMenuKeyDown}>
-          <div className={styles.menuHeader} role="presentation">
+        <div {...menuProps} aria-label="Account" className={menuStyles.menu}>
+          <div className={menuStyles.header} role="presentation">
             <strong>{profile.name}</strong>
             <span>@{profile.handle}</span>
           </div>
@@ -117,7 +71,7 @@ function AccountDropdown({ profile }: { profile: Profile }) {
                 <span>{item.label}</span>
               </>
             );
-            const className = [styles.menuItem, item.key === 'signout' && styles.signOut].filter(Boolean).join(' ');
+            const className = [menuStyles.item, item.key === 'signout' && menuStyles.danger].filter(Boolean).join(' ');
             return 'to' in item ? (
               <Link
                 key={item.key}
@@ -126,7 +80,7 @@ function AccountDropdown({ profile }: { profile: Profile }) {
                 tabIndex={-1}
                 className={className}
                 aria-current={pathname === item.to ? 'page' : undefined}
-                onClick={() => setOpen(false)}
+                onClick={close}
               >
                 {content}
               </Link>
@@ -138,7 +92,7 @@ function AccountDropdown({ profile }: { profile: Profile }) {
                 tabIndex={-1}
                 className={className}
                 onClick={() => {
-                  setOpen(false);
+                  close();
                   item.onSelect();
                 }}
               >
