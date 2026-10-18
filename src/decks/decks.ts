@@ -1,15 +1,15 @@
 import { useSyncExternalStore } from 'react';
-import { cardImageUrl, type CardName } from '../engine/cards';
+import { cardImageUrl, type CardName, type CardNotation } from '../engine/cards';
 
 /*
  * The designs a player can pick for the cards in their hand. Each deck is a folder of SVGs in public/decks/<id>/
  * named after the cards (see public/decks/README.md for where each one comes from), except the original deck, which
- * the backend serves, and the drawn deck, which has no images at all.
+ * the backend serves, and the drawn and numbered decks, which have no images at all.
  * The choice is remembered on this device, and on the account of a signed-in player (useAccountChoice.ts). It can be
  * changed at any time, also in the middle of a game.
  */
 
-export type DeckId = 'original' | 'classic' | 'jumbo' | 'four-colour' | 'drawn';
+export type DeckId = 'original' | 'classic' | 'jumbo' | 'four-colour' | 'drawn' | 'numbered';
 
 export interface Deck {
   id: DeckId;
@@ -24,7 +24,9 @@ export interface Deck {
   suits: 'two' | 'four';
   /** The colour of its card faces, which the board's light cells take on. */
   face: string;
-  /** The face of `card` (or the back), or null for the drawn deck. */
+  /** How it names cards, on the cards, the board's cells and in the game's messages: rank and suit, or 1 to 48. */
+  notation: CardNotation;
+  /** The face of `card` (or the back), or null for a deck the app draws. */
   image: ((card: CardName | 'back') => string) | null;
 }
 
@@ -41,6 +43,7 @@ export const DECKS: readonly Deck[] = [
     aspect: 5 / 7,
     suits: 'two',
     face: '#ffffff',
+    notation: 'suits',
     image: (card) => cardImageUrl(card === 'back' ? 'Reverse' : card),
   },
   {
@@ -51,6 +54,7 @@ export const DECKS: readonly Deck[] = [
     aspect: 167.09 / 242.67,
     suits: 'two',
     face: '#ffffff',
+    notation: 'suits',
     image: folder('classic'),
   },
   {
@@ -61,6 +65,7 @@ export const DECKS: readonly Deck[] = [
     aspect: 2 / 3,
     suits: 'two',
     face: '#fdfeee',
+    notation: 'suits',
     image: folder('jumbo'),
   },
   {
@@ -71,6 +76,7 @@ export const DECKS: readonly Deck[] = [
     aspect: 2 / 3,
     suits: 'four',
     face: '#fdfeee',
+    notation: 'suits',
     image: folder('four-colour'),
   },
   {
@@ -81,6 +87,18 @@ export const DECKS: readonly Deck[] = [
     aspect: 5 / 7,
     suits: 'two',
     face: '#ffffff',
+    notation: 'suits',
+    image: null,
+  },
+  {
+    id: 'numbered',
+    name: 'Numbered',
+    description: 'Cards numbered 1 to 48 instead of suits, and jacks named Wild and Remove. The board shows the numbers too.',
+    credit: 'Drawn by this app',
+    aspect: 5 / 7,
+    suits: 'four',
+    face: '#ffffff',
+    notation: 'numbers',
     image: null,
   },
 ];
