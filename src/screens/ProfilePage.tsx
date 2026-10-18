@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { errorMessage } from '../api/http';
+import { errorMessage, request } from '../api/http';
 import {
   AccountError,
   changeEmail,
@@ -16,10 +16,16 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { Avatar } from '../components/Avatar';
+import { BackToDashboard } from '../components/BackToDashboard';
 import { BoardStylePicker, DeckPicker } from '../components/cards/DeckPicker';
 import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
-import { AVATAR_ACCEPT, AvatarError, makeAvatar } from '../profile/avatarImage';
+import { Icon } from '../components/ui/Icon';
+import menuStyles from '../components/ui/Menu.module.css';
+import { tipProps } from '../components/ui/TooltipLayer';
+import { useMenu } from '../components/ui/useMenu';
+import { AvatarCropDialog } from '../profile/AvatarCropDialog';
+import { AVATAR_ACCEPT, AvatarError, makeAvatar, type Crop } from '../profile/avatarImage';
 import { describeDevice } from '../profile/describeDevice';
 import { validateNewPassword } from './ResetPassword';
 import { EMAIL_PATTERN, NAME_MAX, PASSWORD_MIN } from './SignUp';
@@ -41,13 +47,18 @@ export function ProfilePage() {
     <>
       <AppHeader />
       <div className={styles.page}>
+        <BackToDashboard className={own.back} tip="Go back to the dashboard: your tables and games" />
         <div className={own.grid}>
-          <IdentityCard profile={profile} refresh={refresh} />
-          <NameCard profile={profile} refresh={refresh} />
-          <DeckCard />
-          <EmailCard profile={profile} />
-          <PasswordCard />
-          <DevicesCard />
+          <div className={own.column}>
+            <IdentityCard profile={profile} refresh={refresh} />
+            <NameCard profile={profile} refresh={refresh} />
+            <EmailCard profile={profile} />
+            <DevicesCard />
+          </div>
+          <div className={own.column}>
+            <PasswordCard />
+            <DeckCard />
+          </div>
         </div>
       </div>
     </>
@@ -59,22 +70,45 @@ type CardProps = { profile: Profile; refresh: () => Promise<Profile | null> };
 function IdentityCard({ profile, refresh }: CardProps) {
   const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState<'upload' | 'remove' | null>(null);
+  const [busy, setBusy] = useState<'load' | 'upload' | 'remove' | null>(null);
+  const menu = useMenu();
   const { played, won, playing } = profile.stats;
 
-  const upload = async (file: File | undefined) => {
-    if (!file) return;
+  // A chosen picture waits here while the player crops it.
+  const [picked, setPicked] = useState<File | null>(null);
+  const forgetPicked = () => {
+    setPicked(null);
+    // Choosing the same file again should open the crop again.
+    if (input.current) input.current.value = '';
+  };
+
+  const upload = async (file: File, crop: Crop) => {
     setBusy('upload');
     try {
-      await uploadAvatar(await makeAvatar(file));
+      await uploadAvatar(await makeAvatar(file, crop));
       await refresh();
+      forgetPicked();
       toast.success('Picture updated.', { id: 'avatar' });
     } catch (e) {
       toast.error(e instanceof AvatarError ? e.message : problem(e), { id: 'avatar' });
     } finally {
       setBusy(null);
-      // Choosing the same file again should upload again.
-      if (input.current) input.current.value = '';
+    }
+  };
+
+  // Re-crop the current picture: it is fetched back and opened in the same dialog as a new one.
+  const adjust = async () => {
+    if (!profile.image) return;
+    setBusy('load');
+    try {
+      const response = await request(profile.image);
+      if (!response.ok) throw new AvatarError("Your picture couldn't be loaded. Try again.");
+      const blob = await response.blob();
+      setPicked(new File([blob], 'avatar', { type: blob.type }));
+    } catch (e) {
+      toast.error(e instanceof AvatarError ? e.message : problem(e), { id: 'avatar' });
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -94,7 +128,86 @@ function IdentityCard({ profile, refresh }: CardProps) {
   return (
     <section className={[styles.card, own.identity].join(' ')} aria-labelledby="profile-title">
       <div className={own.who}>
-        <Avatar name={profile.name} handle={profile.handle} image={profile.image} size={96} />
+        <div ref={menu.rootRef} className={own.avatarBox}>
+          <Avatar name={profile.name} handle={profile.handle} image={profile.image} size={96} />
+          <button
+            type="button"
+            className={own.editAvatar}
+            aria-label="Edit picture"
+            disabled={busy !== null}
+            aria-busy={busy !== null || undefined}
+            {...menu.triggerProps}
+            {...(menu.open ? {} : tipProps(profile.image ? 'Change, crop or remove your picture' : 'Upload a picture', 'bottom', 'start'))}
+          >
+            {busy ? <span className={own.spinner} aria-hidden="true" /> : <Icon name="edit" size={16} />}
+          </button>
+          {menu.open && (
+            <div {...menu.menuProps} aria-label="Picture" className={[menuStyles.menu, menuStyles.start].join(' ')}>
+              <button
+                type="button"
+                role="menuitem"
+                tabIndex={-1}
+                className={menuStyles.item}
+                onClick={() => {
+                  menu.close();
+                  input.current?.click();
+                }}
+              >
+                <Icon name="image" size={18} />
+                <span>{profile.image ? 'Change picture' : 'Upload a picture'}</span>
+              </button>
+              {profile.image && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  tabIndex={-1}
+                  className={menuStyles.item}
+                  onClick={() => {
+                    menu.close();
+                    void adjust();
+                  }}
+                >
+                  <Icon name="crop" size={18} />
+                  <span>Adjust crop</span>
+                </button>
+              )}
+              {profile.image && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  tabIndex={-1}
+                  className={[menuStyles.item, menuStyles.danger].join(' ')}
+                  onClick={() => {
+                    menu.close();
+                    void remove();
+                  }}
+                >
+                  <Icon name="trash" size={18} />
+                  <span>Remove picture</span>
+                </button>
+              )}
+            </div>
+          )}
+          <input
+            ref={input}
+            type="file"
+            accept={AVATAR_ACCEPT}
+            className={own.fileInput}
+            onChange={(e) => setPicked(e.target.files?.[0] ?? null)}
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+        </div>
+        <AvatarCropDialog
+          file={picked}
+          busy={busy === 'upload'}
+          onCancel={forgetPicked}
+          onSave={(crop) => picked && void upload(picked, crop)}
+          onError={(message) => {
+            forgetPicked();
+            toast.error(message, { id: 'avatar' });
+          }}
+        />
         <div className={own.names}>
           <h1 id="profile-title">{profile.name}</h1>
           <p className={own.handle}>@{profile.handle}</p>
@@ -119,31 +232,6 @@ function IdentityCard({ profile, refresh }: CardProps) {
           <dd>{playing}</dd>
         </div>
       </dl>
-      <div className={own.actions}>
-        <input
-          ref={input}
-          type="file"
-          accept={AVATAR_ACCEPT}
-          className={own.fileInput}
-          onChange={(e) => void upload(e.target.files?.[0])}
-          tabIndex={-1}
-          aria-hidden="true"
-        />
-        <Button
-          variant="primary"
-          busy={busy === 'upload'}
-          disabled={busy !== null}
-          onClick={() => input.current?.click()}
-          tip="Choose a picture. Its centre is cropped to a square and shrunk before it is uploaded."
-        >
-          {profile.image ? 'Change picture' : 'Upload a picture'}
-        </Button>
-        {profile.image && (
-          <Button busy={busy === 'remove'} disabled={busy !== null} onClick={remove} tip="Go back to your initials">
-            Remove picture
-          </Button>
-        )}
-      </div>
     </section>
   );
 }

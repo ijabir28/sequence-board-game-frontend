@@ -1,13 +1,38 @@
-/* The profile: one column of cards, like the dashboard. */
+/*
+ * The profile: on wide screens two columns that fill independently. Left: picture, display name, email and the
+ * signed-in device. Right: the password at its own height, then the cards and board straight under it. The last card
+ * of each column grows so both end level. Phones get one column.
+ */
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
-  width: min(100%, 44rem);
+  width: 100%;
 }
 
-.grid > * {
+.back {
   width: 100%;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.column > * {
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .column > :last-child {
+    flex: 1;
+  }
 }
 
 .title {
@@ -28,6 +53,59 @@
   align-items: center;
   gap: var(--space-4);
   min-width: 0;
+}
+
+/* The picture, with a small edit button on its top-right corner that opens Change / Remove. */
+.avatarBox {
+  position: relative;
+  flex: none;
+}
+
+.editAvatar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--surface-container);
+  border-radius: 50%;
+  background: var(--surface-highest);
+  color: var(--on-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+/* A bigger touch target than it looks. */
+.editAvatar::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.editAvatar:hover:not(:disabled),
+.editAvatar[aria-expanded='true'] {
+  background: var(--surface-bright);
+  color: var(--primary);
+}
+
+.editAvatar:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: avatar-spin 700ms linear infinite;
+}
+
+@keyframes avatar-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .names {

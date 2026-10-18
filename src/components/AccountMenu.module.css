@@ -1,0 +1,121 @@
+.root {
+  position: relative;
+  min-width: 0;
+}
+
+/* The picture and display name, nothing else, until it is pressed. */
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--on-surface);
+  font-size: var(--text-sm);
+}
+
+.trigger:hover,
+.trigger[aria-expanded='true'] {
+  background: var(--surface-high);
+}
+
+.trigger:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.avatarOnly {
+  padding: 0 var(--space-1);
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.caret {
+  flex: none;
+  color: var(--on-surface-muted);
+}
+
+/* Phone drawer: the same entries, as the game menu's large rows. */
+.drawerTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.drawerTitle > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.drawerTitle strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawerTitle small {
+  color: var(--on-surface-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+
+.drawerItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--outline-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-low);
+  color: var(--on-surface);
+  text-align: left;
+  text-decoration: none;
+}
+
+.drawerItem:hover {
+  background: var(--surface-high);
+}
+
+.drawerItem:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.drawerItem > svg {
+  flex: none;
+  color: var(--on-surface-muted);
+}
+
+.drawerItem > span {
+  min-width: 0;
+  font-weight: 600;
+}
+
+.drawerItem[aria-current='page'] {
+  border-color: var(--primary);
+}
+
+.drawerItem[aria-current='page'] > svg {
+  color: var(--primary);
+}
+
+.drawerSignOut {
+  margin-top: var(--space-2);
+}
+
+.drawerSignOut > svg {
+  color: var(--error);
+}
