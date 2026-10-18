@@ -24,7 +24,8 @@ import { Icon } from '../components/ui/Icon';
 import menuStyles from '../components/ui/Menu.module.css';
 import { tipProps } from '../components/ui/TooltipLayer';
 import { useMenu } from '../components/ui/useMenu';
-import { AVATAR_ACCEPT, AvatarError, makeAvatar } from '../profile/avatarImage';
+import { AvatarCropDialog } from '../profile/AvatarCropDialog';
+import { AVATAR_ACCEPT, AvatarError, makeAvatar, type Crop } from '../profile/avatarImage';
 import { describeDevice } from '../profile/describeDevice';
 import { validateNewPassword } from './ResetPassword';
 import { EMAIL_PATTERN, NAME_MAX, PASSWORD_MIN } from './SignUp';
@@ -73,19 +74,25 @@ function IdentityCard({ profile, refresh }: CardProps) {
   const menu = useMenu();
   const { played, won, playing } = profile.stats;
 
-  const upload = async (file: File | undefined) => {
-    if (!file) return;
+  // A chosen picture waits here while the player crops it.
+  const [picked, setPicked] = useState<File | null>(null);
+  const forgetPicked = () => {
+    setPicked(null);
+    // Choosing the same file again should open the crop again.
+    if (input.current) input.current.value = '';
+  };
+
+  const upload = async (file: File, crop: Crop) => {
     setBusy('upload');
     try {
-      await uploadAvatar(await makeAvatar(file));
+      await uploadAvatar(await makeAvatar(file, crop));
       await refresh();
+      forgetPicked();
       toast.success('Picture updated.', { id: 'avatar' });
     } catch (e) {
       toast.error(e instanceof AvatarError ? e.message : problem(e), { id: 'avatar' });
     } finally {
       setBusy(null);
-      // Choosing the same file again should upload again.
-      if (input.current) input.current.value = '';
     }
   };
 
@@ -155,11 +162,21 @@ function IdentityCard({ profile, refresh }: CardProps) {
             type="file"
             accept={AVATAR_ACCEPT}
             className={own.fileInput}
-            onChange={(e) => void upload(e.target.files?.[0])}
+            onChange={(e) => setPicked(e.target.files?.[0] ?? null)}
             tabIndex={-1}
             aria-hidden="true"
           />
         </div>
+        <AvatarCropDialog
+          file={picked}
+          busy={busy === 'upload'}
+          onCancel={forgetPicked}
+          onSave={(crop) => picked && void upload(picked, crop)}
+          onError={(message) => {
+            forgetPicked();
+            toast.error(message, { id: 'avatar' });
+          }}
+        />
         <div className={own.names}>
           <h1 id="profile-title">{profile.name}</h1>
           <p className={own.handle}>@{profile.handle}</p>

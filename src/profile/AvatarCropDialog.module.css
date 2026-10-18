@@ -1,0 +1,85 @@
+.help {
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+}
+
+/* The square that becomes the avatar. The picture moves under it; touch-action: none keeps a drag from scrolling. */
+.frame {
+  position: relative;
+  margin-inline: auto;
+  width: min(18rem, 100%);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--surface-lowest);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.frame:active {
+  cursor: grabbing;
+}
+
+.frame:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.picture {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+/* The round avatar: everything outside the circle is dimmed. */
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: -1px;
+  box-shadow: 0 0 0 100vmax rgba(2, 6, 23, 0.6);
+  pointer-events: none;
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline: auto;
+  width: min(18rem, 100%);
+}
+
+.slider {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--primary);
+}
+
+.zoomButton {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--on-surface-muted);
+}
+
+.zoomButton:hover:not(:disabled) {
+  background: var(--surface-high);
+  color: var(--on-surface);
+}
+
+.zoomButton:disabled {
+  opacity: 0.4;
+}
+
+.zoomButton:focus-visible {
+  box-shadow: var(--focus-ring);
+}
