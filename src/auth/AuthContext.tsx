@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { onSignedInElsewhere } from '../api/socket';
 import { getProfile, signIn as apiSignIn, signOut as apiSignOut, signUp as apiSignUp, type Profile } from '../api/user';
 import { useToast } from '../components/toast/Toaster';
-import { useAccountDeck } from '../decks/useAccountDeck';
+import { BOARD_STYLE_CHOICE, CARD_DECK_CHOICE, useAccountChoice } from '../decks/useAccountChoice';
 import styles from '../screens/Forms.module.css';
 
 // The session cookie is HttpOnly, so the app asks the server who is signed in (GET /user/profile)
@@ -67,12 +67,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [handle, toast]);
 
-  // The hand card deck follows the account to every device.
+  // The hand card deck and the board style follow the account to every device.
   const deckNotSaved = useCallback(
     () => toast.error("Your card deck couldn't be saved to your account. It still applies on this device.", { id: 'deck' }),
     [toast],
   );
-  useAccountDeck(handle, profile?.cardDeck ?? null, deckNotSaved);
+  const boardNotSaved = useCallback(
+    () => toast.error("Your board style couldn't be saved to your account. It still applies on this device.", { id: 'board-style' }),
+    [toast],
+  );
+  useAccountChoice(handle, profile?.cardDeck ?? null, CARD_DECK_CHOICE, deckNotSaved);
+  useAccountChoice(handle, profile?.boardStyle ?? null, BOARD_STYLE_CHOICE, boardNotSaved);
 
   const signIn = useCallback(async (handle: string, password: string) => {
     const next = await apiSignIn(handle, password);

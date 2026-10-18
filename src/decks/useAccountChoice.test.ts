@@ -1,24 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { reconcileDeck } from './useAccountDeck';
+import { BOARD_STYLE_CHOICE, CARD_DECK_CHOICE, reconcileChoice } from './useAccountChoice';
 
-describe('reconcileDeck', () => {
-  it("shows the account's deck on this device", () => {
-    expect(reconcileDeck('classic', 'original')).toEqual({ apply: 'classic' });
+describe('reconcileChoice', () => {
+  it("shows the account's choice on this device", () => {
+    expect(reconcileChoice('classic', 'original', CARD_DECK_CHOICE)).toEqual({ apply: 'classic' });
+    expect(reconcileChoice('cards', 'dark', BOARD_STYLE_CHOICE)).toEqual({ apply: 'cards' });
   });
 
   it('does nothing when both already agree', () => {
-    expect(reconcileDeck('classic', 'classic')).toBeNull();
+    expect(reconcileChoice('classic', 'classic', CARD_DECK_CHOICE)).toBeNull();
   });
 
-  it("uploads this device's deck to an account that never chose one", () => {
-    expect(reconcileDeck(null, 'jumbo')).toEqual({ upload: 'jumbo' });
+  it("uploads this device's choice to an account that never chose", () => {
+    expect(reconcileChoice(null, 'jumbo', CARD_DECK_CHOICE)).toEqual({ upload: 'jumbo' });
+    expect(reconcileChoice(null, 'cards', BOARD_STYLE_CHOICE)).toEqual({ upload: 'cards' });
   });
 
-  it('leaves an account without a deck alone while this device has the default', () => {
-    expect(reconcileDeck(null, 'original')).toBeNull();
+  it('leaves an account that never chose alone while this device has the default', () => {
+    expect(reconcileChoice(null, 'original', CARD_DECK_CHOICE)).toBeNull();
+    expect(reconcileChoice(null, 'dark', BOARD_STYLE_CHOICE)).toBeNull();
   });
 
-  it('ignores a deck this app no longer has, keeping the device its own', () => {
-    expect(reconcileDeck('retired-deck', 'jumbo')).toBeNull();
+  it('ignores an option this app no longer has, keeping the device its own', () => {
+    expect(reconcileChoice('retired-deck', 'jumbo', CARD_DECK_CHOICE)).toBeNull();
+    expect(reconcileChoice('neon', 'cards', BOARD_STYLE_CHOICE)).toBeNull();
   });
 });
