@@ -2,6 +2,7 @@ import { useId, useState, type CSSProperties } from 'react';
 import { BOARD_STYLES, DECKS, useBoardStyle, useDeck, type Deck } from '../../decks/decks';
 import { parseCard, type CardName } from '../../engine/cards';
 import { DrawnCard } from './DrawnCard';
+import { NumberedCard } from './NumberedCard';
 import { SuitIcon } from './SuitIcon';
 import styles from './DeckPicker.module.css';
 
@@ -15,6 +16,8 @@ function SampleCard({ deck, card }: { deck: Deck; card: CardName }) {
     <span className={styles.card} style={{ '--card-aspect': deck.aspect } as CSSProperties}>
       {deck.image && !failed ? (
         <img src={deck.image(card)} alt="" draggable={false} loading="lazy" onError={() => setFailed(true)} />
+      ) : deck.notation === 'numbers' ? (
+        <NumberedCard card={card} />
       ) : (
         <DrawnCard card={card} />
       )}
