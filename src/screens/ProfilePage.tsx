@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { errorMessage } from '../api/http';
+import { errorMessage, request } from '../api/http';
 import {
   AccountError,
   changeEmail,
@@ -70,7 +70,7 @@ type CardProps = { profile: Profile; refresh: () => Promise<Profile | null> };
 function IdentityCard({ profile, refresh }: CardProps) {
   const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState<'upload' | 'remove' | null>(null);
+  const [busy, setBusy] = useState<'load' | 'upload' | 'remove' | null>(null);
   const menu = useMenu();
   const { played, won, playing } = profile.stats;
 
@@ -89,6 +89,22 @@ function IdentityCard({ profile, refresh }: CardProps) {
       await refresh();
       forgetPicked();
       toast.success('Picture updated.', { id: 'avatar' });
+    } catch (e) {
+      toast.error(e instanceof AvatarError ? e.message : problem(e), { id: 'avatar' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // Re-crop the current picture: it is fetched back and opened in the same dialog as a new one.
+  const adjust = async () => {
+    if (!profile.image) return;
+    setBusy('load');
+    try {
+      const response = await request(profile.image);
+      if (!response.ok) throw new AvatarError("Your picture couldn't be loaded. Try again.");
+      const blob = await response.blob();
+      setPicked(new File([blob], 'avatar', { type: blob.type }));
     } catch (e) {
       toast.error(e instanceof AvatarError ? e.message : problem(e), { id: 'avatar' });
     } finally {
@@ -121,7 +137,7 @@ function IdentityCard({ profile, refresh }: CardProps) {
             disabled={busy !== null}
             aria-busy={busy !== null || undefined}
             {...menu.triggerProps}
-            {...(menu.open ? {} : tipProps(profile.image ? 'Change or remove your picture' : 'Upload a picture', 'bottom', 'start'))}
+            {...(menu.open ? {} : tipProps(profile.image ? 'Change, crop or remove your picture' : 'Upload a picture', 'bottom', 'start'))}
           >
             {busy ? <span className={own.spinner} aria-hidden="true" /> : <Icon name="edit" size={16} />}
           </button>
@@ -140,6 +156,21 @@ function IdentityCard({ profile, refresh }: CardProps) {
                 <Icon name="image" size={18} />
                 <span>{profile.image ? 'Change picture' : 'Upload a picture'}</span>
               </button>
+              {profile.image && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  tabIndex={-1}
+                  className={menuStyles.item}
+                  onClick={() => {
+                    menu.close();
+                    void adjust();
+                  }}
+                >
+                  <Icon name="crop" size={18} />
+                  <span>Adjust crop</span>
+                </button>
+              )}
               {profile.image && (
                 <button
                   type="button"
