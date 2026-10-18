@@ -212,11 +212,12 @@ function DeckCard() {
     <section className={styles.card} aria-labelledby="deck-title">
       <header className={styles.header}>
         <h2 id="deck-title" className={own.title}>
-          Card deck
+          Cards and board
         </h2>
         <p>
-          The design of the cards in your hand. Only you see it, and you can change it any time, also from the game menu
-          in the middle of a game. It is saved to your account, so it follows you to every device.
+          The design of the cards in your hand and how the board looks. Only you see them, and you can change them any
+          time, also from the game menu in the middle of a game. They are saved to your account, so they follow you to
+          every device.
         </p>
       </header>
       <DeckPicker />
