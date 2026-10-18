@@ -1,6 +1,6 @@
 import { useId, useState, type CSSProperties } from 'react';
 import { BOARD_STYLES, DECKS, useBoardStyle, useDeck, type Deck } from '../../decks/decks';
-import { parseCard, type CardName } from '../../engine/cards';
+import { cardNumber, parseCard, type CardName } from '../../engine/cards';
 import { DrawnCard } from './DrawnCard';
 import { NumberedCard } from './NumberedCard';
 import { SuitIcon } from './SuitIcon';
@@ -94,8 +94,14 @@ export function BoardStylePicker() {
               const { rank, suit } = parseCard(card);
               return (
                 <span key={card} className={styles.cell} data-suit={suit}>
-                  <span>{rank}</span>
-                  <SuitIcon suit={suit} className={styles.cellSuit} />
+                  {deck.notation === 'numbers' ? (
+                    <span>{cardNumber(card)}</span>
+                  ) : (
+                    <>
+                      <span>{rank}</span>
+                      <SuitIcon suit={suit} className={styles.cellSuit} />
+                    </>
+                  )}
                 </span>
               );
             })}

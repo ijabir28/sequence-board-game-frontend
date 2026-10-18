@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { BOARD_SIZE, posKey, type Pos } from '../../engine/board';
 import { useBoardStyle, useDeck } from '../../decks/decks';
-import { BLANK, cardLabel, parseCard, type BoardCardName } from '../../engine/cards';
+import { BLANK, cardLabel, cardNumber, parseCard, type BoardCardName, type CardNotation } from '../../engine/cards';
 import type { Sequence } from '../../engine/sequences';
 import type { TeamIndex } from '../../engine/setup';
 import { TEAM_STYLES, teamChipLabel, teamName } from '../../game/teams';
@@ -139,6 +139,7 @@ export function Board({
                   last={lastMove !== null && lastMove.row === cell.row && lastMove.column === cell.column}
                   hinted={hint !== null && hint.row === cell.row && hint.column === cell.column}
                   drafted={draft !== null && draft.row === cell.row && draft.column === cell.column}
+                  notation={deck.notation}
                   onFocus={() => setFocus({ row: cell.row, column: cell.column })}
                   onClick={() => !disabled && onActivate({ row: cell.row, column: cell.column })}
                 />
@@ -169,13 +170,14 @@ interface CellProps {
   last: boolean;
   hinted: boolean;
   drafted: boolean;
+  notation: CardNotation;
   onFocus: () => void;
   onClick: () => void;
   cellRef: (el: HTMLDivElement | null) => void;
 }
 
-function cellAriaLabel(cell: CellView, target: boolean, removing: boolean, hinted: boolean, drafted: boolean): string {
-  const parts = [cellLabelText(cell.card)];
+function cellAriaLabel(cell: CellView, target: boolean, removing: boolean, hinted: boolean, drafted: boolean, notation: CardNotation): string {
+  const parts = [cellLabelText(cell.card, notation)];
   parts.push(cell.chip === null ? (cell.card === BLANK ? 'counts for every team' : 'empty') : teamChipLabel(cell.chip));
   if (cell.locked) parts.push('in a completed sequence');
   if (target) parts.push(removing ? 'can be removed' : 'playable');
@@ -185,9 +187,9 @@ function cellAriaLabel(cell: CellView, target: boolean, removing: boolean, hinte
 }
 
 /** What hovering (or long-pressing) a cell says: the card, who holds it, and what a click would do. */
-function cellTip(cell: CellView, target: boolean, removing: boolean, hinted: boolean, drafted: boolean): string {
+function cellTip(cell: CellView, target: boolean, removing: boolean, hinted: boolean, drafted: boolean, notation: CardNotation): string {
   const corner = cell.card === BLANK;
-  const name = corner ? 'Free corner' : cardLabel(cell.card);
+  const name = corner ? 'Free corner' : cardLabel(cell.card, notation);
   let state: string;
   if (cell.chip !== null) state = `${teamName(cell.chip)} chip${cell.locked ? ', locked in a sequence' : ''}`;
   else state = corner ? 'counts for every team' : 'empty';
@@ -203,11 +205,11 @@ function cellTip(cell: CellView, target: boolean, removing: boolean, hinted: boo
   return [`${name}: ${state}.`, action].filter(Boolean).join(' ');
 }
 
-function cellLabelText(card: BoardCardName): string {
-  return card === BLANK ? 'Corner' : cardLabel(card);
+function cellLabelText(card: BoardCardName, notation: CardNotation): string {
+  return card === BLANK ? 'Corner' : cardLabel(card, notation);
 }
 
-function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, drafted, onFocus, onClick, cellRef }: CellProps) {
+function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, drafted, notation, onFocus, onClick, cellRef }: CellProps) {
   const corner = cell.card === BLANK;
   const parsed = corner ? null : parseCard(cell.card as Exclude<BoardCardName, 'Blank'>);
   return (
@@ -215,10 +217,10 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, drafted,
       role="gridcell"
       ref={cellRef}
       tabIndex={tabbable ? 0 : -1}
-      aria-label={cellAriaLabel(cell, target, removing, hinted, drafted)}
+      aria-label={cellAriaLabel(cell, target, removing, hinted, drafted, notation)}
       aria-colindex={cell.column + 1}
       data-suit={parsed?.suit}
-      {...tipProps(cellTip(cell, target, removing, hinted, drafted))}
+      {...tipProps(cellTip(cell, target, removing, hinted, drafted, notation))}
       className={[
         styles.cell,
         corner && styles.corner,
@@ -233,7 +235,12 @@ function Cell({ cell, tabbable, target, dimmed, removing, last, hinted, drafted,
       onFocus={onFocus}
       onClick={onClick}
     >
-      {parsed ? (
+      {parsed && notation === 'numbers' ? (
+        // The Numbered deck: the cell's number, in its suit's colour, in place of rank and suit.
+        <span className={[styles.rank, styles.number].join(' ')} aria-hidden="true">
+          {cardNumber(cell.card as Exclude<BoardCardName, 'Blank'>)}
+        </span>
+      ) : parsed ? (
         <>
           <span className={styles.rank} aria-hidden="true">
             {parsed.rank}

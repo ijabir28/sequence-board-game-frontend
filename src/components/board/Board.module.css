@@ -162,6 +162,11 @@
   letter-spacing: -0.03em;
 }
 
+/* The Numbered deck: just the number, a little larger since it stands alone. */
+.number {
+  font-size: max(10px, 3cqw);
+}
+
 /* The suit sits in the bottom-right corner, mirroring the rank, so a chip in the middle never hides it. */
 .suit {
   position: absolute;
