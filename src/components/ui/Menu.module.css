@@ -16,6 +16,12 @@
   animation: menu-in 120ms var(--ease-out);
 }
 
+/* Left-aligned instead, for a button near the left edge. */
+.start {
+  right: auto;
+  left: 0;
+}
+
 @keyframes menu-in {
   from {
     opacity: 0;

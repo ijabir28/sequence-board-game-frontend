@@ -20,6 +20,10 @@ import { BackToDashboard } from '../components/BackToDashboard';
 import { BoardStylePicker, DeckPicker } from '../components/cards/DeckPicker';
 import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
+import menuStyles from '../components/ui/Menu.module.css';
+import { tipProps } from '../components/ui/TooltipLayer';
+import { useMenu } from '../components/ui/useMenu';
 import { AVATAR_ACCEPT, AvatarError, makeAvatar } from '../profile/avatarImage';
 import { describeDevice } from '../profile/describeDevice';
 import { validateNewPassword } from './ResetPassword';
@@ -66,6 +70,7 @@ function IdentityCard({ profile, refresh }: CardProps) {
   const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<'upload' | 'remove' | null>(null);
+  const menu = useMenu();
   const { played, won, playing } = profile.stats;
 
   const upload = async (file: File | undefined) => {
@@ -100,7 +105,61 @@ function IdentityCard({ profile, refresh }: CardProps) {
   return (
     <section className={[styles.card, own.identity].join(' ')} aria-labelledby="profile-title">
       <div className={own.who}>
-        <Avatar name={profile.name} handle={profile.handle} image={profile.image} size={96} />
+        <div ref={menu.rootRef} className={own.avatarBox}>
+          <Avatar name={profile.name} handle={profile.handle} image={profile.image} size={96} />
+          <button
+            type="button"
+            className={own.editAvatar}
+            aria-label="Edit picture"
+            disabled={busy !== null}
+            aria-busy={busy !== null || undefined}
+            {...menu.triggerProps}
+            {...(menu.open ? {} : tipProps(profile.image ? 'Change or remove your picture' : 'Upload a picture', 'bottom', 'start'))}
+          >
+            {busy ? <span className={own.spinner} aria-hidden="true" /> : <Icon name="edit" size={16} />}
+          </button>
+          {menu.open && (
+            <div {...menu.menuProps} aria-label="Picture" className={[menuStyles.menu, menuStyles.start].join(' ')}>
+              <button
+                type="button"
+                role="menuitem"
+                tabIndex={-1}
+                className={menuStyles.item}
+                onClick={() => {
+                  menu.close();
+                  input.current?.click();
+                }}
+              >
+                <Icon name="image" size={18} />
+                <span>{profile.image ? 'Change picture' : 'Upload a picture'}</span>
+              </button>
+              {profile.image && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  tabIndex={-1}
+                  className={[menuStyles.item, menuStyles.danger].join(' ')}
+                  onClick={() => {
+                    menu.close();
+                    void remove();
+                  }}
+                >
+                  <Icon name="trash" size={18} />
+                  <span>Remove picture</span>
+                </button>
+              )}
+            </div>
+          )}
+          <input
+            ref={input}
+            type="file"
+            accept={AVATAR_ACCEPT}
+            className={own.fileInput}
+            onChange={(e) => void upload(e.target.files?.[0])}
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+        </div>
         <div className={own.names}>
           <h1 id="profile-title">{profile.name}</h1>
           <p className={own.handle}>@{profile.handle}</p>
@@ -125,31 +184,6 @@ function IdentityCard({ profile, refresh }: CardProps) {
           <dd>{playing}</dd>
         </div>
       </dl>
-      <div className={own.actions}>
-        <input
-          ref={input}
-          type="file"
-          accept={AVATAR_ACCEPT}
-          className={own.fileInput}
-          onChange={(e) => void upload(e.target.files?.[0])}
-          tabIndex={-1}
-          aria-hidden="true"
-        />
-        <Button
-          variant="primary"
-          busy={busy === 'upload'}
-          disabled={busy !== null}
-          onClick={() => input.current?.click()}
-          tip="Choose a picture. Its centre is cropped to a square and shrunk before it is uploaded."
-        >
-          {profile.image ? 'Change picture' : 'Upload a picture'}
-        </Button>
-        {profile.image && (
-          <Button busy={busy === 'remove'} disabled={busy !== null} onClick={remove} tip="Go back to your initials">
-            Remove picture
-          </Button>
-        )}
-      </div>
     </section>
   );
 }

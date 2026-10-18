@@ -55,6 +55,59 @@
   min-width: 0;
 }
 
+/* The picture, with a small edit button on its top-right corner that opens Change / Remove. */
+.avatarBox {
+  position: relative;
+  flex: none;
+}
+
+.editAvatar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--surface-container);
+  border-radius: 50%;
+  background: var(--surface-highest);
+  color: var(--on-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+/* A bigger touch target than it looks. */
+.editAvatar::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.editAvatar:hover:not(:disabled),
+.editAvatar[aria-expanded='true'] {
+  background: var(--surface-bright);
+  color: var(--primary);
+}
+
+.editAvatar:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: avatar-spin 700ms linear infinite;
+}
+
+@keyframes avatar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .names {
   display: flex;
   flex-direction: column;
