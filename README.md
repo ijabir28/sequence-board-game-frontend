@@ -165,12 +165,12 @@ invariants.
 ## Design notes
 
 - **Choose your card deck.** Each player picks the design of the cards in their hand (`src/decks/decks.ts`) from the
-  Card deck section of their profile, or at any time in a game from the cards button in the top bar (the menu drawer on
+  Cards and board section of their profile, or at any time in a game from the cards button in the top bar (the menu drawer on
   phones); the hand changes at once. The choice is only seen by you. It is saved to a signed-in player's account
-  (`PUT /user/card-deck`, `src/decks/useAccountDeck.ts`), so it follows them to every device: signing in shows the
+  (`PUT /user/card-deck`, `src/decks/useAccountChoice.ts`), so it follows them to every device: signing in shows the
   account's deck, and an account that never chose one takes the deck already picked on the device. Signed out it is
-  remembered on the device, so in a hot-seat game everyone shares it. The board style (below) stays per device. There
-  are five decks:
+  remembered on the device, so in a hot-seat game everyone shares it. The board style (below) is kept the same way.
+  There are five decks:
   - **Original**, the backend's deck, served from `/images/card_deck/` (the default).
   - **Classic**, Byron Knoll's public-domain cards (via MattCain/svg-playing-cards).
   - **Jumbo index** and **Four colour** (black spades, red hearts, blue diamonds, green clubs), with big corner letters
@@ -184,8 +184,8 @@ invariants.
   corner rank and suit, but draw the suits with the same vector pips as the Minimal deck (text suit characters turn
   into emoji on some phones) in your deck's colours, so a blue diamond in your hand is a blue diamond on the board.
   Under the deck you also choose the **board cells**: **Dark tiles** (the default) or **Card faces**, light cells in
-  your deck's face colour with dark ink, like a printed Sequence board. The game's dialog for both is called Cards and
-  board.
+  your deck's face colour with dark ink, like a printed Sequence board. Like the deck, it is saved to a signed-in
+  player's account (`PUT /user/board-style`). The game's dialog for both is called Cards and board.
 
 - **The game screen never scrolls.** It is exactly one viewport tall. The board area is a CSS size container, and the
   board sizes itself to whichever is smaller, the area's width or its height, so all 100 cells are always visible.

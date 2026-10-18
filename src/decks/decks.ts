@@ -5,7 +5,7 @@ import { cardImageUrl, type CardName } from '../engine/cards';
  * The designs a player can pick for the cards in their hand. Each deck is a folder of SVGs in public/decks/<id>/
  * named after the cards (see public/decks/README.md for where each one comes from), except the original deck, which
  * the backend serves, and the drawn deck, which has no images at all.
- * The choice is remembered on this device, and on the account of a signed-in player (useAccountDeck.ts). It can be
+ * The choice is remembered on this device, and on the account of a signed-in player (useAccountChoice.ts). It can be
  * changed at any time, also in the middle of a game.
  */
 
@@ -156,7 +156,7 @@ export function useDeck(): [Deck, (id: DeckId) => void] {
 
 /**
  * How the board's cells look: dark tiles on the felt (the default), or light card faces in the chosen deck's colours,
- * like a printed Sequence board.
+ * like a printed Sequence board. Remembered like the deck: on this device, and on a signed-in player's account.
  */
 export type BoardStyle = 'dark' | 'cards';
 
@@ -165,9 +165,18 @@ export const BOARD_STYLES: readonly { id: BoardStyle; name: string; description:
   { id: 'cards', name: 'Card faces', description: "Light cells like little cards, in your deck's colours." },
 ];
 
-const boardChoice = preference<BoardStyle>('sequence:board-style', (saved) => (saved === 'cards' ? 'cards' : 'dark'));
+export const DEFAULT_BOARD_STYLE: BoardStyle = 'dark';
 
+export function isBoardStyle(id: string | null | undefined): id is BoardStyle {
+  return BOARD_STYLES.some((style) => style.id === id);
+}
+
+const boardChoice = preference<BoardStyle>('sequence:board-style', (saved) => (isBoardStyle(saved) ? saved : DEFAULT_BOARD_STYLE));
+
+export const currentBoardStyle = boardChoice.get;
 export const setBoardStyle = boardChoice.set;
+/** Calls `listener` whenever the board style changes; returns a function that stops it. */
+export const onBoardStyleChange = boardChoice.subscribe;
 
 export function useBoardStyle(): [BoardStyle, (style: BoardStyle) => void] {
   return [boardChoice.use(), setBoardStyle];
