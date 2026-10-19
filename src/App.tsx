@@ -15,6 +15,7 @@ import { ServerGamePage } from './screens/ServerGamePage';
 import { SignIn } from './screens/SignIn';
 import { SignUp } from './screens/SignUp';
 import { TrainingPage } from './tutorial/TrainingPage';
+import { UpdateNotice } from './pwa/UpdateNotice';
 
 // SPA routes must not start with a proxied backend prefix (/api, /user, /room, /game, /board, /images).
 export function App() {
@@ -75,6 +76,7 @@ export function App() {
         </Routes>
       </AuthProvider>
       <TooltipLayer />
+      <UpdateNotice />
     </ToastProvider>
   );
 }

@@ -3,9 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { installCopyGuard } from './copyGuard';
+import { registerServiceWorker } from './pwa/serviceWorker';
 import './styles/global.css';
 
 installCopyGuard();
+registerServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
