@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_BOARD_STYLE, DEFAULT_DECK } from './decks';
 import { BOARD_STYLE_CHOICE, CARD_DECK_CHOICE, reconcileChoice } from './useAccountChoice';
 
 describe('reconcileChoice', () => {
   it("shows the account's choice on this device", () => {
-    expect(reconcileChoice('classic', 'original', CARD_DECK_CHOICE)).toEqual({ apply: 'classic' });
-    expect(reconcileChoice('cards', 'dark', BOARD_STYLE_CHOICE)).toEqual({ apply: 'cards' });
+    expect(reconcileChoice('jumbo', DEFAULT_DECK, CARD_DECK_CHOICE)).toEqual({ apply: 'jumbo' });
+    expect(reconcileChoice('cards', DEFAULT_BOARD_STYLE, BOARD_STYLE_CHOICE)).toEqual({ apply: 'cards' });
   });
 
   it('does nothing when both already agree', () => {
@@ -17,8 +18,8 @@ describe('reconcileChoice', () => {
   });
 
   it('leaves an account that never chose alone while this device has the default', () => {
-    expect(reconcileChoice(null, 'original', CARD_DECK_CHOICE)).toBeNull();
-    expect(reconcileChoice(null, 'dark', BOARD_STYLE_CHOICE)).toBeNull();
+    expect(reconcileChoice(null, DEFAULT_DECK, CARD_DECK_CHOICE)).toBeNull();
+    expect(reconcileChoice(null, DEFAULT_BOARD_STYLE, BOARD_STYLE_CHOICE)).toBeNull();
   });
 
   it('ignores an option this app no longer has, keeping the device its own', () => {
