@@ -1,5 +1,6 @@
 import type { FormEvent, ReactNode } from 'react';
 import { Chip } from '../components/Chip';
+import { PoweredBy } from '../components/PoweredBy';
 import styles from './Forms.module.css';
 import own from './SignIn.module.css';
 
@@ -19,6 +20,7 @@ export function AuthShell({ onSubmit, children }: { onSubmit?: (event: FormEvent
       ) : (
         <div className={styles.card}>{children}</div>
       )}
+      <PoweredBy />
     </div>
   );
 }

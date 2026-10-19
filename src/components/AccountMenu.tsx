@@ -4,6 +4,7 @@ import type { Profile } from '../api/user';
 import { useAuth } from '../auth/AuthContext';
 import { useMediaQuery } from '../game/useMediaQuery';
 import { Avatar } from './Avatar';
+import { PoweredBy } from './PoweredBy';
 import { Drawer } from './ui/Drawer';
 import { Icon, type IconName } from './ui/Icon';
 import { tipProps } from './ui/TooltipLayer';
@@ -100,6 +101,7 @@ function AccountDropdown({ profile }: { profile: Profile }) {
               </button>
             );
           })}
+          <PoweredBy className={styles.menuCredit} />
         </div>
       )}
     </div>
@@ -171,6 +173,7 @@ function AccountDrawer({ profile }: { profile: Profile }) {
             </button>
           );
         })}
+        <PoweredBy className={styles.drawerCredit} />
       </Drawer>
     </>
   );

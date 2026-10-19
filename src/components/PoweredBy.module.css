@@ -1,0 +1,14 @@
+/* Sits at the foot of whatever column holds it; muted and small, so it never competes with the page. */
+.credit {
+  margin-top: auto;
+  padding-top: var(--space-6);
+  text-align: center;
+}
+
+.credit small {
+  color: var(--on-surface-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  opacity: 0.75;
+}

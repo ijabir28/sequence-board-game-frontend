@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { HAND_SIZE_BY_PLAYER_COUNT, playersPerTeamOptions, seatTeams, sequencesToWin, type TeamCount } from '../engine/setup';
 import { DEFAULT_ROOM_SETTINGS, type RoomSettings } from '../api/rooms';
 import { Chip } from '../components/Chip';
+import { PoweredBy } from '../components/PoweredBy';
 import { RoomOptions } from '../components/RoomOptions';
 import { Button } from '../components/ui/Button';
 import { tipProps } from '../components/ui/TooltipLayer';
@@ -120,6 +121,7 @@ export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
           </Button>
         </div>
       </form>
+      <PoweredBy />
     </div>
   );
 }
