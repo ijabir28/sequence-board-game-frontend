@@ -44,7 +44,15 @@ function isIos(): boolean {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
-export type InstallOption = { kind: 'prompt'; install: () => Promise<void> } | { kind: 'ios' } | null;
+/** Where the Add to Home Screen item is in this iOS browser. Chrome and Edge have had it since iOS 16.4. */
+function iosSteps(): string {
+  const ua = navigator.userAgent;
+  if (/CriOS|EdgiOS/.test(ua)) return 'Tap the Share button in the address bar, then Add to Home Screen.';
+  if (/FxiOS/.test(ua)) return 'Open the menu, tap Share, then Add to Home Screen.';
+  return 'Tap Share at the bottom of Safari, then Add to Home Screen.';
+}
+
+export type InstallOption = { kind: 'prompt'; install: () => Promise<void> } | { kind: 'ios'; steps: string } | null;
 
 /** How this browser can install the app, or null if it can't or it already is installed. */
 export function useInstallOption(): InstallOption {
@@ -62,5 +70,5 @@ export function useInstallOption(): InstallOption {
       },
     };
   }
-  return isIos() ? { kind: 'ios' } : null;
+  return isIos() ? { kind: 'ios', steps: iosSteps() } : null;
 }

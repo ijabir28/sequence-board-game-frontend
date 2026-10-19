@@ -33,7 +33,7 @@ function useItems(): Item[] {
           onSelect:
             install.kind === 'prompt'
               ? () => void install.install()
-              : () => toast.info('In Safari, tap Share, then Add to Home Screen.', { id: 'install-ios', durationMs: 10000 }),
+              : () => toast.info(install.steps, { id: 'install-ios', durationMs: 10000 }),
         },
       ];
   return [
