@@ -40,6 +40,15 @@ function serviceWorker(): Plugin {
 
 export default defineConfig({
   plugins: [react(), serviceWorker()],
+  build: {
+    rollupOptions: {
+      output: {
+        // Libraries change far less often than the app, so they get their own file: a deploy that only touches the
+        // app leaves this one's name, and the copy already in browsers' caches, as they were.
+        manualChunks: { vendor: ['react', 'react-dom', 'react-router-dom', 'socket.io-client'] },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {
