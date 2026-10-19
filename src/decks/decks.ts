@@ -106,7 +106,7 @@ export const DECKS: readonly Deck[] = [
   },
 ];
 
-export const DEFAULT_DECK: DeckId = 'original';
+export const DEFAULT_DECK: DeckId = 'classic';
 
 export function deckById(id: string | null | undefined): Deck {
   return DECKS.find((deck) => deck.id === id) ?? DECKS.find((deck) => deck.id === DEFAULT_DECK)!;
