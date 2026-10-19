@@ -14,15 +14,8 @@ export interface RoomTeam {
   seats: (Seat | null)[];
 }
 
-/**
- * `training` gives the player whose turn it is hints; `standard` games never get any. Tables are always standard now;
- * only the practice match in the interactive training still hints.
- */
-export type GameMode = 'standard' | 'training';
-
 /** Options the table's host picks. They can change until the game starts. */
 export interface RoomSettings {
-  mode: GameMode;
   /** Players can read back every move (the move log). */
   history: boolean;
   /** Legal cells light up when a card is picked. */
@@ -57,7 +50,6 @@ export const TURN_SECONDS_MAX = 600;
  * themselves and may exchange as many as they like. Matches the backend.
  */
 export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
-  mode: 'standard',
   history: false,
   highlights: false,
   autoDrawDead: false,
@@ -71,7 +63,6 @@ export function isValidTurnSeconds(seconds: number): boolean {
 }
 
 export interface RawRoomSettings {
-  mode?: string;
   history?: boolean;
   highlights?: boolean;
   auto_draw_dead?: boolean;
@@ -86,8 +77,6 @@ export interface RawRoomSettings {
  */
 export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings {
   return {
-    // Training tables are retired: every table plays as a standard one, whatever an older room still says.
-    mode: 'standard',
     history: raw?.history ?? DEFAULT_ROOM_SETTINGS.history,
     highlights: raw?.highlights ?? DEFAULT_ROOM_SETTINGS.highlights,
     autoDrawDead: raw?.auto_draw_dead ?? DEFAULT_ROOM_SETTINGS.autoDrawDead,
@@ -100,7 +89,6 @@ export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings
 
 function rawSettings(settings: Partial<RoomSettings>): RawRoomSettings {
   return {
-    mode: settings.mode,
     history: settings.history,
     highlights: settings.highlights,
     auto_draw_dead: settings.autoDrawDead,

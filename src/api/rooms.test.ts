@@ -38,7 +38,6 @@ describe('sanitizeRoom', () => {
     expect(room.name).toBe('Friday');
     // A backend without the dead card settings marks dead cards and allows one exchange per turn.
     expect(room.settings).toEqual({
-      mode: 'standard',
       history: false,
       highlights: true,
       autoDrawDead: true,
@@ -48,14 +47,13 @@ describe('sanitizeRoom', () => {
     });
     const old = sanitizeRoom('42', raw);
     expect(old.name).toBe('Table 42');
-    expect(old.settings).toMatchObject({ mode: 'standard', history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 });
+    expect(old.settings).toMatchObject({ history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 });
     const current = sanitizeRoom('x', { ...raw, settings: { dead_cards: 'manual', exchanges_per_turn: null } }).settings;
     expect(current).toMatchObject({ deadCards: 'manual', exchangesPerTurn: null });
     expect(sanitizeRoom('x', { ...raw, settings: { exchanges_per_turn: 4 } }).settings.exchangesPerTurn).toBe(4);
     expect(sanitizeRoom('x', { ...raw, settings: { turn_seconds: 45 } }).settings.turnSeconds).toBe(45);
-    // Training tables are retired: an older room still in training plays as a standard one.
-    expect(sanitizeRoom('x', { ...raw, settings: { mode: 'training' } }).settings.mode).toBe('standard');
-    expect(sanitizeRoom('x', { ...raw, settings: { mode: 'chaos' } }).settings.mode).toBe('standard');
+    // An older backend's retired game mode is dropped.
+    expect(sanitizeRoom('x', { ...raw, settings: { mode: 'training' } as never }).settings).not.toHaveProperty('mode');
   });
 });
 

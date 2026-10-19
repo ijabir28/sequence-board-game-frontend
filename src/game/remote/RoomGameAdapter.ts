@@ -264,12 +264,12 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
   const teamIndexes = Array.from({ length: server.team_count }, (_, i) => i as TeamIndex);
   const hand = server.hand.filter(isCardName) as CardName[];
   const chips = server.board.map((row) => row.map((cell) => cell.team));
-  const { mode, highlights, history, deadCards } = sanitizeSettings(server.settings);
+  const { highlights, history, deadCards } = sanitizeSettings(server.settings);
   return {
     status: 'ready',
     title: server.name,
-    settings: { mode, highlights, history, deadCards },
-    // Training tables are retired, so tables never hint, even if an older server still sends one.
+    settings: { mode: 'standard', highlights, history, deadCards },
+    // Tables never hint.
     hint: null,
     turnStartedAt: server.winner === null && server.turn_started_at ? Date.parse(server.turn_started_at) + clockSkew : null,
     turnDeadline: server.winner === null && server.turn_deadline ? Date.parse(server.turn_deadline) + clockSkew : null,

@@ -4,8 +4,8 @@ import { canExchange, isDeadCard, legalTargets, type GameState } from './game';
 import { countsFor, DIRECTIONS, findNewSequences, type ChipGrid } from './sequences';
 import type { TeamIndex } from './setup';
 
-// Hints for training games: one suggested move for the current player, and why. Matches the backend's
-// entity/hints.js, so hot-seat training games hint the same way tables do.
+// Hints: one suggested move for the current player, and why. The interactive training's practice match offers them,
+// and its Bot plays them. (The backend's copy went with training tables.)
 
 export type HintReason =
   | { kind: 'sequence' }

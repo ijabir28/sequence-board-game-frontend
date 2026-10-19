@@ -217,9 +217,9 @@ describe('RoomGameAdapter', () => {
     manual.dispose();
   });
 
-  it('never shows a hint, even from an older training table', async () => {
-    const hint = { type: 'play' as const, hand_index: 0, target: { row: 0, column: 1 }, reason: { kind: 'extend' as const, length: 2 } };
-    stubFetch(() => ({ status: 200, body: serverView({ settings: { mode: 'training' }, hint }) }));
+  it('plays every table as standard, without hints, even from an older training table', async () => {
+    const hint = { type: 'play', hand_index: 0, target: { row: 0, column: 1 }, reason: { kind: 'extend', length: 2 } };
+    stubFetch(() => ({ status: 200, body: { ...serverView({ settings: { mode: 'training' } as never }), hint } }));
     const a = adapter();
     await a.refresh();
     expect(a.getState().settings.mode).toBe('standard');

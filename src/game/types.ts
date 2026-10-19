@@ -1,6 +1,5 @@
 import type { Pos } from '../engine/board';
 import type { BoardCardName, CardName } from '../engine/cards';
-import type { GameMode } from '../api/rooms';
 import type { DeadCardMode, LogEntry } from '../engine/game';
 import type { Hint } from '../engine/hints';
 import type { Sequence } from '../engine/sequences';
@@ -122,6 +121,12 @@ export interface RoundsView {
   /** The viewer is the host. */
   isHost: boolean;
 }
+
+/**
+ * `training` gives the player whose turn it is hints: only the practice match of the interactive training plays it.
+ * Tables and hot-seat games are always `standard`.
+ */
+export type GameMode = 'standard' | 'training';
 
 /** How the game is shown, chosen with the table (or the hot-seat setup). */
 export interface PlaySettings {
