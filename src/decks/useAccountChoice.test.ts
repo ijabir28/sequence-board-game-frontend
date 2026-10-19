@@ -5,7 +5,7 @@ import { BOARD_STYLE_CHOICE, CARD_DECK_CHOICE, reconcileChoice } from './useAcco
 describe('reconcileChoice', () => {
   it("shows the account's choice on this device", () => {
     expect(reconcileChoice('jumbo', DEFAULT_DECK, CARD_DECK_CHOICE)).toEqual({ apply: 'jumbo' });
-    expect(reconcileChoice('cards', DEFAULT_BOARD_STYLE, BOARD_STYLE_CHOICE)).toEqual({ apply: 'cards' });
+    expect(reconcileChoice('dark', DEFAULT_BOARD_STYLE, BOARD_STYLE_CHOICE)).toEqual({ apply: 'dark' });
   });
 
   it('does nothing when both already agree', () => {
@@ -14,7 +14,7 @@ describe('reconcileChoice', () => {
 
   it("uploads this device's choice to an account that never chose", () => {
     expect(reconcileChoice(null, 'jumbo', CARD_DECK_CHOICE)).toEqual({ upload: 'jumbo' });
-    expect(reconcileChoice(null, 'cards', BOARD_STYLE_CHOICE)).toEqual({ upload: 'cards' });
+    expect(reconcileChoice(null, 'dark', BOARD_STYLE_CHOICE)).toEqual({ upload: 'dark' });
   });
 
   it('leaves an account that never chose alone while this device has the default', () => {
@@ -24,6 +24,6 @@ describe('reconcileChoice', () => {
 
   it('ignores an option this app no longer has, keeping the device its own', () => {
     expect(reconcileChoice('retired-deck', 'jumbo', CARD_DECK_CHOICE)).toBeNull();
-    expect(reconcileChoice('neon', 'cards', BOARD_STYLE_CHOICE)).toBeNull();
+    expect(reconcileChoice('neon', 'dark', BOARD_STYLE_CHOICE)).toBeNull();
   });
 });
