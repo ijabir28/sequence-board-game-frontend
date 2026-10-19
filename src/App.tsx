@@ -8,6 +8,7 @@ import { Lobby } from './screens/Lobby';
 import { RoomGamePage } from './screens/RoomGamePage';
 import { RoomPage } from './screens/RoomPage';
 import { EmailVerified } from './screens/EmailVerified';
+import { HowToPlay } from './screens/HowToPlay';
 import { ForgotPassword } from './screens/ForgotPassword';
 import { ResetPassword } from './screens/ResetPassword';
 import { ServerGamePage } from './screens/ServerGamePage';
@@ -66,6 +67,7 @@ export function App() {
               </RequireAuth>
             }
           />
+          <Route path="/how-to-play" element={<HowToPlay />} />
           <Route path="/local" element={<LocalGamePage />} />
           <Route path="*" element={<Home />} />
         </Routes>

@@ -27,6 +27,13 @@ function useItems(): Item[] {
       to: '/profile',
     },
     {
+      key: 'howto',
+      icon: 'book',
+      label: 'How to play',
+      tip: 'The rules, step by step: sequences, jacks, dead cards and winning',
+      to: '/how-to-play',
+    },
+    {
       key: 'signout',
       icon: 'exit',
       label: 'Sign out',
@@ -53,7 +60,7 @@ function AccountDropdown({ profile }: { profile: Profile }) {
         type="button"
         className={styles.trigger}
         {...triggerProps}
-        {...(open ? {} : tipProps('Your account: profile settings and sign out', 'bottom', 'end'))}
+        {...(open ? {} : tipProps('Your account: profile settings, how to play and sign out', 'bottom', 'end'))}
       >
         <Avatar name={profile.name} handle={profile.handle} image={profile.image} size={32} />
         <span className={styles.name}>{profile.name}</span>
@@ -122,7 +129,7 @@ function AccountDrawer({ profile }: { profile: Profile }) {
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
-        {...tipProps('Your account: profile settings and sign out', 'bottom', 'end')}
+        {...tipProps('Your account: profile settings, how to play and sign out', 'bottom', 'end')}
       >
         <Avatar name={profile.name} handle={profile.handle} image={profile.image} size={32} />
       </button>
