@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { Profile } from '../api/user';
+import { useInstallOption } from '../pwa/install';
 import { useAuth } from '../auth/AuthContext';
 import { useMediaQuery } from '../game/useMediaQuery';
 import { Avatar } from './Avatar';
 import { PoweredBy } from './PoweredBy';
+import { useToast } from './toast/Toaster';
 import { Drawer } from './ui/Drawer';
 import { Icon, type IconName } from './ui/Icon';
 import { tipProps } from './ui/TooltipLayer';
@@ -18,6 +20,22 @@ type Item = { key: string; icon: IconName; label: string; tip: string } & ({ to:
 function useItems(): Item[] {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
+  const install = useInstallOption();
+  const installItem: Item[] = !install
+    ? []
+    : [
+        {
+          key: 'install',
+          icon: 'download',
+          label: 'Install app',
+          tip: 'Add Sequence to your home screen or desktop, to open in its own window and play hot-seat offline',
+          onSelect:
+            install.kind === 'prompt'
+              ? () => void install.install()
+              : () => toast.info(install.steps, { id: 'install-ios', durationMs: 10000 }),
+        },
+      ];
   return [
     {
       key: 'profile',
@@ -33,6 +51,7 @@ function useItems(): Item[] {
       tip: 'The rules, step by step: sequences, jacks, dead cards and winning',
       to: '/how-to-play',
     },
+    ...installItem,
     {
       key: 'signout',
       icon: 'exit',
