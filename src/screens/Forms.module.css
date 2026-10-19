@@ -81,6 +81,12 @@
   border-color: var(--primary);
 }
 
+/* A table code, set like the codes shown on tables so what's typed reads the same as what was shared. */
+.code {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}
+
 .input[aria-invalid='true'] {
   border-color: var(--error);
 }
