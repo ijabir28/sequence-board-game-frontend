@@ -14,6 +14,7 @@ import { ResetPassword } from './screens/ResetPassword';
 import { ServerGamePage } from './screens/ServerGamePage';
 import { SignIn } from './screens/SignIn';
 import { SignUp } from './screens/SignUp';
+import { TrainingPage } from './tutorial/TrainingPage';
 
 // SPA routes must not start with a proxied backend prefix (/api, /user, /room, /game, /board, /images).
 export function App() {
@@ -68,6 +69,7 @@ export function App() {
             }
           />
           <Route path="/how-to-play" element={<HowToPlay />} />
+          <Route path="/how-to-play/training" element={<TrainingPage />} />
           <Route path="/local" element={<LocalGamePage />} />
           <Route path="*" element={<Home />} />
         </Routes>

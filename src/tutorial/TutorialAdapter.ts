@@ -11,7 +11,7 @@ export const BOT_DELAY_MS = 900;
 /**
  * One training lesson as a game: You against the Bot on this device. Moves go through the real rules engine, then
  * through the lesson's check, which may turn down a legal move that misses the task. The Bot plays the move the
- * training hints would suggest.
+ * training hints would suggest. Once the task is done, the position plays on as a free game against the Bot.
  */
 export class TutorialAdapter implements GameAdapter {
   readonly mode = 'local' as const;
@@ -22,12 +22,15 @@ export class TutorialAdapter implements GameAdapter {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private turnStartedAt = Date.now();
   private finished = false;
+  private random: () => number;
 
   constructor(
     readonly lesson: BoardLesson,
-    private random: () => number = Math.random,
+    { playerName = 'Player', random = Math.random }: { playerName?: string; random?: () => number } = {},
   ) {
-    this.state = lesson.setup();
+    this.random = random;
+    const state = lesson.setup();
+    this.state = { ...state, players: state.players.map((p, i) => (i === YOU ? { ...p, name: playerName } : p)) };
     this.view = this.toView();
   }
 
@@ -74,7 +77,6 @@ export class TutorialAdapter implements GameAdapter {
   }
 
   private attempt(move: Move): Promise<ActionResult> {
-    if (this.finished) return Promise.resolve({ ok: false, message: 'Lesson done. Go on to the next one, or play it again.' });
     if (this.state.current !== YOU) return Promise.resolve({ ok: false, message: 'Wait for the Bot to finish its turn.' });
     const before = this.state;
     let after: GameState;
@@ -84,9 +86,12 @@ export class TutorialAdapter implements GameAdapter {
       if (error instanceof RuleError) return Promise.resolve({ ok: false, message: error.message });
       throw error;
     }
-    const problem = this.lesson.check?.({ before, move, after }) ?? null;
-    if (problem) return Promise.resolve({ ok: false, message: problem });
-    this.finished = this.lesson.done({ before, move, after });
+    // Once the task is done the position is free play against the Bot.
+    if (!this.finished) {
+      const problem = this.lesson.check?.({ before, move, after }) ?? null;
+      if (problem) return Promise.resolve({ ok: false, message: problem });
+      this.finished = this.lesson.done({ before, move, after });
+    }
     this.update(after);
     return Promise.resolve({ ok: true });
   }
@@ -94,13 +99,13 @@ export class TutorialAdapter implements GameAdapter {
   /** On the Bot's turn, it moves after a pause: as many moves as its turn takes (an exchange keeps the turn). */
   private scheduleBot() {
     clearTimeout(this.timer);
-    if (this.finished || this.state.winner !== null || this.state.current !== BOT || this.listeners.size === 0) return;
+    if (this.state.winner !== null || this.state.current !== BOT || this.listeners.size === 0) return;
     this.timer = setTimeout(() => {
       const hint = suggestMove(this.state);
       const move: Move = !hint || hint.type === 'pass' ? { type: 'pass' } : hint.type === 'exchange' ? { type: 'exchange', handIndex: hint.handIndex } : { type: 'play', handIndex: hint.handIndex, target: hint.target };
       const after = applyMove(this.state, move, this.random);
       // The practice match ends when either side wins.
-      if (after.winner !== null) this.finished = this.lesson.done({ before: this.state, move, after });
+      if (after.winner !== null && !this.finished) this.finished = this.lesson.done({ before: this.state, move, after });
       this.update(after);
     }, BOT_DELAY_MS);
   }

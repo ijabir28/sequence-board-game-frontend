@@ -5,7 +5,7 @@ import { LESSONS, type BoardLesson } from './lessons';
 import { BOT_DELAY_MS, TutorialAdapter } from './TutorialAdapter';
 
 const lesson = (id: string) => LESSONS.find((l) => l.id === id) as BoardLesson;
-const start = (id: string) => new TutorialAdapter(lesson(id), seededRandom(7));
+const start = (id: string) => new TutorialAdapter(lesson(id), { random: seededRandom(7) });
 const card = (adapter: TutorialAdapter, name: CardName) => adapter.getState().hand.findIndex((h) => h.card === name);
 const at = (row: number, column: number) => ({ row, column });
 
@@ -26,7 +26,8 @@ describe('training lessons', () => {
     expect(await a.playCard(card(a, '7-Spade'), at(1, 8))).toEqual({ ok: false, message: 'That cell already has a chip. Pick an empty cell.' });
     expect(await a.playCard(card(a, '7-Spade'), at(9, 3))).toEqual({ ok: true });
     expect(a.done).toBe(true);
-    expect(await a.playCard(0, at(6, 4))).toMatchObject({ ok: false, message: expect.stringContaining('Lesson done') });
+    // Then it is free play: the lesson's check no longer applies, and the Bot answers.
+    expect(a.getState().currentPlayerId).toBe('bot');
   });
 
   it('corner: the corner takes no chip, and 9♦ next to it makes the sequence', async () => {
@@ -91,7 +92,7 @@ describe('the Bot', () => {
   afterEach(() => vi.useRealTimers());
 
   it('moves after a pause in the practice match, then hands the turn back', async () => {
-    const a = new TutorialAdapter(lesson('match'), seededRandom(11));
+    const a = new TutorialAdapter(lesson('match'), { random: seededRandom(11) });
     const unsubscribe = a.subscribe(() => {});
     const view = a.getState();
     const handIndex = view.hand.findIndex((_, i) => a.legalTargets(i).length > 0);

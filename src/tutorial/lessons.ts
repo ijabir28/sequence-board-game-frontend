@@ -15,7 +15,7 @@ import type { PlaySettings } from '../game/types';
 export const YOU = 0;
 export const BOT = 1;
 const PLAYERS: Player[] = [
-  { id: 'you', name: 'You', team: 0 },
+  { id: 'you', name: 'Player', team: 0 },
   { id: 'bot', name: 'Bot', team: 1 },
 ];
 
