@@ -8,16 +8,10 @@ import {
   TURN_SECONDS_MIN,
   TURN_TIMER_PRESETS,
   type DeadCardMode,
-  type GameMode,
   type RoomSettings,
 } from '../api/rooms';
 import { tipProps } from './ui/TooltipLayer';
 import styles from './RoomOptions.module.css';
-
-const MODES: { mode: GameMode; label: string; description: string }[] = [
-  { mode: 'standard', label: 'Standard', description: 'The real game: no hints.' },
-  { mode: 'training', label: 'Training', description: 'On your turn, get a suggested move and why.' },
-];
 
 type Flag = Exclude<keyof RoomSettings, 'mode' | 'turnSeconds' | 'deadCards' | 'exchangesPerTurn'>;
 
@@ -77,33 +71,6 @@ export function RoomOptions({ value, onChange, disabled }: RoomOptionsProps) {
   const id = useId();
   return (
     <div className={styles.group}>
-      <div className={styles.modes} role="radiogroup" aria-label="Game mode">
-        {MODES.map(({ mode, label, description }) => {
-          const active = value.mode === mode;
-          return onChange ? (
-            <label key={mode} className={styles.mode} {...tipProps(`${label} mode: ${description}`, 'top')}>
-              <input
-                type="radio"
-                name={`${id}-mode`}
-                checked={active}
-                disabled={disabled}
-                onChange={() => onChange({ ...value, mode })}
-              />
-              <span className={styles.modeCard}>
-                <span className={styles.label}>{label}</span>
-                <span className={styles.description}>{description}</span>
-              </span>
-            </label>
-          ) : (
-            active && (
-              <p key={mode} className={styles.modeCard} data-active="true">
-                <span className={styles.label}>{label} mode</span>
-                <span className={styles.description}>{description}</span>
-              </p>
-            )
-          );
-        })}
-      </div>
       <TurnTimer id={id} value={value.turnSeconds} onChange={onChange && ((turnSeconds) => onChange({ ...value, turnSeconds }))} disabled={disabled} />
       <DeadCards id={id} value={value} onChange={onChange} disabled={disabled} />
       <ul className={styles.options}>
