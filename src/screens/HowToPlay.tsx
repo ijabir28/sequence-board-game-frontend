@@ -1,12 +1,14 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { BackToDashboard } from '../components/BackToDashboard';
+import backStyles from '../components/BackToDashboard.module.css';
 import { Chip } from '../components/Chip';
 import { PoweredBy } from '../components/PoweredBy';
 import { SuitIcon } from '../components/cards/SuitIcon';
 import { Icon } from '../components/ui/Icon';
+import { tipProps } from '../components/ui/TooltipLayer';
 import { useBoardStyle, useDeck } from '../decks/decks';
 import { BLANK, parseCard, type BoardCardName, type CardName } from '../engine/cards';
 import { HAND_SIZE_BY_PLAYER_COUNT, type TeamIndex } from '../engine/setup';
@@ -281,7 +283,7 @@ const STEPS: Step[] = [
   },
 ];
 
-/** The rules of Sequence, step by step, with a contents list that stays in view on wide screens. */
+/** The rules of Sequence as a page of its own, reached from the account menu. */
 export function HowToPlay() {
   const { profile } = useAuth();
   return (
@@ -289,60 +291,102 @@ export function HowToPlay() {
       <AppHeader />
       <div className={styles.page}>
         {profile && <BackToDashboard className={own.back} tip="Go back to the dashboard: your tables and games" />}
-        <div className={own.layout}>
-          <header className={[styles.header, own.intro].join(' ')}>
-            <h1>How to play</h1>
-            <p>Sequence in {STEPS.length} short steps, from your first chip to your winning line.</p>
-          </header>
-
-          <nav className={own.contents} aria-label="Steps">
-            <ol>
-              {STEPS.map((step, i) => (
-                <li key={step.id}>
-                  <a href={`#${step.id}`}>
-                    <span className={own.number}>{i + 1}</span>
-                    {step.short}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
-
-          <div className={own.steps}>
-            {STEPS.map((step, i) => {
-              const next = STEPS[i + 1];
-              return (
-                <section key={step.id} id={step.id} className={[styles.card, own.step].join(' ')} aria-labelledby={`${step.id}-title`}>
-                  <h2 id={`${step.id}-title`}>
-                    <span className={own.number} aria-hidden="true">
-                      {i + 1}
-                    </span>
-                    <span>
-                      <span className={own.visuallyHidden}>Step {i + 1}: </span>
-                      {step.title}
-                    </span>
-                  </h2>
-                  <div className={own.body}>{step.body}</div>
-                  {(step.figure || step.image) && <Figure image={step.image} caption={step.caption}>{step.figure}</Figure>}
-                  {next ? (
-                    <a href={`#${next.id}`} className={own.next}>
-                      Next: {next.short}
-                      <Icon name="chevronRight" size={16} />
-                    </a>
-                  ) : (
-                    <Link to={profile ? '/lobby' : '/local'} className={[own.next, own.start].join(' ')}>
-                      {profile ? 'Start a game' : 'Try a game on this device'}
-                      <Icon name="chevronRight" size={16} />
-                    </Link>
-                  )}
-                </section>
-              );
-            })}
-          </div>
-        </div>
+        <Guide
+          end={
+            <Link to={profile ? '/lobby' : '/local'} className={own.start}>
+              {profile ? 'Start a game' : 'Try a game on this device'}
+              <Icon name="chevronRight" size={16} />
+            </Link>
+          }
+        />
         <PoweredBy />
       </div>
     </>
+  );
+}
+
+/**
+ * The same guide over a game, so a player can check a rule without leaving the table: a hot-seat game is not lost
+ * and an online one keeps its place. It opens over everything, and "Back to the game" (or Escape) closes it.
+ */
+export function HowToPlayDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      dialog.showModal();
+      dialog.scrollTop = 0;
+    }
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  return (
+    <dialog ref={ref} className={own.dialog} aria-label="How to play" onClose={onClose}>
+      {open && (
+        <div className={styles.page}>
+          <nav className={[backStyles.back, own.back].join(' ')} aria-label="Back">
+            <button type="button" className={backStyles.link} onClick={onClose} {...tipProps('Close the guide and go back to the board (Esc)', 'bottom', 'start')}>
+              <Icon name="chevronLeft" size={18} />
+              Back to the game
+            </button>
+          </nav>
+          <Guide scroller={ref} />
+          <PoweredBy />
+        </div>
+      )}
+    </dialog>
+  );
+}
+
+/** The intro, the contents list (beside the steps on wide screens) and the steps, with `end` after the last one. */
+function Guide({ end, scroller }: { end?: ReactNode; scroller?: RefObject<HTMLElement> }) {
+  // The contents scroll to a step without touching the address, so a game's URL never gains a #fragment.
+  const goTo = (event: MouseEvent, id: string) => {
+    event.preventDefault();
+    const root = scroller?.current ?? document;
+    root.querySelector<HTMLElement>(`[data-step="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  return (
+    <div className={own.layout}>
+      <header className={[styles.header, own.intro].join(' ')}>
+        <h1>How to play</h1>
+        <p>Sequence in {STEPS.length} short steps, from your first chip to your winning line.</p>
+      </header>
+
+      <nav className={own.contents} aria-label="Steps">
+        <ol>
+          {STEPS.map((step, i) => (
+            <li key={step.id}>
+              <a href={`#${step.id}`} onClick={(event) => goTo(event, step.id)}>
+                <span className={own.number}>{i + 1}</span>
+                {step.short}
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <div className={own.steps}>
+        {STEPS.map((step, i) => (
+          <section key={step.id} id={step.id} data-step={step.id} className={[styles.card, own.step].join(' ')} aria-labelledby={`${step.id}-title`}>
+            <h2 id={`${step.id}-title`}>
+              <span className={own.number} aria-hidden="true">
+                {i + 1}
+              </span>
+              <span>
+                <span className={own.visuallyHidden}>Step {i + 1}: </span>
+                {step.title}
+              </span>
+            </h2>
+            <div className={own.body}>{step.body}</div>
+            {(step.figure || step.image) && <Figure image={step.image} caption={step.caption}>{step.figure}</Figure>}
+          </section>
+        ))}
+        {end}
+      </div>
+    </div>
   );
 }
 
