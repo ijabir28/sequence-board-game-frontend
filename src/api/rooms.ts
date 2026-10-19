@@ -14,7 +14,10 @@ export interface RoomTeam {
   seats: (Seat | null)[];
 }
 
-/** `training` gives the player whose turn it is hints; `standard` games never get any. */
+/**
+ * `training` gives the player whose turn it is hints; `standard` games never get any. Tables are always standard now;
+ * only the practice match in the interactive training still hints.
+ */
 export type GameMode = 'standard' | 'training';
 
 /** Options the table's host picks. They can change until the game starts. */
@@ -83,7 +86,8 @@ export interface RawRoomSettings {
  */
 export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings {
   return {
-    mode: raw?.mode === 'training' ? 'training' : 'standard',
+    // Training tables are retired: every table plays as a standard one, whatever an older room still says.
+    mode: 'standard',
     history: raw?.history ?? DEFAULT_ROOM_SETTINGS.history,
     highlights: raw?.highlights ?? DEFAULT_ROOM_SETTINGS.highlights,
     autoDrawDead: raw?.auto_draw_dead ?? DEFAULT_ROOM_SETTINGS.autoDrawDead,

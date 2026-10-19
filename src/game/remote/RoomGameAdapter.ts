@@ -8,7 +8,6 @@ import {
   nextRoomRound,
   passRoomTurn,
   playRoomCard,
-  type RawHint,
   type RawPlayerStats,
   type RawRoundResult,
   type RawRounds,
@@ -19,7 +18,6 @@ import { announcePresence, onGameUpdated } from '../../api/socket';
 import { positionsOf, type Pos } from '../../engine/board';
 import { BLANK, cardKind, isCardName, type BoardCardName, type CardName } from '../../engine/cards';
 import { legalTargets, type GameState } from '../../engine/game';
-import type { Hint } from '../../engine/hints';
 import { isLocked } from '../../engine/sequences';
 import type { TeamIndex } from '../../engine/setup';
 import {
@@ -271,8 +269,8 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     status: 'ready',
     title: server.name,
     settings: { mode, highlights, history, deadCards },
-    // The server only sends hints in training games; never show one elsewhere.
-    hint: mode === 'training' ? toHint(server.hint) : null,
+    // Training tables are retired, so tables never hint, even if an older server still sends one.
+    hint: null,
     turnStartedAt: server.winner === null && server.turn_started_at ? Date.parse(server.turn_started_at) + clockSkew : null,
     turnDeadline: server.winner === null && server.turn_deadline ? Date.parse(server.turn_deadline) + clockSkew : null,
     turnPaused: server.winner === null && server.turn_paused === true,
@@ -355,13 +353,6 @@ function toRounds(raw: RawRounds | undefined, hostId: string | null, viewer: str
       leaders: raw.summary.verdict.leaders,
     },
   };
-}
-
-function toHint(raw: RawHint | null | undefined): Hint | null {
-  if (!raw) return null;
-  if (raw.type === 'pass') return { type: 'pass', reason: raw.reason };
-  if (raw.type === 'exchange') return { type: 'exchange', handIndex: raw.hand_index, reason: raw.reason };
-  return { type: 'play', handIndex: raw.hand_index, target: raw.target, reason: raw.reason };
 }
 
 /** Both board cells for this card are covered (jacks are never dead). */

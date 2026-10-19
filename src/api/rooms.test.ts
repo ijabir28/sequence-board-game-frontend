@@ -53,7 +53,8 @@ describe('sanitizeRoom', () => {
     expect(current).toMatchObject({ deadCards: 'manual', exchangesPerTurn: null });
     expect(sanitizeRoom('x', { ...raw, settings: { exchanges_per_turn: 4 } }).settings.exchangesPerTurn).toBe(4);
     expect(sanitizeRoom('x', { ...raw, settings: { turn_seconds: 45 } }).settings.turnSeconds).toBe(45);
-    expect(sanitizeRoom('x', { ...raw, settings: { mode: 'training' } }).settings.mode).toBe('training');
+    // Training tables are retired: an older room still in training plays as a standard one.
+    expect(sanitizeRoom('x', { ...raw, settings: { mode: 'training' } }).settings.mode).toBe('standard');
     expect(sanitizeRoom('x', { ...raw, settings: { mode: 'chaos' } }).settings.mode).toBe('standard');
   });
 });
