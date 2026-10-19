@@ -217,19 +217,14 @@ describe('RoomGameAdapter', () => {
     manual.dispose();
   });
 
-  it("maps a training game's hint, and ignores a hint outside training", async () => {
-    const hint = { type: 'play' as const, hand_index: 0, target: { row: 0, column: 1 }, reason: { kind: 'extend' as const, length: 2 } };
-    stubFetch(() => ({ status: 200, body: serverView({ settings: { mode: 'training' }, hint }) }));
+  it('plays every table as standard, without hints, even from an older training table', async () => {
+    const hint = { type: 'play', hand_index: 0, target: { row: 0, column: 1 }, reason: { kind: 'extend', length: 2 } };
+    stubFetch(() => ({ status: 200, body: { ...serverView({ settings: { mode: 'training' } as never }), hint } }));
     const a = adapter();
     await a.refresh();
-    expect(a.getState().hint).toEqual({ type: 'play', handIndex: 0, target: { row: 0, column: 1 }, reason: { kind: 'extend', length: 2 } });
+    expect(a.getState().settings.mode).toBe('standard');
+    expect(a.getState().hint).toBeNull();
     a.dispose();
-
-    stubFetch(() => ({ status: 200, body: serverView({ settings: { mode: 'standard' }, hint }) }));
-    const standard = adapter();
-    await standard.refresh();
-    expect(standard.getState().hint).toBeNull();
-    standard.dispose();
   });
 
   it("runs the turn clock on this device's time, measured once", async () => {

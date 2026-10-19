@@ -44,6 +44,8 @@ interface GameScreenProps {
   headerExtra?: ReactNode;
   /** Where to remember how each player arranged their hand on this device (e.g. per table). */
   handOrderKey?: string;
+  /** Shown above the turn panel: the training lesson's task. */
+  coach?: ReactNode;
 }
 
 /** Game messages share one toast, so a new one replaces the last instead of piling up. */
@@ -51,7 +53,7 @@ const FEEDBACK_TOAST = 'game-feedback';
 /** A new round's notice has its own toast, so the host's next action (which clears feedback) doesn't hide it. */
 const ROUND_TOAST = 'game-round';
 
-export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, handOrderKey }: GameScreenProps) {
+export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, handOrderKey, coach }: GameScreenProps) {
   const view = useGame(adapter);
   // The viewer's deck decides how cards are named in messages: "7♥", or "#7" with the Numbered deck.
   const [{ notation }] = useDeck();
@@ -651,6 +653,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       )}
 
       <div className={styles.status} hidden={view.status !== 'ready'}>
+        {coach}
         {/* Large screens give the turn panel a fixed slot, so the hand under it never moves. */}
         <div className={styles.turnSlot}>
           <TurnPanel
@@ -665,6 +668,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             turnPaused={view.turnPaused}
             turnTimeLeft={view.turnTimeLeft}
             away={view.away}
+            // Phones have no header, so the round goes on the turn line.
+            round={phone ? (rounds?.round ?? null) : null}
             collapsible={
               phone
                 ? {

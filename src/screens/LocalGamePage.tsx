@@ -26,7 +26,6 @@ export function LocalGamePage() {
             },
             turnSeconds: config.settings.turnSeconds,
             settings: {
-              mode: config.settings.mode,
               highlights: config.settings.highlights,
               history: config.settings.history,
               deadCards: config.settings.deadCards,

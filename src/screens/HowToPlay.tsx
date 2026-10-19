@@ -270,7 +270,8 @@ const STEPS: Step[] = [
           comes.
         </li>
         <li>
-          <strong>Training</strong> tables suggest a move on your turn and say why, a good way to learn.
+          New here? <strong>Training</strong>, at the top of the How to play page, walks you through every tricky rule in short
+          lessons against a bot, then a practice match.
         </li>
         <li>
           No account or network? <strong>Play on this device</strong> passes one screen round the table.
@@ -291,6 +292,16 @@ export function HowToPlay() {
       <AppHeader />
       <div className={styles.page}>
         {profile && <BackToDashboard className={own.back} tip="Go back to the dashboard: your tables and games" />}
+        <Link to="/how-to-play/training" className={own.training} {...tipProps('Short lessons against a bot, on the real board, then a practice match')}>
+          <span className={own.trainingIcon} aria-hidden="true">
+            <Icon name="bulb" size={22} />
+          </span>
+          <span className={own.trainingText}>
+            <strong>Learn by playing</strong>
+            <small>Interactive training: every tricky rule as a short lesson against a bot, then a practice match.</small>
+          </span>
+          <Icon name="chevronRight" size={18} />
+        </Link>
         <Guide
           end={
             <Link to={profile ? '/lobby' : '/local'} className={own.start}>

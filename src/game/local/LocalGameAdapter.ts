@@ -121,8 +121,19 @@ export class LocalGameAdapter implements GameAdapter {
   }
 }
 
-function toView(state: GameState, settings: PlaySettings, turnStartedAt: number, turnDeadline: number | null): GameView {
+/**
+ * The game as `viewerIndex` sees it (by default whoever's turn it is, as in hot-seat play). Only the current player
+ * may exchange or pass.
+ */
+export function toView(
+  state: GameState,
+  settings: PlaySettings,
+  turnStartedAt: number,
+  turnDeadline: number | null,
+  viewerIndex: number = state.current,
+): GameView {
   const player = state.players[state.current];
+  const viewing = viewerIndex === state.current;
   const teamIndexes = Array.from({ length: state.teamCount }, (_, i) => i as TeamIndex);
   return {
     status: 'ready',
@@ -139,19 +150,19 @@ function toView(state: GameState, settings: PlaySettings, turnStartedAt: number,
     sequencesToWin: sequencesToWin(state.teamCount),
     players: state.players,
     currentPlayerId: player.id,
-    viewer: player,
-    hand: state.hands[state.current].map((card) => ({ card, dead: settings.deadCards === 'indicator' && isDeadCard(state, card) })),
+    viewer: state.players[viewerIndex],
+    hand: state.hands[viewerIndex].map((card) => ({ card, dead: settings.deadCards === 'indicator' && isDeadCard(state, card) })),
     // With manual dead cards, being allowed to exchange mustn't give away that a dead card is in the hand.
-    canExchange: settings.deadCards === 'manual' ? mayExchangeMore(state) : canExchange(state),
+    canExchange: viewing && (settings.deadCards === 'manual' ? mayExchangeMore(state) : canExchange(state)),
     exchangesLeft: exchangesLeft(state),
-    canPass: state.winner === null && !hasLegalPlay(state) && !canExchange(state),
+    canPass: viewing && state.winner === null && !hasLegalPlay(state) && !canExchange(state),
     deckCount: state.deck.length,
     sequences: state.sequences,
     log: state.log,
     winner: state.winner,
     turn: state.turn,
     settings,
-    hint: settings.mode === 'training' ? suggestMove(state) : null,
+    hint: settings.mode === 'training' && viewing ? suggestMove(state) : null,
     turnStartedAt: state.winner === null ? turnStartedAt : null,
     turnDeadline,
     // Everyone shares this device, so nobody can be away.
