@@ -164,6 +164,32 @@
   --outline-subtle: rgba(15, 23, 42, 0.16);
 }
 
+/*
+ * Corners on card faces: the dark foil would punch four holes in a light board, so they become a pale gold leaf
+ * worked into the deck's own face colour, edged in a thin gold line, with a deep amber star that reads on it.
+ */
+.board[data-cells='cards'] {
+  --corner-foil: linear-gradient(
+    135deg,
+    color-mix(in srgb, #e9b949 30%, var(--deck-face, #ffffff)) 0%,
+    color-mix(in srgb, #e9b949 8%, var(--deck-face, #ffffff)) 50%,
+    color-mix(in srgb, #e9b949 36%, var(--deck-face, #ffffff)) 100%
+  );
+  --corner-ink: #b45309;
+}
+
+.board[data-cells='cards'] :where(.corner) {
+  box-shadow:
+    inset 0 0 0 1px rgba(180, 83, 9, 0.38),
+    inset 0 0 0 3px color-mix(in srgb, #e9b949 14%, var(--deck-face, #ffffff));
+}
+
+.board[data-cells='cards'] .cornerMark {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 0.6cqw rgba(233, 185, 73, 0.55);
+}
+
 .board[data-cells='cards'] .last::before {
   box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.7);
 }
