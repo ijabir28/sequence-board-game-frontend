@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRoom, isSeated, leaveSeat, shuffleSeats, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
+import { createRoom, formatTableCode, isSeated, leaveSeat, shuffleSeats, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
 
 describe('sanitizeRoom', () => {
   const raw = {
@@ -154,8 +154,31 @@ describe('parseTableCode', () => {
     expect(parseTableCode('http://localhost:5173/table/lucky-otter-ab12/game')).toBe('lucky-otter-ab12');
   });
 
+  it('forgives spaces, stray hyphens and punctuation', () => {
+    expect(parseTableCode('friday night k3m9!')).toBe('friday-night-k3m9');
+    expect(parseTableCode('-friday--night_k3m9-')).toBe('friday-night-k3m9');
+    expect(parseTableCode('Café Night-ab12')).toBe('cafe-night-ab12');
+  });
+
   it('refuses text that cannot be a code', () => {
-    for (const bad of ['', 'friday night!', '-x', 'a--b']) expect(parseTableCode(bad)).toBeNull();
+    for (const bad of ['', '   ', '!?', '---']) expect(parseTableCode(bad)).toBeNull();
+  });
+});
+
+describe('formatTableCode', () => {
+  it('hyphenates as the player types', () => {
+    expect(formatTableCode('Friday ')).toBe('friday-');
+    expect(formatTableCode('friday  night_')).toBe('friday-night-');
+    expect(formatTableCode('friday--night.k3m9')).toBe('friday-night-k3m9');
+    expect(formatTableCode(' -friday')).toBe('friday');
+  });
+
+  it('drops the trailing hyphen once the player is done', () => {
+    expect(formatTableCode('friday-night-', true)).toBe('friday-night');
+  });
+
+  it('turns a pasted table link into its code', () => {
+    expect(formatTableCode('https://sequence.fifteens.app/table/lucky-otter-ab12/game')).toBe('lucky-otter-ab12');
   });
 });
 

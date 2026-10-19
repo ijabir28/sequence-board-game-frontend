@@ -198,16 +198,42 @@ export function shuffleSeats(id: string): Promise<Room> {
   return roomAction(id, 'shuffle', 'The server refused to shuffle the teams');
 }
 
+/** The code inside a table link ("…/table/lucky-otter-ab12/game"), or null when the text isn't a link. */
+function codeInLink(text: string): string | null {
+  const link = /\/table\/([^/?#\s]+)/.exec(text);
+  if (!link) return null;
+  try {
+    return decodeURIComponent(link[1]);
+  } catch {
+    return link[1];
+  }
+}
+
 /**
- * Reads a table code from what a player typed or pasted: a code ("friday-night-k3m9", or an older numeric one)
- * or a table link. Returns null when it can't be a code.
+ * Shapes what a player types into a table code as they go: lower-case, with every run of spaces or other separators
+ * ("friday night", "friday_night", "friday—night") becoming one hyphen, and no hyphen at the start. A hyphen at the
+ * end is kept while typing (the next word follows it) and dropped when `done`. A pasted table link becomes its code.
+ * Only ever looks backwards, so formatting the text before the caret tells where the caret lands.
+ */
+export function formatTableCode(input: string, done = false): string {
+  const code = (codeInLink(input) ?? input)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+/, '');
+  return done ? code.replace(/-+$/, '') : code;
+}
+
+/**
+ * Reads a table code from what a player typed or pasted: a code ("friday-night-k3m9", or an older numeric one,
+ * spaces and all) or a table link. Returns null when it can't be a code.
  */
 export function parseTableCode(input: string): string | null {
-  let text = input.trim();
-  const link = /\/table\/([^/?#\s]+)/.exec(text);
-  if (link) text = decodeURIComponent(link[1]);
-  text = text.toLowerCase().replace(/\s+/g, '');
-  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(text) ? text : null;
+  const text = codeInLink(input.trim()) ?? input.trim();
+  // Older codes are long numbers, sometimes copied with spaces between digit groups.
+  const code = /^[\d\s]+$/.test(text) ? text.replace(/\s+/g, '') : formatTableCode(text, true);
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(code) ? code : null;
 }
 
 /** GET /room/:id. Returns null when the room doesn't exist (the backend answers 200 with an empty body). */
