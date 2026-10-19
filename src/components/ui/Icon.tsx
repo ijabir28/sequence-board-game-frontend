@@ -28,6 +28,7 @@ const PATHS = {
   minus: 'M5 12h14',
   crop: 'M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14',
   book: 'M4 5a2 2 0 0 1 2-2h5v17H6a2 2 0 0 0-2 2V5zM20 5a2 2 0 0 0-2-2h-5v17h5a2 2 0 0 1 2 2V5z',
+  download: 'M12 3v12M7 10l5 5 5-5M5 21h14',
   soundOff: 'M11 5L6 9H3v6h3l5 4V5zM16 9l6 6M22 9l-6 6',
 } as const;
 
