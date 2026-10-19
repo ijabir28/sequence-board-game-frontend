@@ -119,3 +119,14 @@
 .drawerSignOut > svg {
   color: var(--error);
 }
+
+/* The ownership credit under the entries: the dropdown's last line, the drawer's foot. */
+.menuCredit {
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  border-top: 1px solid var(--outline-subtle);
+}
+
+.drawerCredit {
+  padding-bottom: var(--space-2);
+}

@@ -6,6 +6,7 @@ import { isFull, isSeated, joinRoom, leaveSeat, sanitizeRoom, shuffleSeats, upda
 import { onTeamsShuffled } from '../api/socket';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
+import { PoweredBy } from '../components/PoweredBy';
 import { BackToDashboard } from '../components/BackToDashboard';
 import { Chip } from '../components/Chip';
 import { useToast, type ToastOptions } from '../components/toast/Toaster';
@@ -194,6 +195,7 @@ export function RoomPage() {
             onOpenGame={() => navigate(`/table/${id}/game`)}
           />
         )}
+        <PoweredBy />
       </div>
     </>
   );

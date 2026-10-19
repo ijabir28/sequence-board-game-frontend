@@ -19,6 +19,7 @@ import { Chip } from '../Chip';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
 import { Drawer } from '../ui/Drawer';
+import { HowToPlayDialog } from '../../screens/HowToPlay';
 import { Icon } from '../ui/Icon';
 import { Tooltip } from '../ui/Tooltip';
 import { tipProps } from '../ui/TooltipLayer';
@@ -68,13 +69,14 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const [deckOpen, setDeckOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  // Opening the menu drawer or the leave dialog counts as stepping away from the table, as if the player had already
+  const [guideOpen, setGuideOpen] = useState(false);
+  // Opening the menu drawer, the how-to-play guide or the leave dialog counts as stepping away from the table, as if the player had already
   // left: their turn pauses until they close it.
   // On a phone or tablet, a hidden page (the screen locked, another app) counts too, from the moment it is hidden.
   // Desktop players may watch another tab while they wait: the tab title tells them when it is their turn.
   const touch = useMediaQuery('(pointer: coarse)');
   const hiddenAway = useAwayWhileHidden(touch, () => adapter.stepAway?.(true));
-  const steppedAway = menuOpen || exitOpen || hiddenAway;
+  const steppedAway = menuOpen || guideOpen || exitOpen || hiddenAway;
   useEffect(() => {
     adapter.stepAway?.(steppedAway);
   }, [adapter, steppedAway]);
@@ -488,7 +490,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             className={styles.drawerHandle}
             onClick={() => setMenuOpen(true)}
             aria-label="Game menu"
-            {...tipProps('Open the game menu: move log and leave game', 'bottom', 'end')}
+            {...tipProps('Open the game menu: move log, how to play and leave game', 'bottom', 'end')}
             aria-expanded={menuOpen}
             aria-haspopup="dialog"
           >
@@ -563,6 +565,21 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
                 <small>Your deck design and the board's cells</small>
               </span>
             </button>
+            <button
+              type="button"
+              className={styles.drawerItem}
+              {...tipProps('The rules, step by step. Your turn waits while you read.')}
+              onClick={() => {
+                setMenuOpen(false);
+                setGuideOpen(true);
+              }}
+            >
+              <Icon name="book" />
+              <span>
+                <strong>How to play</strong>
+                <small>The rules, step by step</small>
+              </span>
+            </button>
             {headerExtra && <div className={styles.drawerExtra}>{headerExtra}</div>}
             <button
               type="button"
@@ -607,6 +624,11 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             <Tooltip text="Choose your card deck and how the board looks" align="end">
               <button type="button" className={styles.iconButton} onClick={() => setDeckOpen(true)} aria-label="Cards and board" aria-haspopup="dialog">
                 <Icon name="cards" />
+              </button>
+            </Tooltip>
+            <Tooltip text="How to play: the rules, step by step. Your turn waits while you read." align="end">
+              <button type="button" className={styles.iconButton} onClick={() => setGuideOpen(true)} aria-label="How to play" aria-haspopup="dialog">
+                <Icon name="book" />
               </button>
             </Tooltip>
             {history && (
@@ -768,6 +790,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         <h3 className={styles.deckSubtitle}>Board cells</h3>
         <BoardStylePicker />
       </Dialog>
+
+      <HowToPlayDialog open={guideOpen} onClose={() => setGuideOpen(false)} />
 
       <Dialog open={logOpen && history} title="Move log" onClose={() => setLogOpen(false)}>
         <MoveLog entries={view.log} emptyText="No moves yet. Moves will appear here as they are played." />

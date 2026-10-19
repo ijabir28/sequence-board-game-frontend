@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
+import { PoweredBy } from '../components/PoweredBy';
 import { devToolsEnabled } from '../components/game/DevAdapterToggle';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
@@ -64,6 +65,7 @@ export function Lobby() {
             </section>
           )}
         </div>
+        <PoweredBy />
       </div>
 
       <NewGameDialog open={dialog === 'new'} onClose={() => setDialog(null)} />

@@ -4,6 +4,7 @@ import { errorMessage } from '../api/http';
 import { AccountError } from '../api/user';
 import { useAuth } from '../auth/AuthContext';
 import { Chip } from '../components/Chip';
+import { PoweredBy } from '../components/PoweredBy';
 import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
 import { tipProps } from '../components/ui/TooltipLayer';
@@ -113,6 +114,7 @@ export function SignIn() {
           Play on this device without signing in
         </Link>
       </form>
+      <PoweredBy />
     </div>
   );
 }
