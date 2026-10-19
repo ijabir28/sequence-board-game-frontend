@@ -665,6 +665,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             turnPaused={view.turnPaused}
             turnTimeLeft={view.turnTimeLeft}
             away={view.away}
+            // Phones have no header, so the round goes on the turn line.
+            round={phone ? (rounds?.round ?? null) : null}
             collapsible={
               phone
                 ? {

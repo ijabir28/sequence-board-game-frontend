@@ -26,6 +26,8 @@ interface TurnPanelProps {
   turnTimeLeft?: number | null;
   /** Ids of the players who aren't at the table. */
   away?: string[];
+  /** Table games are played in rounds: the round being played, shown with the turn. */
+  round?: number | null;
   /**
    * Phones: the panel folds into one line (your countdown on your turn, else whose turn it is) and expands on
    * request, showing `children` (the scoreboard) too.
@@ -55,6 +57,7 @@ export function TurnPanel({
   turnPaused = false,
   turnTimeLeft = null,
   away = [],
+  round = null,
   collapsible,
 }: TurnPanelProps) {
   const detailsId = useId();
@@ -140,6 +143,11 @@ export function TurnPanel({
                     : `${current.name}'s turn`
                 : 'Waiting for the game to start'}
           </span>
+          {round !== null && (
+            <span className={styles.roundBadge} aria-label={`Round ${round}`}>
+              Round {round}
+            </span>
+          )}
           {timer}
           {pausedTimer}
           <Icon name="chevronDown" size={18} />
@@ -159,7 +167,10 @@ export function TurnPanel({
           </span>
         )}
         <div className={styles.text}>
-          <p className={styles.eyebrow}>{winner !== null ? 'Game over' : turn !== null ? `Turn ${turn}` : 'Turn'}</p>
+          <p className={styles.eyebrow}>
+            {round !== null && `Round ${round} · `}
+            {winner !== null ? 'Game over' : turn !== null ? `Turn ${turn}` : 'Turn'}
+          </p>
           <p className={styles.who}>
             {winner !== null ? (
               <>
