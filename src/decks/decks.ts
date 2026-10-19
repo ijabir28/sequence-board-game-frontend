@@ -176,17 +176,17 @@ export function useDeck(): [Deck, (id: DeckId) => void] {
 }
 
 /**
- * How the board's cells look: dark tiles on the felt (the default), or light card faces in the chosen deck's colours,
- * like a printed Sequence board. Remembered like the deck: on this device, and on a signed-in player's account.
+ * How the board's cells look: light card faces in the chosen deck's colours, like a printed Sequence board (the
+ * default), or dark tiles on the felt. Remembered like the deck: on this device, and on a signed-in player's account.
  */
 export type BoardStyle = 'dark' | 'cards';
 
 export const BOARD_STYLES: readonly { id: BoardStyle; name: string; description: string }[] = [
-  { id: 'dark', name: 'Dark tiles', description: 'Light letters on dark cells, easy on the eyes.' },
   { id: 'cards', name: 'Card faces', description: "Light cells like little cards, in your deck's colours." },
+  { id: 'dark', name: 'Dark tiles', description: 'Light letters on dark cells, easy on the eyes.' },
 ];
 
-export const DEFAULT_BOARD_STYLE: BoardStyle = 'dark';
+export const DEFAULT_BOARD_STYLE: BoardStyle = 'cards';
 
 export function isBoardStyle(id: string | null | undefined): id is BoardStyle {
   return BOARD_STYLES.some((style) => style.id === id);
