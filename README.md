@@ -77,7 +77,29 @@ pins `socket.io-client@2.3.0`. The two majors must match. If your backend instal
 | `npm test` | Unit tests (Vitest): rules engine, adapters, API helpers |
 | `npm run typecheck` | TypeScript check |
 | `npm run build` | Type-check and build to `dist/` |
-| `npm run preview` | Serve the build (uses the same proxy) |
+| `npm run preview` | Serve the build (uses the same proxy); the only way to try the service worker locally |
+| `npm run bench` | Time the rules engine and the Bot ([docs/performance.md](docs/performance.md)) |
+| `node scripts/make-icons.mjs` | Redraw the app icons in `public/icons/` |
+
+## Installing as an app
+
+The site is a Progressive Web App. Chrome, Edge and Android offer to install it (the account menu's *Install app*,
+or the browser's own install button), and on iPhone and iPad it's Safari's *Share → Add to Home Screen*. Installed,
+it opens in its own window from the home screen or desktop.
+
+- `public/manifest.webmanifest` names the app, its icons (`public/icons/`, drawn by `scripts/make-icons.mjs`), the
+  colours and the shortcuts; `index.html` links it, with the `apple-*` tags iOS reads instead.
+- `src/pwa/sw.js` is the service worker. `npm run build` copies it to `dist/sw.js` and fills in the build's file list
+  and a version hash (the `serviceWorker` plugin in `vite.config.ts`). It precaches the app shell and every chunk,
+  serves pages network-first with the cached shell as the offline fallback, caches card faces and fonts on first
+  use, and never handles the API, auth or socket. Hot-seat games and the training then work offline.
+- `src/pwa/serviceWorker.ts` registers it in production builds only (`npm run dev` has none). A new build's worker
+  waits instead of swapping files under an open page. A toast (`UpdateNotice.tsx`) offers *Reload*, which activates
+  it.
+- `src/pwa/install.ts` catches `beforeinstallprompt` for the account menu, and tells iOS players how to add the app.
+
+To try it locally, `npm run build && npm run preview`, then look under DevTools → Application. Lighthouse's PWA
+checks need the preview URL, not the dev server.
 
 ## Deploy
 
