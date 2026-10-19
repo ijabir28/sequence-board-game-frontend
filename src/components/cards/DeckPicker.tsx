@@ -55,7 +55,6 @@ export function DeckPicker({ onPicked }: { onPicked?: (deck: Deck) => void }) {
           <span className={styles.text}>
             <strong>{deck.name}</strong>
             <span>{deck.description}</span>
-            <small>{deck.credit}</small>
           </span>
         </label>
       ))}
