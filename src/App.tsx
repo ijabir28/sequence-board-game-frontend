@@ -12,6 +12,7 @@ import { UpdateNotice } from './pwa/UpdateNotice';
 // first page doesn't wait for the game screen, the training or the profile editor. The service worker caches every
 // chunk, so after the first visit they open at once, offline too.
 const LocalGamePage = lazy(() => import('./screens/LocalGamePage').then((m) => ({ default: m.LocalGamePage })));
+const LeaderboardPage = lazy(() => import('./screens/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const ProfilePage = lazy(() => import('./screens/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const RoomGamePage = lazy(() => import('./screens/RoomGamePage').then((m) => ({ default: m.RoomGamePage })));
 const RoomPage = lazy(() => import('./screens/RoomPage').then((m) => ({ default: m.RoomPage })));
@@ -48,6 +49,14 @@ export function App() {
               element={
                 <RequireAuth>
                   <ProfilePage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/leaderboard"
+              element={
+                <RequireAuth>
+                  <LeaderboardPage />
                 </RequireAuth>
               }
             />
