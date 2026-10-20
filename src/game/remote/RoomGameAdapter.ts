@@ -133,12 +133,8 @@ export class RoomGameAdapter implements GameAdapter {
   }
 
   async roundDetail(round: number): Promise<RoundDetail> {
-    try {
-      const raw = await getRoomRound(this.options.roomId, round);
-      return { result: toRoundResult(raw), board: toBoard(raw.board, raw.sequences), sequences: raw.sequences, log: raw.log };
-    } catch (error) {
-      throw new Error(error instanceof GameRejectedError ? error.message : errorMessage(error));
-    }
+    const raw = await getRoomRound(this.options.roomId, round);
+    return { result: toRoundResult(raw), board: toBoard(raw.board, raw.sequences), sequences: raw.sequences, log: raw.log };
   }
 
   stepAway(away: boolean): void {
@@ -203,8 +199,7 @@ export class RoomGameAdapter implements GameAdapter {
     } catch (error) {
       // Keep the last good board on a failed refresh; only show the error screen if we never loaded.
       if (this.view.status === 'ready') return;
-      const message = error instanceof GameRejectedError ? error.message : errorMessage(error);
-      this.publish({ ...EMPTY_VIEW, status: 'error', error: message });
+      this.publish({ ...EMPTY_VIEW, status: 'error', error: errorMessage(error) });
     }
   }
 

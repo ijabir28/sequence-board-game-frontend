@@ -109,7 +109,7 @@ export function RoomPage() {
       await startRoomGame(id);
       navigate(`/table/${id}/game`);
     } catch (e) {
-      showError(e instanceof Error ? e.message : errorMessage(e));
+      showError(errorMessage(e));
       void reload();
     } finally {
       setStarting(false);
@@ -136,7 +136,7 @@ export function RoomPage() {
           action: { label: 'Sign in again', onClick: signInAgain },
         });
       } else if (result === 'not-found') {
-        showError('The server has no table with this code. Go back to the lobby and open a new one.');
+        showError("We couldn't find a table with this code. Go back to the lobby and open a new one.");
       } else {
         await reload();
         showSuccess(`You joined Team ${name}.`);
@@ -268,7 +268,7 @@ function RoomView({
           </h1>
           <span className={[own.live, own[connection]].join(' ')} role="status">
             <span className={own.dot} aria-hidden="true" />
-            {connection === 'live' ? 'Live' : connection === 'connecting' ? 'Connecting…' : 'Offline, retrying'}
+            {connection === 'live' ? 'Live' : connection === 'connecting' ? 'Connecting…' : 'Connection lost, reconnecting…'}
           </span>
         </div>
         <div id={summaryId} className={own.foldBody} hidden={!showSummary}>
