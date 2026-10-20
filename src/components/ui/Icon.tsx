@@ -31,6 +31,7 @@ const PATHS = {
   download: 'M12 3v12M7 10l5 5 5-5M5 21h14',
   soundOff: 'M11 5L6 9H3v6h3l5 4V5zM16 9l6 6M22 9l-6 6',
   trophy: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3',
+  bolt: 'M13 2L4 14h7l-1 8 9-12h-7l1-8z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

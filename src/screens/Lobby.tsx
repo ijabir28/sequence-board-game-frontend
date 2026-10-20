@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { PoweredBy } from '../components/PoweredBy';
@@ -16,6 +16,7 @@ import { CurrentGame, YourTablesDialog } from './YourTables';
 /** The dashboard: start or join a game. Each flow opens in its own dialog, so the page stays uncluttered. */
 export function Lobby() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [dialog, setDialog] = useState<'new' | 'join' | 'tables' | null>(null);
 
   return (
@@ -28,10 +29,14 @@ export function Lobby() {
           <section className={[styles.card, own.hero].join(' ')} aria-labelledby="lobby-title">
             <header className={styles.header}>
               <h1 id="lobby-title">{profile ? `Ready to play, ${profile.name}?` : 'Ready to play?'}</h1>
-              <p>Start a new game and invite friends with its code, or join a table someone shared with you.</p>
+              <p>Find an opponent with Quick Match, start a new game and invite friends with its code, or join a table someone shared with you.</p>
             </header>
             <div className={own.primaryActions}>
-              <Button variant="primary" onClick={() => setDialog('new')} tip="Open a new table, pick its teams and settings, then share its code">
+              <Button variant="primary" onClick={() => navigate('/quick-match')} tip="Play someone new now: no code to share, and a bot steps in if nobody else is looking">
+                <Icon name="bolt" size={18} />
+                Quick Match
+              </Button>
+              <Button onClick={() => setDialog('new')} tip="Open a new table, pick its teams and settings, then share its code">
                 <Icon name="plus" size={18} />
                 New Game
               </Button>
