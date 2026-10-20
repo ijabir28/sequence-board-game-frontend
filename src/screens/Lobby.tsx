@@ -41,10 +41,16 @@ export function Lobby() {
               </Button>
             </div>
             <div className={own.secondaryActions}>
-              <Button variant="ghost" onClick={() => setDialog('tables')} tip="Tables you opened or sat at, to go back to any game">
-                <Icon name="log" size={18} />
-                Your tables
-              </Button>
+              <div className={own.secondaryButtons}>
+                <Button variant="ghost" onClick={() => setDialog('tables')} tip="Tables you opened or sat at, to go back to any game">
+                  <Icon name="log" size={18} />
+                  Your tables
+                </Button>
+                <Link to="/leaderboard" className={own.leaderboardLink} {...tipProps('See where you rank: ratings, wins and win rates')}>
+                  <Icon name="trophy" size={18} />
+                  Leaderboard
+                </Link>
+              </div>
               <p className={own.local}>
                 No server, one screen? <Link to="/local" {...tipProps('Hot-seat game: everyone shares this screen and passes it round')}>
                   Play on this device

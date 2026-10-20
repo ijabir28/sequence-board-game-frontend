@@ -117,7 +117,7 @@ The backend has no CORS, so the Vite dev server proxies `/api`, `/user`, `/room`
 `/socket.io` (websockets included) to `http://localhost:3000`. The session cookie `sequence.session_token` stays
 same-origin. App routes are
 chosen so they never start with a proxied prefix: `/signin`, `/signup`, `/email-verified`, `/forgot-password`,
-`/reset-password`, `/profile`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
+`/reset-password`, `/profile`, `/leaderboard`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
 
 ### Code map
 
@@ -288,6 +288,12 @@ The header's avatar opens `/profile`: the player's picture, game stats and accou
 (confirmed by an emailed link) or password, and see the device they are signed in on. Handles never change. On load the
 app asks `GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the
 session on the server.
+
+`/leaderboard` (from the dashboard and the account menu) ranks players by their Elo rating, which the backend changes
+with every round won (`GET /user/leaderboard`, `src/api/leaderboard.ts`). Tabs switch between all time, this week and
+today (rating gained over the last 7 days / 24 hours); the period and page are in the address. The signed-in player's
+own numbers sit above the list, their row is highlighted, and when they are on a later page their row is pinned under
+the list with a button to jump there.
 
 An account is signed in on one device at a time: signing in on another device ends the session here. The server
 announces it over Socket.IO (`signed_in_elsewhere`), so an open page checks its own session at once and, once it is
