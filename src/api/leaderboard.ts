@@ -1,4 +1,4 @@
-import { ApiError, readJson, request } from './http';
+import { ApiError, UNREADABLE_RESPONSE, readJson, request } from './http';
 
 // The leaderboard, GET /user/leaderboard on the backend (see its docs/api.md). Ratings are team Elo from 1200, changed
 // by every round won; the weekly and daily boards rank by the rating gained in the last 7 days / 24 hours.
@@ -82,6 +82,6 @@ export function sanitizeLeaderboard(raw: Record<string, unknown>, period: Leader
 export async function getLeaderboard(period: LeaderboardPeriod, page = 1, perPage = 20): Promise<LeaderboardPage> {
   const query = new URLSearchParams({ period, page: String(page), per_page: String(perPage) });
   const body = await readJson<Record<string, unknown>>(await request(`/user/leaderboard?${query}`));
-  if (!body) throw new ApiError('unexpected', 'The server sent a response this app could not read. Try again.');
+  if (!body) throw new ApiError('unexpected', UNREADABLE_RESPONSE);
   return sanitizeLeaderboard(body, period);
 }

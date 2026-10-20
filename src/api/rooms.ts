@@ -1,6 +1,6 @@
 import type { DeadCardMode } from '../engine/game';
 import type { TeamIndex } from '../engine/setup';
-import { ApiError, postJson, readJson, request } from './http';
+import { ApiError, UNREADABLE_RESPONSE, postJson, readJson, request } from './http';
 
 /** A seated player. */
 export interface Seat {
@@ -141,7 +141,7 @@ export function sanitizeRoom(id: string, raw: RawRoom): Room {
 async function refusal(response: Response, fallback: string): Promise<void> {
   if (response.status >= 400 && response.status < 500) {
     const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
-    const message = typeof body?.message === 'string' ? body.message : `${fallback} (${response.status}).`;
+    const message = typeof body?.message === 'string' ? body.message : fallback;
     throw new ApiError('server', message, response.status);
   }
 }
@@ -160,9 +160,9 @@ export async function createRoom(teamCount: number, playersPerTeam: number, opti
     name: options.name?.trim() || undefined,
     ...rawSettings(options.settings ?? {}),
   });
-  await refusal(response, 'The server refused to open the table');
+  await refusal(response, "We couldn't open the table. Please try again.");
   const body = await readJson<{ id: string }>(response);
-  if (!body?.id) throw new Error('The server did not return a table code. Try again.');
+  if (!body?.id) throw new ApiError('unexpected', UNREADABLE_RESPONSE);
   return String(body.id);
 }
 
@@ -173,9 +173,9 @@ export async function updateRoom(id: string, changes: { name?: string; settings?
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: changes.name, ...rawSettings(changes.settings ?? {}) }),
   });
-  await refusal(response, 'The server refused to change the table');
+  await refusal(response, "We couldn't change the table's settings. Please try again.");
   const raw = await readJson<RawRoom>(response);
-  if (!raw) throw new ApiError('unexpected', 'The server did not return the table. Reload the page.');
+  if (!raw) throw new ApiError('unexpected', "We couldn't load the table. Please refresh the page.");
   return sanitizeRoom(id, raw);
 }
 
@@ -184,18 +184,18 @@ async function roomAction(id: string, action: 'leave' | 'shuffle', fallback: str
   const response = await postJson(`/room/${encodeURIComponent(id)}/${action}`, {});
   await refusal(response, fallback);
   const raw = await readJson<RawRoom>(response);
-  if (!raw) throw new ApiError('unexpected', 'The server did not return the table. Reload the page.');
+  if (!raw) throw new ApiError('unexpected', "We couldn't load the table. Please refresh the page.");
   return sanitizeRoom(id, raw);
 }
 
 /** POST /room/:id/leave: stand up from your seat (before the game starts). */
 export function leaveSeat(id: string): Promise<Room> {
-  return roomAction(id, 'leave', 'The server refused to free your seat');
+  return roomAction(id, 'leave', "We couldn't free your seat. Please try again.");
 }
 
 /** POST /room/:id/shuffle: the host deals the seated players out to the teams at random. */
 export function shuffleSeats(id: string): Promise<Room> {
-  return roomAction(id, 'shuffle', 'The server refused to shuffle the teams');
+  return roomAction(id, 'shuffle', "We couldn't shuffle the teams. Please try again.");
 }
 
 /** The code inside a table link ("…/table/lucky-otter-ab12/game"), or null when the text isn't a link. */

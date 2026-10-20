@@ -1,5 +1,5 @@
 import type { Pos } from '../engine/board';
-import { readJson, request } from './http';
+import { ApiError, UNREADABLE_RESPONSE, readJson, request } from './http';
 
 // The legacy HTTP game (backend controller/game.js): one global game for the whole server.
 
@@ -10,7 +10,7 @@ export interface RawCell {
 
 export async function getDeck(): Promise<RawCell[][]> {
   const body = await readJson<{ deck: RawCell[][] }>(await request('/board/deck'));
-  if (!body?.deck) throw new Error('The server returned no board.');
+  if (!body?.deck) throw new ApiError('unexpected', UNREADABLE_RESPONSE);
   return body.deck;
 }
 

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import layout from '../../engine/board-layout.json';
+import { SERVER_UNREACHABLE } from '../../api/http';
 import { RemoteGameAdapter } from './RemoteGameAdapter';
 
 type Handler = (url: URL) => { status: number; body: string } | 'network-error';
@@ -91,7 +92,7 @@ describe('RemoteGameAdapter', () => {
     const adapter = new RemoteGameAdapter({ handle: 'jabir', displayName: 'Jabir', pollIntervalMs: 60_000 });
     await ready(adapter);
     const result = await adapter.playCard(0, { row: 0, column: 0 });
-    expect(!result.ok && result.message).toMatch(/rejected/);
+    expect(!result.ok && result.message).toMatch(/isn't allowed/);
     adapter.dispose();
   });
 
@@ -101,7 +102,7 @@ describe('RemoteGameAdapter', () => {
     const adapter = new RemoteGameAdapter({ handle: 'jabir', displayName: 'Jabir', pollIntervalMs: 60_000 });
     await ready(adapter);
     expect(adapter.getState().status).toBe('error');
-    expect(adapter.getState().error).toMatch(/port 3000/);
+    expect(adapter.getState().error).toBe(SERVER_UNREACHABLE);
     down = false;
     await adapter.refresh();
     expect(adapter.getState().status).toBe('ready');
