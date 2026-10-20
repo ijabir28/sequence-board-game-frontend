@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SERVER_ERROR } from './http';
 import { getLeaderboard, sanitizeEntry, sanitizeLeaderboard } from './leaderboard';
 
 const ENTRY = {
@@ -77,6 +78,6 @@ describe('getLeaderboard', () => {
 
   it('reports a server error', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>', { status: 500 })));
-    await expect(getLeaderboard('all')).rejects.toThrow(/server returned an error/);
+    await expect(getLeaderboard('all')).rejects.toThrow(SERVER_ERROR);
   });
 });

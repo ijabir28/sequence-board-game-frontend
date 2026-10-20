@@ -1,4 +1,4 @@
-import { ApiError, postJson, request } from './http';
+import { ApiError, UNREADABLE_RESPONSE, failureMessage, postJson, request } from './http';
 
 // Accounts. Signing up, in and out goes to Better Auth on the backend (/api/auth, see its auth.js); the signed-in
 // profile comes from GET /user/profile. Better Auth's errors are JSON {code, message}; ours are {error, message}.
@@ -47,14 +47,14 @@ const ERRORS: Record<string, { field: AccountField | null; message?: string }> =
 };
 
 /** The server refused a sign-in or sign-up, for example a taken handle. `message` is written for players. */
-export class AccountError extends Error {
+export class AccountError extends ApiError {
   readonly field: AccountField | null;
 
   constructor(
     readonly code: string,
     message: string,
   ) {
-    super(ERRORS[code]?.message ?? message);
+    super('refused', ERRORS[code]?.message ?? message);
     this.name = 'AccountError';
     this.field = ERRORS[code]?.field ?? null;
   }
@@ -73,9 +73,9 @@ async function readBody(response: Response): Promise<Record<string, unknown> | n
 function refusal(response: Response, body: Record<string, unknown> | null): never {
   const code = typeof body?.code === 'string' ? body.code : typeof body?.error === 'string' ? body.error : null;
   if (response.status >= 400 && response.status < 500 && code) {
-    throw new AccountError(code, typeof body?.message === 'string' ? body.message : 'The server refused that. Try again.');
+    throw new AccountError(code, typeof body?.message === 'string' ? body.message : "That didn't work. Please check what you entered and try again.");
   }
-  throw new ApiError('server', `The server returned an error (${response.status}). Try again in a moment.`, response.status);
+  throw new ApiError('server', failureMessage(response.status), response.status);
 }
 
 function count(value: unknown): number {
@@ -84,7 +84,7 @@ function count(value: unknown): number {
 
 function toProfile(body: Record<string, unknown> | null): Profile {
   if (typeof body?.handle !== 'string') {
-    throw new ApiError('unexpected', 'The server sent a response this app could not read. Try again.');
+    throw new ApiError('unexpected', UNREADABLE_RESPONSE);
   }
   const stats = (body.stats && typeof body.stats === 'object' ? body.stats : {}) as Record<string, unknown>;
   return {
@@ -109,7 +109,7 @@ async function authAction(path: string, body: unknown): Promise<void> {
 /** The profile right after signing in, which must exist. */
 async function signedInProfile(): Promise<Profile> {
   const profile = await getProfile();
-  if (!profile) throw new ApiError('unexpected', 'Signed in, but the server lost the session. Try again.');
+  if (!profile) throw new ApiError('unexpected', "You're signed in, but we couldn't load your account. Please try again.");
   return profile;
 }
 
@@ -148,7 +148,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 /** Ends the session on the server. */
 export async function signOut(): Promise<void> {
   const response = await postJson('/api/auth/sign-out', {});
-  if (!response.ok) throw new ApiError('server', `Signing out failed (${response.status}). Try again.`, response.status);
+  if (!response.ok) throw new ApiError('server', "We couldn't sign you out. Please try again.", response.status);
 }
 
 /** The signed-in user, or null when there is no session (or it has expired). */
@@ -187,7 +187,7 @@ export async function uploadAvatar(picture: Blob): Promise<string> {
   const response = await request('/user/avatar', { method: 'PUT', headers: { 'Content-Type': picture.type }, body: picture });
   const body = await readBody(response);
   if (!response.ok) refusal(response, body);
-  if (typeof body?.image !== 'string') throw new ApiError('unexpected', 'The server sent a response this app could not read. Try again.');
+  if (typeof body?.image !== 'string') throw new ApiError('unexpected', UNREADABLE_RESPONSE);
   return body.image;
 }
 
