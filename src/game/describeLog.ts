@@ -20,6 +20,8 @@ function describeTimedOut(entry: Extract<LogEntry, { player: string }>, notation
       return `${late}, so their dead card ${cardShort(entry.card, notation)} was swapped`;
     case 'pass':
       return `${late} with no playable card, so their turn passed`;
+    case 'forfeit':
+      return describeMove(entry, notation);
   }
 }
 
@@ -45,5 +47,7 @@ function describeMove(entry: LogEntry, notation: CardNotation): string {
       return `${teamName(entry.team)} completed a sequence`;
     case 'win':
       return `${teamName(entry.team)} won the game`;
+    case 'forfeit':
+      return entry.auto ? `${entry.player} missed too many turns in a row and forfeited` : `${entry.player} forfeited`;
   }
 }

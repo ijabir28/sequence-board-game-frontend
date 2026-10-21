@@ -1,11 +1,22 @@
 import { ApiError, UNREADABLE_RESPONSE, readJson, request } from './http';
 
-// The leaderboard, GET /user/leaderboard on the backend (see its docs/api.md). Ratings are team Elo from 1200, changed
-// by every round won; the weekly and daily boards rank by the rating gained in the last 7 days / 24 hours.
+// The leaderboards on the backend (see its docs/api.md): GET /user/leaderboard for private tables and
+// GET /matchmaking/leaderboard for Quick Match, each with ratings of its own. Ratings are team Elo from 1200, changed by
+// every round won; the weekly and daily boards rank by the rating gained in the last 7 days / 24 hours.
 
 export type LeaderboardPeriod = 'all' | 'week' | 'day';
 
 export const LEADERBOARD_PERIODS: LeaderboardPeriod[] = ['all', 'week', 'day'];
+
+/** Which board: private tables (`custom`) or Quick Match (`matchmaking`). */
+export type LeaderboardLadder = 'custom' | 'matchmaking';
+
+export const LEADERBOARD_LADDERS: LeaderboardLadder[] = ['custom', 'matchmaking'];
+
+const LADDER_PATHS: Record<LeaderboardLadder, string> = {
+  custom: '/user/leaderboard',
+  matchmaking: '/matchmaking/leaderboard',
+};
 
 export interface LeaderboardEntry {
   /** Shared by players tied on score. */
@@ -79,9 +90,14 @@ export function sanitizeLeaderboard(raw: Record<string, unknown>, period: Leader
 }
 
 /** One page of the board for `period`, best first, with where the signed-in player stands. */
-export async function getLeaderboard(period: LeaderboardPeriod, page = 1, perPage = 20): Promise<LeaderboardPage> {
+export async function getLeaderboard(
+  period: LeaderboardPeriod,
+  page = 1,
+  perPage = 20,
+  ladder: LeaderboardLadder = 'custom',
+): Promise<LeaderboardPage> {
   const query = new URLSearchParams({ period, page: String(page), per_page: String(perPage) });
-  const body = await readJson<Record<string, unknown>>(await request(`/user/leaderboard?${query}`));
+  const body = await readJson<Record<string, unknown>>(await request(`${LADDER_PATHS[ladder]}?${query}`));
   if (!body) throw new ApiError('unexpected', UNREADABLE_RESPONSE);
   return sanitizeLeaderboard(body, period);
 }

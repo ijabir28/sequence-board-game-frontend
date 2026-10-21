@@ -3,8 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import {
   getLeaderboard,
+  LEADERBOARD_LADDERS,
   LEADERBOARD_PERIODS,
   type LeaderboardEntry,
+  type LeaderboardLadder,
   type LeaderboardPage,
   type LeaderboardPeriod,
 } from '../api/leaderboard';
@@ -42,7 +44,29 @@ const PERIODS: Record<LeaderboardPeriod, { label: string; tip: string; scoreLabe
   },
 };
 
-type State = { status: 'loading' } | { status: 'error'; message: string } | ({ status: 'ready' } & LeaderboardPage);
+const LADDERS: Record<LeaderboardLadder, { label: string; tip: string; intro: string }> = {
+  custom: {
+    label: 'Private tables',
+    tip: 'Rounds played at tables shared with a code',
+    intro:
+      'Every round won or lost at a private table moves your rating, which starts at 1200. Beating a stronger team earns more than beating a weaker one.',
+  },
+  matchmaking: {
+    label: 'Quick Match',
+    tip: 'Quick matches, rated on their own',
+    intro:
+      'Quick matches have a rating of their own, from 1200, apart from private tables. Forfeiting a match counts as a loss.',
+  },
+};
+
+type State =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | ({ status: 'ready'; ladder: LeaderboardLadder } & LeaderboardPage);
+
+function readLadder(value: string | null): LeaderboardLadder {
+  return LEADERBOARD_LADDERS.includes(value as LeaderboardLadder) ? (value as LeaderboardLadder) : 'custom';
+}
 
 function readPeriod(value: string | null): LeaderboardPeriod {
   return LEADERBOARD_PERIODS.includes(value as LeaderboardPeriod) ? (value as LeaderboardPeriod) : 'all';
@@ -66,49 +90,52 @@ export function percent(rate: number): string {
 }
 
 /**
- * The leaderboard: every rated player by Elo rating, or by the rating gained this week or today. The period and page
- * are in the address, so the back button and a shared link land on the same board. The signed-in player's row is
- * highlighted, and pinned under the list when they are on another page.
+ * The leaderboards: private tables' or Quick Match's, each with every rated player by Elo rating, or by the rating
+ * gained this week or today. The board, period and page are in the address, so the back button and a shared link land
+ * on the same board. The signed-in player's row is highlighted, and pinned under the list when they are on another page.
  */
 export function LeaderboardPage() {
   const { profile } = useAuth();
   const [params, setParams] = useSearchParams();
+  const ladder = readLadder(params.get('ladder'));
   const period = readPeriod(params.get('period'));
   const page = readPage(params.get('page'));
   const [state, setState] = useState<State>({ status: 'loading' });
 
   const go = useCallback(
-    (next: { period?: LeaderboardPeriod; page?: number }) => {
+    (next: { ladder?: LeaderboardLadder; period?: LeaderboardPeriod; page?: number }) => {
+      const nextLadder = next.ladder ?? ladder;
       const nextPeriod = next.period ?? period;
       const nextPage = next.page ?? 1;
       const query: Record<string, string> = {};
+      if (nextLadder !== 'custom') query.ladder = nextLadder;
       if (nextPeriod !== 'all') query.period = nextPeriod;
       if (nextPage > 1) query.page = String(nextPage);
       setParams(query);
     },
-    [period, setParams],
+    [ladder, period, setParams],
   );
 
   const load = useCallback(async () => {
     // Keep the current board on screen while the next page loads, so the list doesn't jump.
     setState((prev) => (prev.status === 'ready' ? prev : { status: 'loading' }));
     try {
-      const result = await getLeaderboard(period, page, PER_PAGE);
+      const result = await getLeaderboard(period, page, PER_PAGE, ladder);
       // A page past the end (the board shrank, or an old link): show the last page that exists.
       if (result.players.length === 0 && page > result.pages) return go({ page: result.pages });
-      setState({ status: 'ready', ...result });
+      setState({ status: 'ready', ladder, ...result });
     } catch (e) {
       setState({ status: 'error', message: errorMessage(e) });
     }
-  }, [period, page, go]);
+  }, [ladder, period, page, go]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const ready = state.status === 'ready' ? state : null;
-  // While another period loads, the board on screen belongs to the previous one.
-  const stale = ready !== null && (ready.period !== period || ready.page !== page);
+  // While another board loads, the one on screen belongs to the previous choice.
+  const stale = ready !== null && (ready.ladder !== ladder || ready.period !== period || ready.page !== page);
   const meta = PERIODS[period];
   const you = ready?.you ?? null;
   const youOnPage = you !== null && ready !== null && you.page === ready.page;
@@ -125,10 +152,23 @@ export function LeaderboardPage() {
                 <Icon name="trophy" size={26} />
                 Leaderboard
               </h1>
-              <p>
-                Every round won or lost moves your rating, which starts at 1200. Beating a stronger team earns more than
-                beating a weaker one.
-              </p>
+              <p>{LADDERS[ladder].intro}</p>
+            </div>
+            <div className={own.tabs} role="tablist" aria-label="Board">
+              {LEADERBOARD_LADDERS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={key === ladder}
+                  aria-controls="leaderboard-list"
+                  className={own.tab}
+                  onClick={() => key !== ladder && go({ ladder: key })}
+                  {...tipProps(LADDERS[key].tip)}
+                >
+                  {LADDERS[key].label}
+                </button>
+              ))}
             </div>
             <div className={own.tabs} role="tablist" aria-label="Period">
               {LEADERBOARD_PERIODS.map((key) => (

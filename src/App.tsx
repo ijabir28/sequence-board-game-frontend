@@ -12,6 +12,7 @@ import { UpdateNotice } from './pwa/UpdateNotice';
 // first page doesn't wait for the game screen, the training or the profile editor. The service worker caches every
 // chunk, so after the first visit they open at once, offline too.
 const LocalGamePage = lazy(() => import('./screens/LocalGamePage').then((m) => ({ default: m.LocalGamePage })));
+const QuickMatchPage = lazy(() => import('./screens/QuickMatchPage').then((m) => ({ default: m.QuickMatchPage })));
 const LeaderboardPage = lazy(() => import('./screens/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const ProfilePage = lazy(() => import('./screens/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const RoomGamePage = lazy(() => import('./screens/RoomGamePage').then((m) => ({ default: m.RoomGamePage })));
@@ -23,7 +24,7 @@ const ResetPassword = lazy(() => import('./screens/ResetPassword').then((m) => (
 const ServerGamePage = lazy(() => import('./screens/ServerGamePage').then((m) => ({ default: m.ServerGamePage })));
 const TrainingPage = lazy(() => import('./tutorial/TrainingPage').then((m) => ({ default: m.TrainingPage })));
 
-// SPA routes must not start with a proxied backend prefix (/api, /user, /room, /game, /board, /images).
+// SPA routes must not start with a proxied backend prefix (/api, /user, /room, /game, /board, /images, /matchmaking).
 export function App() {
   return (
     <ToastProvider>
@@ -49,6 +50,14 @@ export function App() {
               element={
                 <RequireAuth>
                   <ProfilePage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/quick-match"
+              element={
+                <RequireAuth>
+                  <QuickMatchPage />
                 </RequireAuth>
               }
             />

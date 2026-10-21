@@ -88,6 +88,9 @@ export interface RoomGameView {
   name?: string;
   /** The host's handle, and the table's rounds (missing from older backends). */
   host?: string;
+  /** A Quick Match table, and whether the viewer forfeited it (missing from older backends). */
+  matchmaking?: boolean;
+  forfeited?: boolean;
   rounds?: RawRounds;
   settings?: RawRoomSettings;
   /** When the current turn began (ISO time), and the server's clock at the time of the response. */
@@ -156,6 +159,11 @@ export async function exchangeRoomCard(roomId: string, handIndex: number): Promi
 
 export async function passRoomTurn(roomId: string): Promise<RoomGameView> {
   return readGame(await postJson(`${base(roomId)}/game/pass`, {}));
+}
+
+/** POST /room/:id/game/forfeit (quick matches). Gives up the match; answers with the game as the viewer now sees it. */
+export async function forfeitRoomGame(roomId: string): Promise<RoomGameView> {
+  return readGame(await postJson(`${base(roomId)}/game/forfeit`, {}));
 }
 
 /** POST /room/:id/rounds/next (host). Deals the next round once the current one is won. */

@@ -70,6 +70,18 @@ export function onSignedInElsewhere(listener: (handle: string) => void): () => v
   };
 }
 
+/** `match_found {room_id, players}`: the Quick Match queue seated these players at a new table. */
+export function onMatchFound(handle: string, listener: (roomId: string) => void): () => void {
+  const s = getSocket();
+  const handler = (data?: { room_id?: unknown; players?: unknown }) => {
+    if (typeof data?.room_id === 'string' && Array.isArray(data.players) && data.players.includes(handle)) listener(data.room_id);
+  };
+  s.on('match_found', handler);
+  return () => {
+    s.off('match_found', handler);
+  };
+}
+
 export type ConnectionState = 'connecting' | 'live' | 'offline';
 
 export function onConnectionChange(listener: (state: ConnectionState) => void): () => void {
