@@ -2,6 +2,7 @@ import { errorMessage } from '../../api/http';
 import {
   endRoomRounds,
   exchangeRoomCard,
+  forfeitRoomGame,
   GameRejectedError,
   getRoomGame,
   getRoomRound,
@@ -130,6 +131,10 @@ export class RoomGameAdapter implements GameAdapter {
 
   endRounds(): Promise<ActionResult> {
     return this.act(() => endRoomRounds(this.options.roomId));
+  }
+
+  forfeit(): Promise<ActionResult> {
+    return this.act(() => forfeitRoomGame(this.options.roomId));
   }
 
   async roundDetail(round: number): Promise<RoundDetail> {
@@ -272,7 +277,12 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     turnTimeLeft: server.winner === null && server.turn_paused === true ? (server.turn_time_left_ms ?? null) : null,
     away: server.away ?? [],
     rounds: toRounds(server.rounds, server.host ?? null, server.viewer),
-    notice: viewer ? undefined : "You don't have a seat in this game, so you're watching.",
+    notice: server.forfeited
+      ? "You forfeited this match, so you're watching."
+      : viewer
+        ? undefined
+        : "You don't have a seat in this game, so you're watching.",
+    canForfeit: server.matchmaking === true && viewer !== null && server.winner === null && !server.forfeited,
     board: toBoard(server.board, server.sequences),
     teams: teamIndexes.map((index) => ({ index, sequences: server.sequences.filter((s) => s.team === index).length })),
     sequencesToWin: server.sequences_to_win,

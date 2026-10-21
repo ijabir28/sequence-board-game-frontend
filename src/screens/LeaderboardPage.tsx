@@ -53,9 +53,9 @@ const LADDERS: Record<LeaderboardLadder, { label: string; tip: string; intro: st
   },
   matchmaking: {
     label: 'Quick Match',
-    tip: 'Quick matches against other players and bots, rated on their own',
+    tip: 'Quick matches, rated on their own',
     intro:
-      'Quick matches have a rating of their own, from 1200, apart from private tables. Wins against bots count too, but bots are never listed.',
+      'Quick matches have a rating of their own, from 1200, apart from private tables. Forfeiting a match counts as a loss.',
   },
 };
 
