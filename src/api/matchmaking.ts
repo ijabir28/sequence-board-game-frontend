@@ -1,8 +1,7 @@
 import { ApiError, UNREADABLE_RESPONSE, readJson, request } from './http';
 
 // Quick Match, /matchmaking/queue on the backend (see its docs/api.md): queue for a table shape and the server seats
-// you with someone who asked for the same, or with bots after two minutes. A waiting page must keep asking for its
-// status, or the server drops it from the queue.
+// you at a table of that shape. A waiting page must keep asking for its status, or the server drops it from the queue.
 
 export type MatchTeams = 2 | 3;
 export type MatchTimer = 'blitz' | 'medium' | 'slow';
@@ -18,11 +17,8 @@ export type QueueStatus =
       status: 'queued';
       teams: MatchTeams;
       timer: MatchTimer;
-      /** When this device joined and when bots will fill the table, on this device's clock (ms). */
+      /** When this device joined, on this device's clock (ms). */
       joinedAt: number;
-      botsAt: number;
-      /** Players in this queue, you included. */
-      waiting: number;
     }
   /** The table is being made: ask again. */
   | { status: 'matching' }
@@ -44,14 +40,11 @@ export function sanitizeQueueStatus(raw: Record<string, unknown>, now = Date.now
   if (raw.status === 'queued') {
     const serverNow = time(raw.server_time, 0);
     const skew = serverNow === null ? 0 : now - serverNow;
-    const joinedAt = time(raw.joined_at, skew) ?? now;
     return {
       status: 'queued',
       teams: raw.teams === 3 ? 3 : 2,
       timer: MATCH_TIMERS.some((t) => t.id === raw.timer) ? (raw.timer as MatchTimer) : 'medium',
-      joinedAt,
-      botsAt: time(raw.bots_at, skew) ?? joinedAt + 120_000,
-      waiting: typeof raw.waiting === 'number' && raw.waiting >= 1 ? Math.round(raw.waiting) : 1,
+      joinedAt: time(raw.joined_at, skew) ?? now,
     };
   }
   return { status: 'idle' };

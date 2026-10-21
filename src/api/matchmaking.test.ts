@@ -12,15 +12,13 @@ function respond(status: number, body: unknown) {
 }
 
 describe('sanitizeQueueStatus', () => {
-  it('moves the waiting times onto this device’s clock', () => {
+  it('moves the time you joined onto this device’s clock', () => {
     const status = sanitizeQueueStatus(
       {
         status: 'queued',
         teams: 3,
         timer: 'blitz',
         joined_at: '2026-10-20T10:00:00.000Z',
-        bots_at: '2026-10-20T10:02:00.000Z',
-        waiting: 2,
         server_time: '2026-10-20T10:00:30.000Z',
       },
       // This device's clock is 5 s ahead of the server's.
@@ -31,8 +29,6 @@ describe('sanitizeQueueStatus', () => {
       teams: 3,
       timer: 'blitz',
       joinedAt: Date.parse('2026-10-20T10:00:05.000Z'),
-      botsAt: Date.parse('2026-10-20T10:02:05.000Z'),
-      waiting: 2,
     });
   });
 

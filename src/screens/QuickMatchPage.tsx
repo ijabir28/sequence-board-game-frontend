@@ -40,10 +40,7 @@ export function clock(ms: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-/**
- * Quick Match: pick 2 or 3 teams (one player each) and a turn timer, then wait for someone who asked for the same.
- * After two minutes bots take the empty seats. Once seated, the game opens by itself.
- */
+/** Quick Match: pick 2 or 3 teams (one player each) and a turn timer, then wait to be seated. The game opens by itself. */
 export function QuickMatchPage() {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -149,10 +146,7 @@ export function QuickMatchPage() {
               <Icon name="bolt" size={26} />
               Quick Match
             </h1>
-            <p>
-              Play someone new without sharing a code. Everyone plays on their own team, and if nobody else is looking for
-              the same game within two minutes, a bot takes the seat.
-            </p>
+            <p>Play someone new without sharing a code. Everyone plays on their own team.</p>
           </header>
 
           {state.status === 'loading' && (
@@ -242,22 +236,15 @@ function Waiting({
   busy: boolean;
   onCancel: () => void;
 }) {
-  const botsIn = queue ? queue.botsAt - now : 0;
-  const others = queue ? queue.waiting - 1 : 0;
   return (
     <div className={own.waiting} role="status" aria-live="polite">
       <span className={own.pulse} aria-hidden="true" />
       <div className={own.waitingText}>
-        <strong>{queue === null || botsIn <= 0 ? 'Setting up your table…' : `Looking for ${teams === 2 ? 'an opponent' : 'opponents'}…`}</strong>
+        <strong>{queue === null ? 'Setting up your table…' : `Looking for ${teams === 2 ? 'an opponent' : 'opponents'}…`}</strong>
         <span>
           {teams} teams · {timerLabel}
           {queue && ` · waiting ${clock(now - queue.joinedAt)}`}
         </span>
-        {queue && botsIn > 0 && (
-          <span className={own.sub}>
-            {others > 0 ? `${others} other player${others === 1 ? '' : 's'} waiting. ` : ''}A bot joins in {clock(botsIn)} if nobody else does.
-          </span>
-        )}
       </div>
       <Button size="sm" variant="ghost" busy={busy} onClick={onCancel} tip="Leave the queue">
         <Icon name="close" size={16} />

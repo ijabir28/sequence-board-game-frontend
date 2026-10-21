@@ -32,7 +32,7 @@ export function Lobby() {
               <p>Find an opponent with Quick Match, start a new game and invite friends with its code, or join a table someone shared with you.</p>
             </header>
             <div className={own.primaryActions}>
-              <Button variant="primary" onClick={() => navigate('/quick-match')} tip="Play someone new now: no code to share, and a bot steps in if nobody else is looking">
+              <Button variant="primary" onClick={() => navigate('/quick-match')} tip="Play someone new now: no code to share">
                 <Icon name="bolt" size={18} />
                 Quick Match
               </Button>

@@ -56,10 +56,6 @@
   font-size: var(--text-sm);
 }
 
-.sub {
-  font-size: var(--text-sm);
-}
-
 .pulse {
   position: relative;
   flex: none;
