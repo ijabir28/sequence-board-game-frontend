@@ -1,0 +1,359 @@
+.back {
+  width: min(100%, 60rem);
+}
+
+.card {
+  gap: var(--space-4);
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.top > :first-child {
+  flex: 1 1 22rem;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.title svg {
+  color: var(--corner-ink);
+}
+
+/* All time / This week / Today. */
+.tabs {
+  display: inline-flex;
+  flex: none;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--outline-strong);
+  background: var(--surface-low);
+}
+
+.tab {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--on-surface-muted);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.tab:hover {
+  color: var(--on-surface);
+}
+
+.tab[aria-selected='true'] {
+  background: var(--surface-highest);
+  color: var(--primary);
+}
+
+.tab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* The signed-in player's own numbers, above the list. */
+.standing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(16, 185, 129, 0.03));
+}
+
+.standingText {
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+}
+
+.stats div {
+  display: flex;
+  flex-direction: column;
+}
+
+.stats dt {
+  color: var(--on-surface-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.stats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.up {
+  color: var(--primary);
+}
+
+.down {
+  color: var(--error);
+}
+
+.panel {
+  min-height: 6rem;
+}
+
+.problem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+/* The board: rank, player, score, won–lost, win rate. */
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity var(--dur) var(--ease-out);
+}
+
+.stale {
+  opacity: 0.55;
+}
+
+.headings,
+.row {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 5.5rem 4.5rem 7.5rem;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.headings {
+  color: var(--on-surface-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.row {
+  min-height: 56px;
+  border-top: 1px solid var(--outline-subtle);
+}
+
+.headings + .row {
+  border-top: 0;
+}
+
+.mine {
+  border-top-color: transparent;
+  border-radius: var(--radius-md);
+  background: rgba(78, 222, 163, 0.1);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.mine + .row {
+  border-top-color: transparent;
+}
+
+/* Your row, pinned under the page when you are further down the board. */
+.pinned {
+  position: sticky;
+  bottom: var(--space-2);
+  background: var(--surface-highest);
+  box-shadow: inset 3px 0 0 var(--primary), var(--shadow-raised);
+}
+
+.gap {
+  padding: var(--space-1) 0;
+  color: var(--on-surface-muted);
+  text-align: center;
+  letter-spacing: 0.2em;
+}
+
+.rank {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--on-surface-muted);
+}
+
+.top1,
+.top2,
+.top3 {
+  color: #1b1405;
+}
+
+.top1 {
+  background: linear-gradient(135deg, #fde68a, #f5c451);
+}
+
+.top2 {
+  background: linear-gradient(135deg, #e2e8f0, #a9b4cc);
+}
+
+.top3 {
+  background: linear-gradient(135deg, #f0b27a, #c2793c);
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.youTag {
+  flex: none;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.handle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+}
+
+.narrowStats {
+  display: none;
+}
+
+.num {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.score {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-md);
+}
+
+.sub {
+  color: var(--on-surface-muted);
+  font-size: var(--text-xs);
+}
+
+.rate {
+  width: 100%;
+  height: 4px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-highest);
+}
+
+.rateBar {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.position {
+  padding: 0 var(--space-2);
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Phones: rank, player (with won–lost and win rate under the name) and score. */
+@media (max-width: 600px) {
+  .headings,
+  .row {
+    grid-template-columns: 2.5rem minmax(0, 1fr) 4.5rem;
+    gap: var(--space-2);
+    padding: var(--space-2);
+  }
+
+  .wide {
+    display: none;
+  }
+
+  .narrowStats {
+    display: block;
+    color: var(--on-surface-muted);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabs {
+    width: 100%;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 0 var(--space-2);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2) var(--space-4);
+    width: 100%;
+  }
+}

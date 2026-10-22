@@ -2,6 +2,7 @@ import { errorMessage } from '../../api/http';
 import {
   endRoomRounds,
   exchangeRoomCard,
+  forfeitRoomGame,
   GameRejectedError,
   getRoomGame,
   getRoomRound,
@@ -132,13 +133,13 @@ export class RoomGameAdapter implements GameAdapter {
     return this.act(() => endRoomRounds(this.options.roomId));
   }
 
+  forfeit(): Promise<ActionResult> {
+    return this.act(() => forfeitRoomGame(this.options.roomId));
+  }
+
   async roundDetail(round: number): Promise<RoundDetail> {
-    try {
-      const raw = await getRoomRound(this.options.roomId, round);
-      return { result: toRoundResult(raw), board: toBoard(raw.board, raw.sequences), sequences: raw.sequences, log: raw.log };
-    } catch (error) {
-      throw new Error(error instanceof GameRejectedError ? error.message : errorMessage(error));
-    }
+    const raw = await getRoomRound(this.options.roomId, round);
+    return { result: toRoundResult(raw), board: toBoard(raw.board, raw.sequences), sequences: raw.sequences, log: raw.log };
   }
 
   stepAway(away: boolean): void {
@@ -203,8 +204,7 @@ export class RoomGameAdapter implements GameAdapter {
     } catch (error) {
       // Keep the last good board on a failed refresh; only show the error screen if we never loaded.
       if (this.view.status === 'ready') return;
-      const message = error instanceof GameRejectedError ? error.message : errorMessage(error);
-      this.publish({ ...EMPTY_VIEW, status: 'error', error: message });
+      this.publish({ ...EMPTY_VIEW, status: 'error', error: errorMessage(error) });
     }
   }
 
@@ -277,7 +277,12 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     turnTimeLeft: server.winner === null && server.turn_paused === true ? (server.turn_time_left_ms ?? null) : null,
     away: server.away ?? [],
     rounds: toRounds(server.rounds, server.host ?? null, server.viewer),
-    notice: viewer ? undefined : "You don't have a seat in this game, so you're watching.",
+    notice: server.forfeited
+      ? "You forfeited this match, so you're watching."
+      : viewer
+        ? undefined
+        : "You don't have a seat in this game, so you're watching.",
+    canForfeit: server.matchmaking === true && viewer !== null && server.winner === null && !server.forfeited,
     board: toBoard(server.board, server.sequences),
     teams: teamIndexes.map((index) => ({ index, sequences: server.sequences.filter((s) => s.team === index).length })),
     sequencesToWin: server.sequences_to_win,

@@ -71,3 +71,35 @@
   justify-content: space-between;
   gap: var(--space-2);
 }
+
+.secondaryButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Looks like the ghost "Your tables" button beside it. */
+.leaderboardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius);
+  color: var(--on-surface-muted);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.leaderboardLink:hover {
+  color: var(--on-surface);
+  background: var(--surface-high);
+}
+
+.leaderboardLink:focus-visible {
+  box-shadow: var(--focus-ring);
+}

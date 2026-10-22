@@ -185,6 +185,8 @@ export interface GameView {
   title?: string;
   /** Table games are played in rounds; null for games without them (hot-seat, older servers). */
   rounds?: RoundsView | null;
+  /** The viewer may forfeit this game (a quick match they are playing). */
+  canForfeit?: boolean;
 }
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
@@ -214,5 +216,7 @@ export interface GameAdapter {
   endRounds?(): Promise<ActionResult>;
   /** Table games: a won round's statistics, final board and move log. Rejects with a readable message. */
   roundDetail?(round: number): Promise<RoundDetail>;
+  /** Quick matches: give up the game, with a rating penalty. */
+  forfeit?(): Promise<ActionResult>;
   dispose(): void;
 }

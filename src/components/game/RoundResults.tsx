@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { errorMessage } from '../../api/http';
 import type { Pos } from '../../engine/board';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { PlayerStats, RoundDetail, RoundResult, RoundsView, SeriesSummary } from '../../game/types';
@@ -286,7 +287,7 @@ function RoundDetailBody({
     setState({ status: 'loading' });
     load(round).then(
       (detail) => current && setState({ status: 'ready', detail }),
-      (error: unknown) => current && setState({ status: 'error', message: error instanceof Error ? error.message : String(error) }),
+      (error: unknown) => current && setState({ status: 'error', message: errorMessage(error) }),
     );
     return () => {
       current = false;

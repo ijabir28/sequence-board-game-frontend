@@ -2,7 +2,7 @@ import type { Pos } from '../engine/board';
 import type { LogEntry } from '../engine/game';
 import type { Sequence } from '../engine/sequences';
 import type { TeamIndex } from '../engine/setup';
-import { ApiError, postJson, request } from './http';
+import { ApiError, failureMessage, postJson, request } from './http';
 import type { RawRoomSettings } from './rooms';
 
 // A table's game (backend controller/room_game.js). Every response is the game as the
@@ -88,6 +88,9 @@ export interface RoomGameView {
   name?: string;
   /** The host's handle, and the table's rounds (missing from older backends). */
   host?: string;
+  /** A Quick Match table, and whether the viewer forfeited it (missing from older backends). */
+  matchmaking?: boolean;
+  forfeited?: boolean;
   rounds?: RawRounds;
   settings?: RawRoomSettings;
   /** When the current turn began (ISO time), and the server's clock at the time of the response. */
@@ -106,13 +109,15 @@ export interface RoomGameView {
 }
 
 /** The server understood the request and refused it, for example a move out of turn. */
-export class GameRejectedError extends Error {
+export class GameRejectedError extends ApiError {
+  declare readonly status: number;
+
   constructor(
     readonly code: string,
     message: string,
-    readonly status: number,
+    status: number,
   ) {
-    super(message);
+    super('refused', message, status);
     this.name = 'GameRejectedError';
   }
 }
@@ -123,12 +128,12 @@ async function readGame(response: Response): Promise<RoomGameView> {
   try {
     body = JSON.parse(text);
   } catch {
-    throw new ApiError('server', `The server returned an error (${response.status}). Try again in a moment.`, response.status);
+    throw new ApiError('server', failureMessage(response.status), response.status);
   }
   if (!response.ok) {
     const { error, message } = (body ?? {}) as { error?: string; message?: string };
-    if (error && response.status < 500) throw new GameRejectedError(error, message ?? 'The server refused that.', response.status);
-    throw new ApiError('server', message ?? `The server returned an error (${response.status}). Try again in a moment.`, response.status);
+    if (error && response.status < 500) throw new GameRejectedError(error, message ?? "That isn't allowed right now.", response.status);
+    throw new ApiError('server', message ?? failureMessage(response.status), response.status);
   }
   return body as RoomGameView;
 }
@@ -154,6 +159,11 @@ export async function exchangeRoomCard(roomId: string, handIndex: number): Promi
 
 export async function passRoomTurn(roomId: string): Promise<RoomGameView> {
   return readGame(await postJson(`${base(roomId)}/game/pass`, {}));
+}
+
+/** POST /room/:id/game/forfeit (quick matches). Gives up the match; answers with the game as the viewer now sees it. */
+export async function forfeitRoomGame(roomId: string): Promise<RoomGameView> {
+  return readGame(await postJson(`${base(roomId)}/game/forfeit`, {}));
 }
 
 /** POST /room/:id/rounds/next (host). Deals the next round once the current one is won. */

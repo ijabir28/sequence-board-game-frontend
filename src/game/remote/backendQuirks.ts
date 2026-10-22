@@ -1,4 +1,5 @@
 import type { TeamIndex } from '../../engine/setup';
+import { failureMessage } from '../../api/http';
 
 /*
  * Every workaround for the current backend lives here (see backend docs/known-issues.md).
@@ -38,8 +39,8 @@ export function interpretPlay(status: number, body: string): PlayOutcome {
 }
 
 export const PLAY_MESSAGES = {
-  invalid: 'The server rejected that move. Pick a highlighted cell and try again.',
-  serverError: (status: number) => `The server failed with status ${status}, so the move wasn't made. Try again.`,
+  invalid: "That move isn't allowed. Pick a highlighted cell and try again.",
+  serverError: (status: number) => `${failureMessage(status)} Your move wasn't made.`,
 } as const;
 
 /** What the server game can't do yet, shown above the board. */

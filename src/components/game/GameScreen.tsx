@@ -70,6 +70,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const [logOpen, setLogOpen] = useState(false);
   const [deckOpen, setDeckOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
+  const [forfeitOpen, setForfeitOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   // Opening the menu drawer, the how-to-play guide or the leave dialog counts as stepping away from the table, as if the player had already
@@ -78,7 +79,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   // Desktop players may watch another tab while they wait: the tab title tells them when it is their turn.
   const touch = useMediaQuery('(pointer: coarse)');
   const hiddenAway = useAwayWhileHidden(touch, () => adapter.stepAway?.(true));
-  const steppedAway = menuOpen || guideOpen || exitOpen || hiddenAway;
+  const steppedAway = menuOpen || guideOpen || exitOpen || forfeitOpen || hiddenAway;
   useEffect(() => {
     adapter.stepAway?.(steppedAway);
   }, [adapter, steppedAway]);
@@ -336,6 +337,10 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   };
   const onEndRounds = async () => {
     if (adapter.endRounds) await run(() => adapter.endRounds!());
+  };
+  const canForfeit = Boolean(view.canForfeit && adapter.forfeit);
+  const onForfeit = async () => {
+    if (adapter.forfeit && (await run(() => adapter.forfeit!()))) setForfeitOpen(false);
   };
   const waitingForHost = `Waiting for ${hostName} to deal another round or end the rounds here.`;
 
@@ -868,6 +873,18 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             <Button onClick={() => setExitOpen(false)} tip="Close this and go back to the board">
               Keep playing
             </Button>
+            {canForfeit && (
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setExitOpen(false);
+                  setForfeitOpen(true);
+                }}
+                tip="Give up this match. You are asked to confirm first."
+              >
+                Forfeit
+              </Button>
+            )}
             {onDashboard && (
               <Button onClick={onDashboard} tip="Leave the game for the dashboard. It stays saved.">
                 Back to dashboard
@@ -886,6 +903,30 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         <p>{adapter.mode === 'local' ? 'This game is only stored on this device, so leaving ends it.' : onDashboard
               ? 'The game is saved, so you can come back to it from the dashboard. Leave game opens the table page.'
               : 'You can come back to the server game later.'}</p>
+        {canForfeit && (
+          <p>
+            A quick match goes on while you're away: when your time runs out a card is played for you, and missing 10 turns
+            in a row forfeits the match.
+          </p>
+        )}
+      </Dialog>
+
+      <Dialog
+        open={forfeitOpen}
+        title="Forfeit this match?"
+        onClose={() => setForfeitOpen(false)}
+        actions={
+          <>
+            <Button onClick={() => setForfeitOpen(false)} tip="Close this and go back to the board">
+              Keep playing
+            </Button>
+            <Button variant="danger" busy={busy} onClick={() => void onForfeit()} tip="Give up the match and take the loss">
+              Forfeit
+            </Button>
+          </>
+        }
+      >
+        <p>Forfeiting counts as a loss: your Quick Match rating goes down, and you can't come back to this match.</p>
       </Dialog>
     </div>
   );

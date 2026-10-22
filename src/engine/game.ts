@@ -19,7 +19,9 @@ export type LogEntry =
   | { kind: 'exchange'; turn: number; player: string; team: TeamIndex; card: CardName; auto?: boolean; timed_out?: boolean }
   | { kind: 'pass'; turn: number; player: string; team: TeamIndex; timed_out?: boolean }
   | { kind: 'sequence'; turn: number; team: TeamIndex; cells: Pos[] }
-  | { kind: 'win'; turn: number; team: TeamIndex };
+  | { kind: 'win'; turn: number; team: TeamIndex }
+  /** A quick match player gave up (`auto`: after missing too many turns in a row). Only the server logs these. */
+  | { kind: 'forfeit'; turn: number; player: string; team: TeamIndex; auto?: boolean };
 
 /** How players find dead cards: spotted by hand ('manual'), or marked in the hand ('indicator'). */
 export type DeadCardMode = 'manual' | 'indicator';
