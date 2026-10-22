@@ -3,6 +3,14 @@ import layout from '../../engine/board-layout.json';
 import type { RoomGameView } from '../../api/roomGame';
 import { RoomGameAdapter } from './RoomGameAdapter';
 
+// Tests that don't pass their own socket hooks must never open a real socket.
+vi.mock('../../api/socket', () => ({
+  announcePresence: () => () => {},
+  onGameUpdated: () => () => {},
+  onSpectatorsUpdated: () => () => {},
+  watchGame: () => () => {},
+}));
+
 function serverView(overrides: Partial<RoomGameView> = {}): RoomGameView {
   return {
     team_count: 2,
@@ -334,6 +342,50 @@ describe('RoomGameAdapter', () => {
     const unsubscribe = a.subscribe(() => {});
     await a.refresh();
     expect(announcePresence).not.toHaveBeenCalled();
+    unsubscribe();
+    a.dispose();
+  });
+
+  it('counts a spectator as watching while the game is open, and live spectator counts update the view', async () => {
+    stubFetch(() => ({ status: 200, body: serverView({ viewer: null, hand: [], presence_token: null, spectators: 1 }) }));
+    const unwatch = vi.fn();
+    const watch = vi.fn(() => unwatch);
+    let spectatorsListener: (count: number) => void = () => {};
+    const a = new RoomGameAdapter({
+      roomId: '42',
+      subscribeUpdates: () => () => {},
+      pollIntervalMs: 60_000,
+      watch,
+      subscribeSpectators: (listener) => {
+        spectatorsListener = listener;
+        return () => {};
+      },
+    });
+    const unsubscribe = a.subscribe(() => {});
+    await a.refresh();
+    await a.refresh();
+    expect(watch).toHaveBeenCalledTimes(1);
+    expect(a.getState()).toMatchObject({ spectating: true, spectators: 1, hand: [], canExchange: false, canPass: false });
+    expect(a.legalTargets(0)).toEqual([]);
+
+    spectatorsListener(3);
+    expect(a.getState().spectators).toBe(3);
+    unsubscribe();
+    expect(unwatch).toHaveBeenCalledTimes(1);
+    a.dispose();
+  });
+
+  it('never counts a seated player as a spectator', async () => {
+    stubFetch(() => ({ status: 200, body: serverView({ presence_token: 'tok' }) }));
+    const watch = vi.fn(() => () => {});
+    const a = new RoomGameAdapter({
+      roomId: '42', subscribeUpdates: () => () => {}, subscribeSpectators: () => () => {}, pollIntervalMs: 60_000, watch,
+      announcePresence: () => () => {},
+    });
+    const unsubscribe = a.subscribe(() => {});
+    await a.refresh();
+    expect(watch).not.toHaveBeenCalled();
+    expect(a.getState().spectating).toBe(false);
     unsubscribe();
     a.dispose();
   });

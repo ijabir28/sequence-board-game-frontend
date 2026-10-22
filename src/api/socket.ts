@@ -119,3 +119,31 @@ export function announcePresence(roomId: string, handle: string, token: string):
     s.emit('leave_game', { room_id: roomId });
   };
 }
+
+/**
+ * Watches a table's game without a seat (`watch_game`), again after every reconnect, until the returned function is
+ * called (`unwatch_game`). It only counts the viewer among the table's spectators: the game itself arrives through
+ * `game_updated`, like everyone else's.
+ */
+export function watchGame(roomId: string): () => void {
+  const s = getSocket();
+  const watch = () => s.emit('watch_game', { room_id: roomId });
+  if (s.connected) watch();
+  s.on('connect', watch);
+  return () => {
+    s.off('connect', watch);
+    s.emit('unwatch_game', { room_id: roomId });
+  };
+}
+
+/** `spectators_updated {room_id, count}`: someone started or stopped watching this table's game. */
+export function onSpectatorsUpdated(roomId: string, listener: (count: number) => void): () => void {
+  const s = getSocket();
+  const handler = (data?: { room_id?: string; count?: unknown }) => {
+    if (data?.room_id === roomId && typeof data.count === 'number') listener(data.count);
+  };
+  s.on('spectators_updated', handler);
+  return () => {
+    s.off('spectators_updated', handler);
+  };
+}
