@@ -200,3 +200,12 @@
   overscroll-behavior: contain;
   padding-right: var(--space-1);
 }
+
+/* A round in detail: back to every round on the left, sharing this one on the right. */
+.detailBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}

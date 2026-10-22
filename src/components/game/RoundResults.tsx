@@ -267,11 +267,13 @@ function RoundDetailBody({
   load,
   playerName,
   onBack,
+  onShare,
 }: {
   round: number;
   load: (round: number) => Promise<RoundDetail>;
   playerName: (id: string) => string;
   onBack: () => void;
+  onShare?: (detail: RoundDetail) => void;
 }) {
   const [state, setState] = useState<{ status: 'loading' } | { status: 'ready'; detail: RoundDetail } | { status: 'error'; message: string }>({
     status: 'loading',
@@ -307,11 +309,17 @@ function RoundDetailBody({
 
   return (
     <div className={styles.body}>
-      <div ref={top}>
+      <div ref={top} className={styles.detailBar}>
         <Button size="sm" variant="ghost" onClick={onBack} tip="Back to the final results of every round">
           <Icon name="chevronLeft" size={16} />
           All rounds
         </Button>
+        {detail && onShare && (
+          <Button size="sm" variant="primary" onClick={() => onShare(detail)} tip={`Share an image of round ${round}: its final board, winner and numbers`}>
+            <Icon name="share" size={16} />
+            Share round {round}
+          </Button>
+        )}
       </div>
       {state.status === 'loading' && (
         <p className={styles.facts} role="status">
@@ -369,13 +377,15 @@ interface RoundResultsProps {
   /** The round being looked at in detail (null: the results), held by the caller so it survives refreshes. */
   openRound?: number | null;
   onOpenRound?: (round: number | null) => void;
+  /** Offers to share a round looked at in detail. */
+  onShareRound?: (detail: RoundDetail) => void;
 }
 
 /** The latest won round's statistics, or once the host ended the rounds, the final result of them all. */
-export function RoundResults({ rounds, playerName, loadRound, openRound = null, onOpenRound }: RoundResultsProps) {
+export function RoundResults({ rounds, playerName, loadRound, openRound = null, onOpenRound, onShareRound }: RoundResultsProps) {
   if (rounds.over && rounds.summary) {
     if (loadRound && onOpenRound && openRound !== null) {
-      return <RoundDetailBody round={openRound} load={loadRound} playerName={playerName} onBack={() => onOpenRound(null)} />;
+      return <RoundDetailBody round={openRound} load={loadRound} playerName={playerName} onBack={() => onOpenRound(null)} onShare={onShareRound} />;
     }
     return <SeriesBody summary={rounds.summary} results={rounds.results} onOpenRound={loadRound && onOpenRound ? (r) => onOpenRound(r) : undefined} />;
   }

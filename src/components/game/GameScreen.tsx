@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Pos } from '../../engine/board';
 import { cardKind, cardShort, type CardName, type CardNotation } from '../../engine/cards';
-import { useBoardStyle, useDeck } from '../../decks/decks';
+import { useDeck } from '../../decks/decks';
 import { describeHint } from '../../game/describeHint';
 import { describeDraft, draftLostMessage, draftProblem, type Draft } from '../../game/draft';
 import { describeLog } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
-import type { GameAdapter } from '../../game/types';
+import type { GameAdapter, RoundDetail } from '../../game/types';
 import { useHandOrder } from '../../game/useHandOrder';
 import { useAwayWhileHidden } from '../../game/useAwayWhileHidden';
 import { useMediaQuery } from '../../game/useMediaQuery';
@@ -27,8 +27,8 @@ import { HandPanel } from './HandPanel';
 import { MoveLog } from './MoveLog';
 import { describeVerdict, RoundResults } from './RoundResults';
 import { Scoreboard } from './Scoreboard';
-import { buildShareSummary } from './share/shareSummary';
-import { useShareResult } from './share/useShareResult';
+import { ShareDialog } from './share/ShareDialog';
+import { buildRoundShareSummary, buildShareSummary, type ShareSummary } from './share/shareSummary';
 import { useToast } from '../toast/Toaster';
 import { TurnPanel } from './TurnPanel';
 import { TurnSounds } from './TurnSounds';
@@ -58,9 +58,7 @@ const ROUND_TOAST = 'game-round';
 export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, handOrderKey, coach }: GameScreenProps) {
   const view = useGame(adapter);
   // The viewer's deck decides how cards are named in messages: "7♥", or "#7" with the Numbered deck.
-  const [deck] = useDeck();
-  const { notation } = deck;
-  const [boardStyle] = useBoardStyle();
+  const [{ notation }] = useDeck();
   const [selected, setSelected] = useState<number | null>(null);
   const toast = useToast();
   // A new selection or move clears a stale error or tip, but lets good news run its course.
@@ -174,16 +172,18 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   }, [gameOver, playedMs]);
   // Once the game is won: an image of the result (brand, final board and the numbers) to share or save.
   const shareSummary = useMemo(() => buildShareSummary(view, { modeLabel, hotSeat: adapter.hotSeat, playedMs }), [view, modeLabel, adapter, playedMs]);
-  const shareResult = useShareResult(gameOver ? shareSummary : null, { deck, boardStyle });
-  const shareButton = shareResult.available ? (
+  // The result being shared: this game's (or the match's), or one round's from the final results.
+  const [sharing, setSharing] = useState<ShareSummary | null>(null);
+  const shareRound = (detail: RoundDetail) =>
+    setSharing(buildRoundShareSummary(detail, { title: view.title ?? modeLabel, players: view.players, viewer, hotSeat: adapter.hotSeat }));
+  const shareButton = gameOver && shareSummary ? (
     <Button
       variant="primary"
-      onClick={shareResult.share}
-      busy={shareResult.busy}
+      onClick={() => setSharing(shareSummary)}
       tip={
         rounds?.over
-          ? 'Share an image of the match: the final board, the winner and every round added up'
-          : 'Share an image of the result: the final board, the winner and the numbers'
+          ? 'Share an image of the match to WhatsApp, X, Facebook and more, or save it'
+          : 'Share an image of the result to WhatsApp, X, Facebook and more, or save it'
       }
     >
       <Icon name="share" size={16} />
@@ -851,6 +851,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           actions={
             gameOver && !rounds.over && rounds.isHost ? (
               <>
+                {shareButton}
                 <Button
                   onClick={onEndRounds}
                   busy={busy}
@@ -864,7 +865,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
               </>
             ) : (
               <>
-                {rounds.over && openRound === null && shareButton}
+                {(!rounds.over || openRound === null) && shareButton}
                 {rounds.over && onDashboard && (
                   <Button onClick={onDashboard} tip="Go back to the dashboard to start or join another game">
                     Back to dashboard
@@ -890,10 +891,13 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             loadRound={loadRound}
             openRound={openRound}
             onOpenRound={setOpenRound}
+            onShareRound={shareRound}
           />
           {gameOver && !rounds.over && !rounds.isHost && <p className={styles.waitingNote}>{waitingForHost}</p>}
         </Dialog>
       )}
+
+      <ShareDialog summary={sharing} onClose={() => setSharing(null)} />
 
       <Dialog
         open={exitOpen}

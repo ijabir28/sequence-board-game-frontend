@@ -186,13 +186,18 @@ export function buildRoundShareSummary(
   };
 }
 
-/** What goes with the image when it is shared: one line, in the sharer's own words when they won, then where to play. */
-export function shareText(summary: ShareSummary, url: string): string {
+/** The line that goes with the image, in the sharer's own words when they won: "I just won a Sequence match! 🏆". */
+export function shareMessage(summary: ShareSummary): string {
   if (summary.viewerWon) {
     const what = summary.round !== null ? `round ${summary.round} of a Sequence match` : 'a Sequence match';
-    return `I just won ${what}! 🏆 Play at ${url}`;
+    return `I just won ${what}! 🏆`;
   }
-  return `${summary.headline} at Sequence. Play at ${url}`;
+  return `${summary.headline} at Sequence.`;
+}
+
+/** The message, then where to play. */
+export function shareText(summary: ShareSummary, url: string): string {
+  return `${shareMessage(summary)} Play at ${url}`;
 }
 
 /** "sequence-team-green-wins-2026-10-20.png", or "sequence-round-2-team-green-wins-…" for a round. */
