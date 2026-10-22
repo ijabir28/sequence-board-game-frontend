@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Pos } from '../../engine/board';
 import { cardKind, cardShort, type CardName, type CardNotation } from '../../engine/cards';
-import { useDeck } from '../../decks/decks';
+import { useBoardStyle, useDeck } from '../../decks/decks';
 import { describeHint } from '../../game/describeHint';
 import { describeDraft, draftLostMessage, draftProblem, type Draft } from '../../game/draft';
 import { describeLog } from '../../game/describeLog';
@@ -27,6 +27,8 @@ import { HandPanel } from './HandPanel';
 import { MoveLog } from './MoveLog';
 import { describeVerdict, RoundResults } from './RoundResults';
 import { Scoreboard } from './Scoreboard';
+import { buildShareSummary } from './share/shareSummary';
+import { useShareResult } from './share/useShareResult';
 import { useToast } from '../toast/Toaster';
 import { TurnPanel } from './TurnPanel';
 import { TurnSounds } from './TurnSounds';
@@ -56,7 +58,9 @@ const ROUND_TOAST = 'game-round';
 export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, handOrderKey, coach }: GameScreenProps) {
   const view = useGame(adapter);
   // The viewer's deck decides how cards are named in messages: "7♥", or "#7" with the Numbered deck.
-  const [{ notation }] = useDeck();
+  const [deck] = useDeck();
+  const { notation } = deck;
+  const [boardStyle] = useBoardStyle();
   const [selected, setSelected] = useState<number | null>(null);
   const toast = useToast();
   // A new selection or move clears a stale error or tip, but lets good news run its course.
@@ -161,6 +165,31 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     // `view` changes whenever the board does, which changes the legal targets.
     [adapter, selected, handVisible, gameOver, view],
   );
+
+  // Hot-seat games are never saved, so the screen times them itself: from the start until somebody wins.
+  const startedAt = useRef(adapter.mode === 'local' && !gameOver ? Date.now() : null);
+  const [playedMs, setPlayedMs] = useState<number | null>(null);
+  useEffect(() => {
+    if (gameOver && startedAt.current !== null && playedMs === null) setPlayedMs(Date.now() - startedAt.current);
+  }, [gameOver, playedMs]);
+  // Once the game is won: an image of the result (brand, final board and the numbers) to share or save.
+  const shareSummary = useMemo(() => buildShareSummary(view, { modeLabel, hotSeat: adapter.hotSeat, playedMs }), [view, modeLabel, adapter, playedMs]);
+  const shareResult = useShareResult(gameOver ? shareSummary : null, { deck, boardStyle });
+  const shareButton = shareResult.available ? (
+    <Button
+      variant="primary"
+      onClick={shareResult.share}
+      busy={shareResult.busy}
+      tip={
+        rounds?.over
+          ? 'Share an image of the match: the final board, the winner and every round added up'
+          : 'Share an image of the result: the final board, the winner and the numbers'
+      }
+    >
+      <Icon name="share" size={16} />
+      Share result
+    </Button>
+  ) : null;
 
   const lastEntry = view.log.at(-1);
   // The last move's ring on the board is part of the move log: tables played without one don't mark it, so players
@@ -445,6 +474,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       {rounds?.over && rounds.summary && <p className={styles.verdict}>{describeVerdict(rounds.summary)}.</p>}
       {rounds && !rounds.over && !rounds.isHost && <p>{waitingForHost}</p>}
       <div className={styles.actionButtons}>
+        {shareButton}
         {rounds && !rounds.over && rounds.isHost && (
           <Button variant="primary" onClick={onNextRound} busy={busy} tip="Deal another round with the same teams">
             Next round
@@ -834,6 +864,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
               </>
             ) : (
               <>
+                {rounds.over && openRound === null && shareButton}
                 {rounds.over && onDashboard && (
                   <Button onClick={onDashboard} tip="Go back to the dashboard to start or join another game">
                     Back to dashboard

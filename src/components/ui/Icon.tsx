@@ -29,6 +29,7 @@ const PATHS = {
   crop: 'M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14',
   book: 'M4 5a2 2 0 0 1 2-2h5v17H6a2 2 0 0 0-2 2V5zM20 5a2 2 0 0 0-2-2h-5v17h5a2 2 0 0 1 2 2V5z',
   download: 'M12 3v12M7 10l5 5 5-5M5 21h14',
+  share: 'M4 13v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6M16 7l-4-4-4 4M12 3v13',
   soundOff: 'M11 5L6 9H3v6h3l5 4V5zM16 9l6 6M22 9l-6 6',
   trophy: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3',
   bolt: 'M13 2L4 14h7l-1 8 9-12h-7l1-8z',
