@@ -14,6 +14,10 @@ export interface ShareSummary {
   /** The winning team's players, e.g. "Asha & Ben"; null for a draw. */
   subline: string | null;
   winner: TeamIndex | null;
+  /** The player sharing is on the winning team (never in hot-seat play, where the device is everyone's). */
+  viewerWon: boolean;
+  /** The round just won, while more may follow; null once the whole game or match is decided. */
+  round: number | null;
   teams: ShareTeam[];
   /** A few headline numbers: rounds, turns, how long it took, the date. */
   facts: { label: string; value: string }[];
@@ -54,7 +58,10 @@ export function formatShareDate(date: Date): string {
  * `playedMs` is how long the game took when the screen measured it itself (hot-seat games are never saved, so they
  * are timed from the start); table games carry their own round times.
  */
-export function buildShareSummary(view: GameView, options: { modeLabel: string; playedMs?: number | null; now?: Date }): ShareSummary | null {
+export function buildShareSummary(
+  view: GameView,
+  options: { modeLabel: string; hotSeat?: boolean; playedMs?: number | null; now?: Date },
+): ShareSummary | null {
   if (view.winner === null) return null;
   const rounds = view.rounds ?? null;
   const series = rounds?.over && rounds.summary ? rounds.summary : null;
@@ -103,6 +110,8 @@ export function buildShareSummary(view: GameView, options: { modeLabel: string; 
     headline,
     subline: winner === null ? null : names(playersOf(winner)) || null,
     winner,
+    viewerWon: !options.hotSeat && view.viewer !== null && winner !== null && view.viewer.team === winner,
+    round: rounds && !series ? rounds.round : null,
     teams,
     facts,
     board: view.board,
@@ -111,9 +120,13 @@ export function buildShareSummary(view: GameView, options: { modeLabel: string; 
   };
 }
 
-/** What goes with the image when it is shared: one line, then where to play. */
+/** What goes with the image when it is shared: one line, in the sharer's own words when they won, then where to play. */
 export function shareText(summary: ShareSummary, url: string): string {
-  return `${summary.headline} at Sequence 🏆 Play at ${url}`;
+  if (summary.viewerWon) {
+    const what = summary.round !== null ? `round ${summary.round} of a Sequence match` : 'a Sequence match';
+    return `I just won ${what}! 🏆 Play at ${url}`;
+  }
+  return `${summary.headline} at Sequence. Play at ${url}`;
 }
 
 /** "sequence-team-green-wins-2026-10-20.png". */

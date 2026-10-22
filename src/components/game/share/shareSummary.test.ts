@@ -155,6 +155,23 @@ describe('shareFileName and shareText', () => {
   it('names the file after the winner and the day', () => {
     const summary = buildShareSummary(view(), { modeLabel: 'Hot-seat', now: NOW })!;
     expect(shareFileName(summary, NOW)).toBe('sequence-team-green-wins-2026-10-20.png');
-    expect(shareText(summary, 'https://sequence.fifteens.app')).toBe('Team Green wins at Sequence 🏆 Play at https://sequence.fifteens.app');
+    expect(shareText(summary, 'https://sequence.fifteens.app')).toBe('Team Green wins at Sequence. Play at https://sequence.fifteens.app');
+  });
+
+  it('speaks for the sharer when their team won', () => {
+    const asha = { id: 'a', name: 'Asha', team: 0 as const };
+    const won = buildShareSummary(view({ viewer: asha }), { modeLabel: 'Server game', now: NOW })!;
+    expect(shareText(won, 'https://sequence.fifteens.app')).toBe('I just won a Sequence match! 🏆 Play at https://sequence.fifteens.app');
+    const round = buildShareSummary(view({ viewer: asha, rounds: rounds() }), { modeLabel: 'Table', now: NOW })!;
+    expect(shareText(round, 'https://x.test')).toBe('I just won round 2 of a Sequence match! 🏆 Play at https://x.test');
+  });
+
+  it('keeps the team headline for a loser, and in hot-seat play', () => {
+    const ben = { id: 'b', name: 'Ben', team: 1 as const };
+    const lost = buildShareSummary(view({ viewer: ben }), { modeLabel: 'Server game', now: NOW })!;
+    expect(shareText(lost, 'https://x.test')).toBe('Team Green wins at Sequence. Play at https://x.test');
+    const asha = { id: 'a', name: 'Asha', team: 0 as const };
+    const hotSeat = buildShareSummary(view({ viewer: asha }), { modeLabel: 'Hot-seat', hotSeat: true, now: NOW })!;
+    expect(hotSeat.viewerWon).toBe(false);
   });
 });
