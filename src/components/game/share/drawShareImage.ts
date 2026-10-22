@@ -376,18 +376,20 @@ function drawTeams(ctx: CanvasRenderingContext2D, teams: ShareSummary['teams']) 
     ctx.textBaseline = 'middle';
     ctx.fillStyle = C.onSurface;
     ctx.font = `600 26px ${DISPLAY}`;
-    const crown = t.won ? 'Winner' : '';
-    ctx.fillText(fit(ctx, t.name, w - 96 - (crown ? 100 : 0)), x + 72, y + 43);
-    if (crown) {
+    ctx.fillText(fit(ctx, t.name, w - 96), x + 72, y + 43);
+    // The winners' badge sits on the score line, where even a third of the width leaves it room.
+    if (t.won) {
       ctx.font = `700 16px ${BODY}`;
-      const label = crown.toUpperCase();
-      const lw = ctx.measureText(label).width + 20;
-      roundRect(ctx, x + w - 20 - lw, y + 29, lw, 28, 14);
+      setLetterSpacing(ctx, '1px');
+      const label = 'WINNER';
+      const lw = ctx.measureText(label).width + 24;
+      roundRect(ctx, x + w - 20 - lw, y + TEAM_H - 58, lw, 30, 15);
       ctx.fillStyle = TEAM[t.team].color;
       ctx.fill();
       ctx.fillStyle = TEAM[t.team].ink;
       ctx.textAlign = 'center';
-      ctx.fillText(label, x + w - 20 - lw / 2, y + 44);
+      ctx.fillText(label, x + w - 20 - lw / 2, y + TEAM_H - 42);
+      setLetterSpacing(ctx, '0px');
       ctx.textAlign = 'left';
     }
 
@@ -403,7 +405,7 @@ function drawTeams(ctx: CanvasRenderingContext2D, teams: ShareSummary['teams']) 
     const sw = ctx.measureText(score).width;
     ctx.font = `500 21px ${BODY}`;
     ctx.fillStyle = C.muted;
-    ctx.fillText(fit(ctx, t.scoreLabel, w - sw - 60), x + 24 + sw + 12, y + TEAM_H - 26);
+    ctx.fillText(fit(ctx, t.scoreLabel, w - sw - 60 - (t.won ? 110 : 0)), x + 24 + sw + 12, y + TEAM_H - 26);
   });
 }
 
