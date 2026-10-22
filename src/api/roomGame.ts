@@ -105,6 +105,8 @@ export interface RoomGameView {
   away?: string[];
   /** Seated viewers only: sent on the game socket to say they're at the table. */
   presence_token?: string | null;
+  /** How many people are watching without a seat (older servers leave it out). */
+  spectators?: number;
   server_time?: string;
 }
 

@@ -117,7 +117,7 @@ The backend has no CORS, so the Vite dev server proxies `/api`, `/user`, `/room`
 `/socket.io` (websockets included) to `http://localhost:3000`. The session cookie `sequence.session_token` stays
 same-origin. App routes are
 chosen so they never start with a proxied prefix: `/signin`, `/signup`, `/email-verified`, `/forgot-password`,
-`/reset-password`, `/profile`, `/leaderboard`, `/lobby`, `/table/:id`, `/local` and `/server-game`.
+`/reset-password`, `/profile`, `/leaderboard`, `/lobby`, `/table/:id`, `/watch/:id`, `/local` and `/server-game`.
 
 ### Code map
 
@@ -341,6 +341,24 @@ the **Your tables** button; the dashboard itself shows only the game in progress
 (`GET /user/current-game`). The table page and the game's leave dialog have a **Back to dashboard** button. The full move history of a table is available from
 `GET /room/:id/turns` (unless the table plays without history); the game screen's move log comes from the game view
 itself.
+
+### Watching a game
+
+Anyone with a table's **watch link** (`/watch/:id`) can follow its game live, signed in or not
+(`src/screens/WatchGamePage.tsx`, the only game route outside `RequireAuth`). Players copy it from the eye button in
+the game's header (on phones, "Copy watch link" in the game menu), and anyone on the table page can once the game
+has started ("Copy watch link"). A toast says whether it was copied. `src/copyText.ts` falls back to copying from a
+hidden field where the Clipboard API is missing: it only exists on HTTPS and localhost, so not on a phone opening the
+dev server by its LAN address.
+A signed-in visitor without a seat who opens `/table/:id/game` sees the same thing, and a seated player who opens the
+watch link is taken to their own seat.
+
+Spectating is read-only. The server sends a spectator the public game view (`viewer: null`, no hand, no presence
+token) and refuses their moves, and the screen (`view.spectating`) shows a "Watching live" panel instead of a hand,
+ignores clicks on the board and number keys, and leaves without asking. Updates come the same way as for players: the
+socket's `game_updated` triggers a re-fetch, with the 15 s poll as a safety net. While watching, the page sends
+`watch_game` (again after each reconnect) so the server counts it; everyone sees "*n* watching", kept live by
+`spectators_updated`. A spectator doesn't count as being at the table, so their presence never pauses or resumes a turn.
 
 ## Backend limitations
 

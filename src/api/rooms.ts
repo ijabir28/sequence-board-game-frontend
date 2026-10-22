@@ -225,6 +225,11 @@ export function formatTableCode(input: string, done = false): string {
   return done ? code.replace(/-+$/, '') : code;
 }
 
+/** The link anyone can open to watch a table's game live, signed in or not. */
+export function watchLink(roomId: string, origin = window.location.origin): string {
+  return `${origin}/watch/${encodeURIComponent(roomId)}`;
+}
+
 /**
  * Reads a table code from what a player typed or pasted: a code ("friday-night-k3m9", or an older numeric one,
  * spaces and all) or a table link. Returns null when it can't be a code.

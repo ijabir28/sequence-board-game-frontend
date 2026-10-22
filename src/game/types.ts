@@ -187,6 +187,13 @@ export interface GameView {
   rounds?: RoundsView | null;
   /** The viewer may forfeit this game (a quick match they are playing). */
   canForfeit?: boolean;
+  /**
+   * The viewer has no seat and is only watching (table games): the screen is read-only, with no hand and no moves.
+   * The server refuses a spectator's moves too.
+   */
+  spectating?: boolean;
+  /** How many people are watching without a seat; null when unknown. */
+  spectators?: number | null;
 }
 
 export type ActionResult = { ok: true } | { ok: false; message: string };

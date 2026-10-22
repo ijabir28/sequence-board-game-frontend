@@ -16,6 +16,7 @@ const QuickMatchPage = lazy(() => import('./screens/QuickMatchPage').then((m) =>
 const LeaderboardPage = lazy(() => import('./screens/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const ProfilePage = lazy(() => import('./screens/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const RoomGamePage = lazy(() => import('./screens/RoomGamePage').then((m) => ({ default: m.RoomGamePage })));
+const WatchGamePage = lazy(() => import('./screens/WatchGamePage').then((m) => ({ default: m.WatchGamePage })));
 const RoomPage = lazy(() => import('./screens/RoomPage').then((m) => ({ default: m.RoomPage })));
 const EmailVerified = lazy(() => import('./screens/EmailVerified').then((m) => ({ default: m.EmailVerified })));
 const HowToPlay = lazy(() => import('./screens/HowToPlay').then((m) => ({ default: m.HowToPlay })));
@@ -85,6 +86,8 @@ export function App() {
                 </RequireAuth>
               }
             />
+            {/* Spectators: anyone with the link may watch a table's game live, without signing in. */}
+            <Route path="/watch/:id" element={<WatchGamePage />} />
             <Route
               path="/server-game"
               element={

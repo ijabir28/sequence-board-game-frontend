@@ -15,7 +15,7 @@ import {
   type RoomGameView,
 } from '../../api/roomGame';
 import { sanitizeSettings } from '../../api/rooms';
-import { announcePresence, onGameUpdated } from '../../api/socket';
+import { announcePresence, onGameUpdated, onSpectatorsUpdated, watchGame } from '../../api/socket';
 import { positionsOf, type Pos } from '../../engine/board';
 import { BLANK, cardKind, isCardName, type BoardCardName, type CardName } from '../../engine/cards';
 import { legalTargets, type GameState } from '../../engine/game';
@@ -46,6 +46,13 @@ export interface RoomGameOptions {
    * Defaults to the socket's `join_game` / `leave_game`.
    */
   announcePresence?: (handle: string, token: string) => () => void;
+  /**
+   * Counts the viewer among the table's spectators while they watch without a seat; returns a function that stops.
+   * Defaults to the socket's `watch_game` / `unwatch_game`.
+   */
+  watch?: () => () => void;
+  /** Called with a listener for the number of spectators. Defaults to the socket's `spectators_updated`. */
+  subscribeSpectators?: (listener: (count: number) => void) => () => void;
 }
 
 const EMPTY_VIEW: GameView = {
@@ -82,6 +89,9 @@ export class RoomGameAdapter implements GameAdapter {
   private server: RoomGameView | null = null;
   private listeners = new Set<() => void>();
   private unsubscribeUpdates: (() => void) | null = null;
+  private unsubscribeSpectators: (() => void) | null = null;
+  /** While the viewer watches without a seat: how to stop being counted. */
+  private watching: (() => void) | null = null;
   private timer: ReturnType<typeof setInterval> | undefined;
   private disposed = false;
   private inFlight: Promise<void> | null = null;
@@ -170,6 +180,11 @@ export class RoomGameAdapter implements GameAdapter {
     void this.refresh();
     const subscribe = this.options.subscribeUpdates ?? ((listener) => onGameUpdated(this.options.roomId, listener));
     this.unsubscribeUpdates = subscribe(() => void this.refresh());
+    const subscribeSpectators = this.options.subscribeSpectators ?? ((listener) => onSpectatorsUpdated(this.options.roomId, listener));
+    // The count changes without the game changing, so it is applied as it comes rather than re-fetching.
+    this.unsubscribeSpectators = subscribeSpectators((count) => {
+      if (this.view.status === 'ready') this.publish({ ...this.view, spectators: count });
+    });
     this.timer = setInterval(() => {
       if (typeof document === 'undefined' || document.visibilityState === 'visible') void this.refresh();
     }, this.options.pollIntervalMs ?? 15_000);
@@ -178,8 +193,12 @@ export class RoomGameAdapter implements GameAdapter {
   private stop() {
     this.presence?.leave();
     this.presence = null;
+    this.watching?.();
+    this.watching = null;
     this.unsubscribeUpdates?.();
     this.unsubscribeUpdates = null;
+    this.unsubscribeSpectators?.();
+    this.unsubscribeSpectators = null;
     clearInterval(this.timer);
     this.timer = undefined;
   }
@@ -215,7 +234,20 @@ export class RoomGameAdapter implements GameAdapter {
       if (!Number.isNaN(serverNow)) this.clockSkew = Date.now() - serverNow;
     }
     this.announce(server);
+    this.watch(server);
     this.publish(toView(server, this.clockSkew ?? 0));
+  }
+
+  /** A viewer without a seat is counted as a spectator while the game is open; one who takes a seat stops. */
+  private watch(server: RoomGameView) {
+    const spectating = server.viewer === null;
+    if (!spectating || this.listeners.size === 0 || this.disposed) {
+      this.watching?.();
+      this.watching = null;
+      return;
+    }
+    if (this.watching) return;
+    this.watching = (this.options.watch ?? (() => watchGame(this.options.roomId)))();
   }
 
   /** Seated players are "at the table" while the game is open, so their turn doesn't pause. */
@@ -281,7 +313,9 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
       ? "You forfeited this match, so you're watching."
       : viewer
         ? undefined
-        : "You don't have a seat in this game, so you're watching.",
+        : "You're watching live. Only the players see their hands.",
+    spectating: viewer === null,
+    spectators: server.spectators ?? null,
     canForfeit: server.matchmaking === true && viewer !== null && server.winner === null && !server.forfeited,
     board: toBoard(server.board, server.sequences),
     teams: teamIndexes.map((index) => ({ index, sequences: server.sequences.filter((s) => s.team === index).length })),
