@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PLAY_SETTINGS, type GameView, type RoundsView } from '../../../game/types';
-import { buildShareSummary, shareFileName, shareText } from './shareSummary';
+import { buildRoundShareSummary, buildShareSummary, shareFileName, shareText } from './shareSummary';
 
 const NOW = new Date(2026, 9, 20);
 
@@ -173,5 +173,71 @@ describe('shareFileName and shareText', () => {
     const asha = { id: 'a', name: 'Asha', team: 0 as const };
     const hotSeat = buildShareSummary(view({ viewer: asha }), { modeLabel: 'Hot-seat', hotSeat: true, now: NOW })!;
     expect(hotSeat.viewerWon).toBe(false);
+  });
+});
+
+describe('the headline when the sharer won', () => {
+  const asha = { id: 'a', name: 'Asha', team: 0 as const };
+
+  it('says "I won" on the card, with the team and teammates under it', () => {
+    const summary = buildShareSummary(view({ viewer: asha }), { modeLabel: 'Server game', now: NOW })!;
+    expect(summary.headline).toBe('I just won a Sequence match!');
+    expect(summary.subline).toBe('Team Green · Asha & Cleo');
+  });
+
+  it('names the round for a round just won', () => {
+    const summary = buildShareSummary(view({ viewer: asha, rounds: rounds() }), { modeLabel: 'Table', now: NOW })!;
+    expect(summary.headline).toBe('I just won round 2!');
+    expect(shareFileName(summary, NOW)).toBe('sequence-round-2-team-green-wins-2026-10-20.png');
+  });
+
+  it('keeps the team headline in hot-seat play', () => {
+    const summary = buildShareSummary(view({ viewer: asha }), { modeLabel: 'Hot-seat', hotSeat: true, now: NOW })!;
+    expect(summary.headline).toBe('Team Green wins');
+  });
+});
+
+describe('buildRoundShareSummary', () => {
+  const players = view().players;
+  const detail = {
+    result: {
+      round: 1,
+      winner: 1 as const,
+      durationMs: 8 * 60_000,
+      stats: {
+        turns: 50,
+        firstPlayerId: 'a',
+        teams: [
+          { team: 0 as const, sequences: 1, chips: 0, placed: 0, removed: 0 },
+          { team: 1 as const, sequences: 2, chips: 0, placed: 0, removed: 0 },
+        ],
+        players: [],
+      },
+    },
+    board: [],
+    sequences: [],
+    log: [{ kind: 'place' as const, turn: 50, player: 'b', team: 1 as const, card: '2-Heart' as const, pos: { row: 3, column: 3 }, wild: false }],
+  };
+
+  it("shares one round's own result, without a date it doesn't know", () => {
+    const summary = buildRoundShareSummary(detail, { title: 'Friday table', players, viewer: null });
+    expect(summary.headline).toBe('Team Blue wins round 1');
+    expect(summary.subline).toBe('Ben & Dev');
+    expect(summary.teams.map((t) => [t.name, t.score, t.won])).toEqual([
+      ['Team Green', 1, false],
+      ['Team Blue', 2, true],
+    ]);
+    expect(summary.facts).toEqual([
+      { label: 'Round', value: '1' },
+      { label: 'Turns', value: '50' },
+      { label: 'Duration', value: '8 min' },
+    ]);
+    expect(summary.lastMove).toEqual({ row: 3, column: 3 });
+  });
+
+  it('speaks for a sharer whose team won that round', () => {
+    const summary = buildRoundShareSummary(detail, { title: 'Friday table', players, viewer: players[1] });
+    expect(summary.headline).toBe('I just won round 1!');
+    expect(shareText(summary, 'https://x.test')).toBe('I just won round 1 of a Sequence match! 🏆 Play at https://x.test');
   });
 });
