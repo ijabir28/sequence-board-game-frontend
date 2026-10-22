@@ -346,7 +346,10 @@ itself.
 
 Anyone with a table's **watch link** (`/watch/:id`) can follow its game live, signed in or not
 (`src/screens/WatchGamePage.tsx`, the only game route outside `RequireAuth`). Players copy it from the eye button in
-the game's header (`ShareWatchLink`), and anyone on the table page can once the game has started ("Copy watch link").
+the game's header (on phones, "Copy watch link" in the game menu), and anyone on the table page can once the game
+has started ("Copy watch link"). A toast says whether it was copied. `src/copyText.ts` falls back to copying from a
+hidden field where the Clipboard API is missing: it only exists on HTTPS and localhost, so not on a phone opening the
+dev server by its LAN address.
 A signed-in visitor without a seat who opens `/table/:id/game` sees the same thing, and a seated player who opens the
 watch link is taken to their own seat.
 

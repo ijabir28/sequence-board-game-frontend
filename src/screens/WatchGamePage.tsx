@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { GameScreen } from '../components/game/GameScreen';
-import { ShareWatchLink } from '../components/game/ShareWatchLink';
 import { Button } from '../components/ui/Button';
+import { watchLink } from '../api/rooms';
 import { RoomGameAdapter } from '../game/remote/RoomGameAdapter';
 
 /**
@@ -41,7 +41,7 @@ export function WatchGamePage() {
       adapter={adapter}
       modeLabel={`Table ${id}`}
       handOrderKey={`sequence:hand-order:${id}`}
-      headerExtra={<ShareWatchLink roomId={id} />}
+      watchLink={watchLink(id)}
       spectatorExtra={
         signedIn ? undefined : (
           <Button variant="primary" size="sm" onClick={() => navigate('/signup')} tip="Make an account to open your own tables and play">

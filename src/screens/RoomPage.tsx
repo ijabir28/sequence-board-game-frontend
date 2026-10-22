@@ -2,10 +2,10 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } fr
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import { startRoomGame } from '../api/roomGame';
-import { isFull, isSeated, joinRoom, leaveSeat, sanitizeRoom, shuffleSeats, updateRoom, type Room, type RoomSettings, type RoomTeam } from '../api/rooms';
+import { isFull, isSeated, joinRoom, leaveSeat, sanitizeRoom, shuffleSeats, updateRoom, type Room, type RoomSettings, type RoomTeam, watchLink } from '../api/rooms';
 import { onTeamsShuffled } from '../api/socket';
 import { useAuth } from '../auth/AuthContext';
-import { watchLink } from '../components/game/ShareWatchLink';
+import { copyText } from '../copyText';
 import { AppHeader } from '../components/AppHeader';
 import { PoweredBy } from '../components/PoweredBy';
 import { BackToDashboard } from '../components/BackToDashboard';
@@ -484,7 +484,7 @@ function ShareCode({ id, gameStarted }: { id: string; gameStarted: boolean }) {
 
   const copy = async (what: 'code' | 'link' | 'watch') => {
     try {
-      await navigator.clipboard.writeText(what === 'code' ? id : what === 'watch' ? watchLink(id) : link);
+      if (!(await copyText(what === 'code' ? id : what === 'watch' ? watchLink(id) : link))) throw new Error('copy refused');
       setCopied(what);
       setFailed(false);
       setTimeout(() => setCopied(null), 2000);

@@ -7,6 +7,7 @@ import { describeDraft, draftLostMessage, draftProblem, type Draft } from '../..
 import { describeLog } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter, HandCardView } from '../../game/types';
+import { copyText } from '../../copyText';
 import { useHandOrder } from '../../game/useHandOrder';
 import { useAwayWhileHidden } from '../../game/useAwayWhileHidden';
 import { useMediaQuery } from '../../game/useMediaQuery';
@@ -42,6 +43,8 @@ interface GameScreenProps {
   onNewGame?: () => void;
   /** Extra controls for the top bar (for example the dev adapter toggle). */
   headerExtra?: ReactNode;
+  /** A link anyone can open to watch this game live: the header (or the phone menu) offers to copy it. */
+  watchLink?: string;
   /** Shown to a spectator in place of the hand, under the "watching live" note (for example a sign-in link). */
   spectatorExtra?: ReactNode;
   /** Where to remember how each player arranged their hand on this device (e.g. per table). */
@@ -52,6 +55,7 @@ interface GameScreenProps {
 
 /** Game messages share one toast, so a new one replaces the last instead of piling up. */
 const FEEDBACK_TOAST = 'game-feedback';
+const WATCH_LINK_TIP = 'Copy a link anyone can open to watch this game live. They see the board, never a hand.';
 const NO_HAND: HandCardView[] = [];
 const NO_ORDER: number[] = [];
 const ignoreSelect = () => {};
@@ -64,7 +68,7 @@ function spectatorCount(count: number | null | undefined): string | undefined {
 /** A new round's notice has its own toast, so the host's next action (which clears feedback) doesn't hide it. */
 const ROUND_TOAST = 'game-round';
 
-export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, spectatorExtra, handOrderKey, coach }: GameScreenProps) {
+export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, watchLink, spectatorExtra, handOrderKey, coach }: GameScreenProps) {
   const view = useGame(adapter);
   // The viewer's deck decides how cards are named in messages: "7♥", or "#7" with the Numbered deck.
   const [{ notation }] = useDeck();
@@ -345,6 +349,14 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (passed && adapter.hotSeat) setRevealedFor(null);
   };
 
+  const onCopyWatchLink = async () => {
+    if (!watchLink) return;
+    const copied = await copyText(watchLink);
+    setMenuOpen(false);
+    if (copied) toast.show('success', 'Watch link copied. Anyone with it can watch this game live, but never see a hand.');
+    else toast.show('error', `Your browser blocked copying. Share this link instead: ${watchLink}`);
+  };
+
   const onNextRound = async () => {
     if (adapter.nextRound && (await run(() => adapter.nextRound!()))) setResultsOpen(false);
   };
@@ -600,6 +612,15 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
                 <small>The rules, step by step</small>
               </span>
             </button>
+            {watchLink && (
+              <button type="button" className={styles.drawerItem} {...tipProps(WATCH_LINK_TIP)} onClick={onCopyWatchLink}>
+                <Icon name="eye" />
+                <span>
+                  <strong>Copy watch link</strong>
+                  <small>Anyone with it can watch live</small>
+                </span>
+              </button>
+            )}
             {headerExtra && <div className={styles.drawerExtra}>{headerExtra}</div>}
             <button
               type="button"
@@ -636,6 +657,13 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           </div>
           <div className={styles.topActions}>
             {headerExtra}
+            {watchLink && (
+              <Tooltip text={WATCH_LINK_TIP} align="end">
+                <button type="button" className={styles.iconButton} onClick={onCopyWatchLink} aria-label="Copy watch link">
+                  <Icon name="eye" />
+                </button>
+              </Tooltip>
+            )}
             <Tooltip text={soundTip} align="end">
               <button type="button" className={styles.iconButton} onClick={() => setMuted(!muted)} aria-label="Game sounds" aria-pressed={!muted}>
                 <Icon name={muted ? 'soundOff' : 'sound'} />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { GameScreen } from '../components/game/GameScreen';
-import { ShareWatchLink } from '../components/game/ShareWatchLink';
+import { watchLink } from '../api/rooms';
 import { RoomGameAdapter } from '../game/remote/RoomGameAdapter';
 
 /** /table/:id/game: the table's game, run by the server and shared by everyone seated. */
@@ -24,7 +24,7 @@ export function RoomGamePage() {
       adapter={adapter}
       modeLabel={`Table ${id}`}
       handOrderKey={`sequence:hand-order:${id}`}
-      headerExtra={<ShareWatchLink roomId={id} />}
+      watchLink={watchLink(id)}
       onExit={() => navigate(`/table/${id}`)}
       onDashboard={() => navigate('/lobby')}
     />
