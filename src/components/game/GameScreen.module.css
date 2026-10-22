@@ -624,3 +624,50 @@
     overflow-y: auto;
   }
 }
+
+/* Watching without a seat: the note that takes the hand's place. */
+.spectating {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+}
+
+.liveLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--on-surface);
+}
+
+.liveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+  animation: live-pulse 1.6s ease-out infinite;
+}
+
+@keyframes live-pulse {
+  to {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liveDot {
+    animation: none;
+  }
+}
+
+/* Players see how many people are watching their game. */
+.watchers {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  color: var(--on-surface-muted);
+  font-size: var(--text-xs);
+}

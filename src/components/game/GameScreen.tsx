@@ -6,7 +6,7 @@ import { describeHint } from '../../game/describeHint';
 import { describeDraft, draftLostMessage, draftProblem, type Draft } from '../../game/draft';
 import { describeLog } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
-import type { GameAdapter } from '../../game/types';
+import type { GameAdapter, HandCardView } from '../../game/types';
 import { useHandOrder } from '../../game/useHandOrder';
 import { useAwayWhileHidden } from '../../game/useAwayWhileHidden';
 import { useMediaQuery } from '../../game/useMediaQuery';
@@ -42,6 +42,8 @@ interface GameScreenProps {
   onNewGame?: () => void;
   /** Extra controls for the top bar (for example the dev adapter toggle). */
   headerExtra?: ReactNode;
+  /** Shown to a spectator in place of the hand, under the "watching live" note (for example a sign-in link). */
+  spectatorExtra?: ReactNode;
   /** Where to remember how each player arranged their hand on this device (e.g. per table). */
   handOrderKey?: string;
   /** Shown above the turn panel: the training lesson's task. */
@@ -50,10 +52,19 @@ interface GameScreenProps {
 
 /** Game messages share one toast, so a new one replaces the last instead of piling up. */
 const FEEDBACK_TOAST = 'game-feedback';
+const NO_HAND: HandCardView[] = [];
+const NO_ORDER: number[] = [];
+const ignoreSelect = () => {};
+
+function spectatorCount(count: number | null | undefined): string | undefined {
+  if (!count) return undefined;
+  return `${count} watching`;
+}
+
 /** A new round's notice has its own toast, so the host's next action (which clears feedback) doesn't hide it. */
 const ROUND_TOAST = 'game-round';
 
-export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, handOrderKey, coach }: GameScreenProps) {
+export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, spectatorExtra, handOrderKey, coach }: GameScreenProps) {
   const view = useGame(adapter);
   // The viewer's deck decides how cards are named in messages: "7♥", or "#7" with the Numbered deck.
   const [{ notation }] = useDeck();
@@ -93,6 +104,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   const [statusOpen, setStatusOpen] = useState(false);
 
   const viewer = view.viewer;
+  // Watching a table's game without a seat: the screen is read-only. No hand, no moves, nothing to select.
+  const spectating = view.spectating === true;
   // Table games are played in rounds; the host deals each one and decides after it is won whether another follows.
   const rounds = view.rounds ?? null;
   const hostName = rounds?.hostId ? (view.players.find((p) => p.id === rounds.hostId)?.name ?? 'the host') : 'the host';
@@ -100,7 +113,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   // Every update is a fresh snapshot; keep the hand the same object while its cards are, so the memoised cards don't
   // re-render when only the turn or the board changed.
   const hand = useStableValue(view.hand, sameHand);
-  const handVisible = !adapter.hotSeat || (viewer !== null && revealedFor === viewer.id);
+  const handVisible = !spectating && (!adapter.hotSeat || (viewer !== null && revealedFor === viewer.id));
   const gameOver = view.winner !== null;
   const currentPlayer = view.players.find((p) => p.id === view.currentPlayerId) ?? null;
   const activeTeam = currentPlayer?.team ?? viewer?.team ?? null;
@@ -273,7 +286,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   }, [adapter, draft, view, hand, yourTurn, gameOver, busy, notation]);
 
   const onCell = async (pos: Pos) => {
-    if (gameOver || busy) return;
+    if (gameOver || busy || spectating) return;
     if (!handVisible) {
       setFeedback({ tone: 'info', text: `Show ${viewer?.name ?? 'the next player'}'s hand to make a move.` });
       return;
@@ -594,14 +607,14 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
               {...tipProps(gameOver ? 'Close the finished game' : 'Leave this game. You are asked to confirm first.')}
               onClick={() => {
                 setMenuOpen(false);
-                if (gameOver) onExit();
+                if (gameOver || spectating) onExit();
                 else setExitOpen(true);
               }}
             >
               <Icon name="exit" />
               <span>
-                <strong>Leave game</strong>
-                <small>{adapter.mode === 'local' ? 'Hot-seat games are not saved.' : 'It is saved, so you can come back.'}</small>
+                <strong>{spectating ? 'Stop watching' : 'Leave game'}</strong>
+                <small>{spectating ? 'The game goes on without you.' : adapter.mode === 'local' ? 'Hot-seat games are not saved.' : 'It is saved, so you can come back.'}</small>
               </span>
             </button>
           </Drawer>
@@ -646,10 +659,21 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
               </Tooltip>
             )}
             <Tooltip
-              text={adapter.mode === 'local' ? 'Leave this game. Hot-seat games are not saved.' : 'Leave this game. It is saved, so you can come back.'}
+              text={
+                spectating
+                  ? 'Stop watching this game'
+                  : adapter.mode === 'local'
+                    ? 'Leave this game. Hot-seat games are not saved.'
+                    : 'Leave this game. It is saved, so you can come back.'
+              }
               align="end"
             >
-              <button type="button" className={styles.iconButton} onClick={() => (gameOver ? onExit() : setExitOpen(true))} aria-label="Leave game">
+              <button
+                type="button"
+                className={styles.iconButton}
+                onClick={() => (gameOver || spectating ? onExit() : setExitOpen(true))}
+                aria-label={spectating ? 'Stop watching' : 'Leave game'}
+              >
                 <Icon name="exit" />
               </button>
             </Tooltip>
@@ -694,7 +718,13 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         <p className={[styles.line, styles.ticker].join(' ')} aria-hidden="true">
           {lastEntry ? describeLog(lastEntry, notation) : 'No moves yet.'}
         </p>
-        {view.notice && (
+        {!spectating && view.spectators ? (
+          <p className={styles.watchers}>
+            <Icon name="eye" size={14} />
+            <span>{spectatorCount(view.spectators)}</span>
+          </p>
+        ) : null}
+        {view.notice && !(spectating && !view.notice.startsWith('You forfeited')) && (
           <p className={styles.notice}>
             <Icon name="alert" size={16} />
             <span>{view.notice}</span>
@@ -713,7 +743,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             lastMove={lastMove}
             draft={draft?.target ?? null}
             hint={hint && hintShown && hint.type === 'play' ? hint.target : null}
-            disabled={busy || gameOver}
+            disabled={busy || gameOver || spectating}
             turnEdge={turnEdge}
             onActivate={onCell}
           />
@@ -740,7 +770,31 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       </main>
 
       <aside className={styles.rail}>
-        {view.status === 'ready' && (
+        {view.status === 'ready' && spectating && !gameOver ? (
+          <HandPanel
+            title="Watching live"
+            hand={NO_HAND}
+            order={NO_ORDER}
+            selected={null}
+            onSelect={ignoreSelect}
+            cover={null}
+            disabled
+            summary={spectatorCount(view.spectators)}
+            replaceWith={
+              <div className={styles.spectating} role="status">
+                <p className={styles.liveLine}>
+                  <span className={styles.liveDot} aria-hidden="true" />
+                  <strong>Live</strong>
+                </p>
+                <p>
+                  {currentPlayer ? `${currentPlayer.name} is playing.` : 'The game is on.'} You see the board, whose turn it is and every move
+                  as it happens. Only the players see their hands, and you can't make moves.
+                </p>
+                {spectatorExtra}
+              </div>
+            }
+          />
+        ) : view.status === 'ready' && (
           <HandPanel
             title={handTitle}
             hand={hand}
