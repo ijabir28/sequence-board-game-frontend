@@ -5,6 +5,7 @@ import { startRoomGame } from '../api/roomGame';
 import { isFull, isSeated, joinRoom, leaveSeat, sanitizeRoom, shuffleSeats, updateRoom, type Room, type RoomSettings, type RoomTeam } from '../api/rooms';
 import { onTeamsShuffled } from '../api/socket';
 import { useAuth } from '../auth/AuthContext';
+import { watchLink } from '../components/game/ShareWatchLink';
 import { AppHeader } from '../components/AppHeader';
 import { PoweredBy } from '../components/PoweredBy';
 import { BackToDashboard } from '../components/BackToDashboard';
@@ -278,7 +279,7 @@ function RoomView({
             {hostName && <>Opened by {hostName}. </>}
             {open === 0 ? 'Every seat is taken.' : `${open} open seat${open === 1 ? '' : 's'}.`}
           </p>
-          <ShareCode id={room.id} />
+          <ShareCode id={room.id} gameStarted={room.gameStarted} />
         </div>
       </section>
 
@@ -476,14 +477,14 @@ function RenameTable({ name, saving, onSave }: { name: string; saving: boolean; 
   );
 }
 
-function ShareCode({ id }: { id: string }) {
-  const [copied, setCopied] = useState<'code' | 'link' | null>(null);
+function ShareCode({ id, gameStarted }: { id: string; gameStarted: boolean }) {
+  const [copied, setCopied] = useState<'code' | 'link' | 'watch' | null>(null);
   const [failed, setFailed] = useState(false);
   const link = `${window.location.origin}/table/${id}`;
 
-  const copy = async (what: 'code' | 'link') => {
+  const copy = async (what: 'code' | 'link' | 'watch') => {
     try {
-      await navigator.clipboard.writeText(what === 'code' ? id : link);
+      await navigator.clipboard.writeText(what === 'code' ? id : what === 'watch' ? watchLink(id) : link);
       setCopied(what);
       setFailed(false);
       setTimeout(() => setCopied(null), 2000);
@@ -510,8 +511,16 @@ function ShareCode({ id }: { id: string }) {
           {copied === 'link' ? 'Copied' : 'Copy link'}
         </Button>
       </Tooltip>
+      {gameStarted && (
+        <Tooltip text="Copy a link anyone can open to watch the game live, without signing in. They never see a hand." align="end">
+          <Button size="sm" onClick={() => copy('watch')}>
+            <Icon name={copied === 'watch' ? 'check' : 'eye'} size={16} />
+            {copied === 'watch' ? 'Copied' : 'Copy watch link'}
+          </Button>
+        </Tooltip>
+      )}
       <span className="visually-hidden" aria-live="polite">
-        {copied ? `${copied === 'code' ? 'Code' : 'Link'} copied` : ''}
+        {copied ? `${copied === 'code' ? 'Code' : copied === 'watch' ? 'Watch link' : 'Link'} copied` : ''}
       </span>
       {failed && <p className={styles.help}>Your browser blocked copying. Read the code out, or type it to your friends.</p>}
     </div>
