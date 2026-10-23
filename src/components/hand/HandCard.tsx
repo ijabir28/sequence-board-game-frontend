@@ -45,7 +45,9 @@ export const HandCard = memo(function HandCard({ card, handIndex, index, selecte
   const hint = kind === 'normal' ? (dead ? 'dead card, both cells taken' : null) : JACK_HINT[kind];
   const notation = deck.notation;
   const tip = `${cardLabel(card, notation)}. ${
-    kind !== 'normal'
+    drafted
+      ? 'Queued for your next turn. Pick it again to cancel the drafted move.'
+      : kind !== 'normal'
       ? JACK_TIP[kind]
       : dead
         ? 'Dead: both of its cells are taken. Pick it, then Exchange dead.'
@@ -57,7 +59,7 @@ export const HandCard = memo(function HandCard({ card, handIndex, index, selecte
       type="button"
       className={[styles.card, selected && styles.selected, dead && styles.dead, drafted && styles.drafted].filter(Boolean).join(' ')}
       aria-pressed={selected}
-      aria-label={[`${cardLabel(card, notation)}`, hint, drafted && 'drafted for your next turn', `key ${index + 1}`].filter(Boolean).join(', ')}
+      aria-label={[`${cardLabel(card, notation)}`, hint, drafted && 'drafted for your next turn, pick again to cancel', `key ${index + 1}`].filter(Boolean).join(', ')}
       disabled={disabled}
       style={{ '--card-aspect': deck.aspect } as CSSProperties}
       onClick={() => onSelect(handIndex)}

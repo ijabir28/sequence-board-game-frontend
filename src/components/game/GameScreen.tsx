@@ -227,11 +227,18 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
 
   // Stable, so the memoised hand cards don't re-render just because this screen did. It reads the latest state
   // through a ref.
-  const latest = useRef({ handVisible, gameOver, handLength: hand.length, setFeedback });
-  latest.current = { handVisible, gameOver, handLength: hand.length, setFeedback };
+  const latest = useRef({ handVisible, gameOver, handLength: hand.length, drafted: draft?.handIndex ?? null, setFeedback });
+  latest.current = { handVisible, gameOver, handLength: hand.length, drafted: draft?.handIndex ?? null, setFeedback };
   const selectCard = useCallback((index: number) => {
-    const { handVisible, gameOver, handLength, setFeedback } = latest.current;
+    const { handVisible, gameOver, handLength, drafted, setFeedback } = latest.current;
     if (!handVisible || gameOver || index >= handLength) return;
+    // Picking the queued card again takes back the drafted move.
+    if (index === drafted) {
+      setDraft(null);
+      setSelected(null);
+      setFeedback({ tone: 'info', text: 'Draft cancelled. Nothing will be played for you when your turn comes.' });
+      return;
+    }
     setFeedback(null);
     setSelected((current) => (current === index ? null : index));
   }, []);
@@ -314,7 +321,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       const next = { handIndex: selected, card: selectedCard, target: pos };
       setDraft(next);
       setSelected(null);
-      setFeedback({ tone: 'info', text: `Move drafted: ${describeDraft(next, notation)}. It is played as soon as your turn comes.` });
+      setFeedback({ tone: 'info', text: `Move drafted: ${describeDraft(next, notation)}. It is played as soon as your turn comes. Tap the queued card again to cancel it.` });
       return;
     }
     const played = await run(() => adapter.playCard(selected, pos));
@@ -416,14 +423,6 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         <p className={styles.hint}>{prompt}</p>
       )}
       <div className={styles.actionButtons}>
-        {draft && (
-          <Tooltip text="Forget the drafted move, so nothing is played for you when your turn comes" side="top" align="end">
-            <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
-              <Icon name="close" size={16} />
-              Cancel draft
-            </Button>
-          </Tooltip>
-        )}
         {hint && !hintShown && (
           <Tooltip text="Suggest a move for this turn, and say why" side="top" align="end">
             <Button size="sm" variant="ghost" onClick={showHint}>
@@ -850,11 +849,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             {view.deckCount !== null && <p className={styles.deck}>{view.deckCount} cards left in the deck</p>}
           </section>
         ) : (
-          view.status === 'ready' && (
-            <p className={[styles.deck, styles.railNote].join(' ')}>
-              {view.deckCount !== null && `${view.deckCount} cards left in the deck. `}This table plays without a move log.
-            </p>
-          )
+          view.status === 'ready' &&
+          view.deckCount !== null && <p className={[styles.deck, styles.railNote].join(' ')}>{view.deckCount} cards left in the deck</p>
         )}
       </aside>
 
@@ -1044,7 +1040,7 @@ function handHint({
 }): string {
   if (waiting && !selectedCard) {
     return draft
-      ? `Drafted: ${describeDraft(draft, notation)}. It is played as soon as your turn comes. Pick another card to change it.`
+      ? `Drafted: ${describeDraft(draft, notation)}. It is played as soon as your turn comes. Tap the queued card again to cancel it, or pick another card to change it.`
       : `Not your turn yet. Draft your next move: pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}, and it is played when your turn comes.`;
   }
   if (!selectedCard) {
