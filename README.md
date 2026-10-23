@@ -373,15 +373,24 @@ socket's `game_updated` triggers a re-fetch, with the 15 s poll as a safety net.
 ### Table chat
 
 The table page, its game and its watch page have a public chat with quick reactions (`src/chat/TableChat.tsx`,
-`src/api/tableChat.ts`): a round button in the bottom-left corner (on a phone's game, a tab on the right edge under the
-menu's pull tab) opens a panel that floats over the page, so play goes on while it is open. Everyone with the table
-open sees every message and reaction, players and spectators alike. **There are no private or direct messages**, so
-nobody can pass hints about their hand: nothing in the client or the server takes a recipient. Anyone may read along;
-only signed-in players speak. The page sends `open_table_chat` (again after each reconnect), gets the last 50 messages
-in `table_chat_history`, then hears `table_chat` and `table_reaction`; it speaks with `send_table_chat` and
-`send_table_reaction`, whose acknowledgement carries the server's error (too fast, too long, signed out). With the
-panel closed, reactions and new messages float up beside the button for a few seconds and an unread count shows on it.
-The server keeps the chat in memory, so it starts empty after a restart.
+`src/api/tableChat.ts`). A round button (bottom-left on wide screens; bottom-right on phones, where the game's hand
+strip ends its last lines before it) opens a panel over the page, so play goes on while it is open. Its **Quick** tab,
+like a mobile game's message overlay, has twelve one-tap phrases and eight reactions; a tap sends and closes the panel,
+so the board is back in view. **Messages** has the conversation and a box to type in, and opens by itself when there
+are unread messages. Everyone with the table open sees every message and reaction, players and spectators alike.
+**There are no private or direct messages**, so nobody can pass hints about their hand: nothing in the client or the
+server takes a recipient. Anyone may read along; only signed-in players speak.
+
+Reactions from the table (and, with the panel closed, new messages) float for a few seconds in a lane that never
+covers the game (`src/chat/safeLane.ts`): the board, the hand strip, the turn panel and the header are marked
+`data-chat-avoid`, and the lane is a free band across the screen (on a tall phone, the gap between the board and the
+hand) or a free column on the button's side. Lanes take no clicks. Where nothing is free, the reaction pops on the chat
+button instead and messages only add to its unread count.
+
+The page sends `open_table_chat` (again after each reconnect), gets the last 50 messages in `table_chat_history`, then
+hears `table_chat` and `table_reaction`; it speaks with `send_table_chat` and `send_table_reaction`, whose
+acknowledgement carries the server's error (too fast, too long, signed out). The server keeps the chat in memory, so it
+starts empty after a restart.
 
 ## Backend limitations
 

@@ -1,67 +1,30 @@
 /*
- * The chat floats in the bottom-left corner, over the page, so the lobby and the game go on underneath. The panel
- * opens above its button; reactions (and, with the chat closed, new messages) float up beside it for a moment.
+ * The chat button floats in the bottom-left corner on wide screens and in the bottom-right one on phones (where a
+ * thumb is), over the page, so the lobby and the game go on underneath. The panel opens above the button. Reactions
+ * float in a lane measured to stay clear of the game (safeLane.ts), or pop on the button.
  */
 .root {
   --chat-bottom: max(var(--space-4), env(safe-area-inset-bottom));
-  --chat-left: max(var(--gutter), env(safe-area-inset-left));
+  --chat-side: max(var(--gutter), env(safe-area-inset-left));
   position: fixed;
-  left: var(--chat-left);
+  left: var(--chat-side);
   bottom: var(--chat-bottom);
   z-index: 900;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
-  /* Only the button, the panel and the bursts take clicks. */
+  /* Only the button and the panel take clicks. */
   pointer-events: none;
 }
 
-/*
- * A phone's game fills the screen down to the hand strip, so the chat hangs from the right edge instead, under the
- * game menu's pull tab and looking like it, and opens downwards.
- */
 @media (max-width: 600px) {
-  .game {
-    --chat-top: calc(max(var(--space-2), env(safe-area-inset-top)) + 54px);
-    top: var(--chat-top);
-    bottom: auto;
+  .root {
+    --chat-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    --chat-side: max(var(--gutter), env(safe-area-inset-right));
     left: auto;
-    right: 0;
-    flex-direction: column-reverse;
+    right: var(--chat-side);
     align-items: flex-end;
-  }
-
-  .game .launcher {
-    width: 28px;
-    height: 46px;
-    border-right: 0;
-    border-radius: var(--radius-card) 0 0 var(--radius-card);
-  }
-
-  .game .launcher svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .game .badge {
-    top: -6px;
-    right: auto;
-    left: -8px;
-  }
-
-  .game .panel {
-    margin-right: var(--gutter);
-    height: min(28rem, calc(100dvh - var(--chat-top) - 46px - var(--space-6)));
-  }
-
-  .game .bursts {
-    align-items: flex-end;
-    margin-right: var(--gutter);
-  }
-
-  .game:has(.panel) .bursts {
-    display: none;
   }
 }
 
@@ -89,10 +52,43 @@
 
 .launcher:focus-visible,
 .close:focus-visible,
+.tab:focus-visible,
+.phrase:focus-visible,
 .reactionButton:focus-visible,
 .send:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+}
+
+/* No room to float a reaction without covering the game: the button shows it for a moment instead. */
+.popping {
+  border-color: var(--primary);
+}
+
+.popEmoji {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  animation: pop 1800ms var(--ease-out) forwards;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.4);
+  }
+  15% {
+    transform: scale(1.25);
+  }
+  30%,
+  85% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
 }
 
 .badge {
@@ -124,33 +120,82 @@
   animation: panel-in var(--dur) var(--ease-out);
 }
 
+/* Phones: the panel spans the screen, like a game's message overlay, and is only as tall as it needs to be. */
+@media (max-width: 600px) {
+  .panel {
+    width: calc(100vw - 2 * var(--gutter));
+    height: auto;
+    max-height: calc(100dvh - var(--chat-bottom) - 48px - var(--space-6));
+  }
+
+  .panel:has(.list) {
+    height: min(26rem, calc(100dvh - var(--chat-bottom) - 48px - var(--space-6)));
+  }
+}
+
 @keyframes panel-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(8px) scale(0.98);
   }
 }
 
 .header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-3) var(--space-2);
-  border-bottom: 1px solid var(--outline-subtle);
+  padding: var(--space-2) var(--space-2) 0 var(--space-3);
 }
 
-.header h2 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-md);
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--surface-lowest);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--on-surface-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab[aria-selected='true'] {
+  background: var(--surface-high);
+  color: var(--on-surface);
+}
+
+.tabCount {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--text-xs);
+  line-height: 18px;
+  text-align: center;
 }
 
 .public {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  margin: 2px 0 0;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--outline-subtle);
   color: var(--on-surface-muted);
   font-size: var(--text-xs);
 }
@@ -175,6 +220,50 @@
 .close:hover {
   background: var(--surface-high);
   color: var(--on-surface);
+}
+
+.quick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+
+/* Three columns of phrases, then a row of reactions under them. */
+.phrases {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.phrase {
+  min-height: 40px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--outline-subtle);
+  border-radius: var(--radius-card);
+  background: var(--surface-high);
+  color: var(--on-surface);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background var(--dur-fast), transform var(--dur-fast);
+}
+
+.phrase:hover {
+  background: var(--surface-bright);
+}
+
+.phrase:active,
+.reactionButton:active {
+  transform: scale(0.94);
+}
+
+.phrase:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .list {
@@ -249,13 +338,13 @@
 .reactionButton {
   flex: 1;
   min-width: 0;
-  height: 34px;
+  height: 40px;
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--on-surface);
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   font-weight: 700;
   cursor: pointer;
   transition: background var(--dur-fast), transform var(--dur-fast);
@@ -263,10 +352,6 @@
 
 .reactionButton:hover {
   background: var(--surface-high);
-}
-
-.reactionButton:active {
-  transform: scale(0.9);
 }
 
 .error {
@@ -331,38 +416,74 @@
   font-weight: 600;
 }
 
-.bursts {
+/*
+ * The lane is a strip of the screen nothing important is in (its place comes from safeLane.ts, inline). It never
+ * takes clicks, and what floats in it is a little see-through, so even a lane over a page's text hides nothing.
+ */
+.lane {
+  position: fixed;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  overflow: hidden;
+  pointer-events: none;
 }
 
-/* With the panel open, the bursts would cover the conversation: they float beside the button instead. */
-.root:has(.panel) .bursts {
-  position: absolute;
-  left: calc(48px + var(--space-2));
-  bottom: 0;
+/* A band across the screen: reactions come in from the button's edge and line up beside each other. */
+.band {
+  flex-direction: row;
+  align-items: center;
+  padding: 0 var(--gutter);
+}
+
+/* A column beside the board: reactions rise from the bottom. */
+.column {
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: var(--space-2) var(--gutter);
+}
+
+@media (max-width: 600px) {
+  .band {
+    flex-direction: row-reverse;
+  }
+
+  .column {
+    align-items: flex-end;
+  }
 }
 
 .burst {
   display: flex;
+  flex: none;
   align-items: center;
   gap: var(--space-2);
-  max-width: min(18rem, calc(100vw - 2 * var(--gutter)));
+  max-width: min(16rem, 100%);
   margin: 0;
   padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
   border: 1px solid var(--outline-strong);
   border-radius: 999px;
-  background: var(--surface-highest);
+  background: rgba(45, 52, 73, 0.88);
   box-shadow: var(--shadow-raised);
   font-size: var(--text-sm);
-  animation: burst 3500ms var(--ease-out) forwards;
+  opacity: 0.94;
+}
+
+.band .burst {
+  /* Slim enough for the gap a phone leaves between the board and the hand. */
+  height: 30px;
+  padding-top: 0;
+  padding-bottom: 0;
+  animation: drift-in 3500ms var(--ease-out) forwards;
+}
+
+.column .burst {
+  animation: rise 3500ms var(--ease-out) forwards;
 }
 
 .burstEmoji {
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: 700;
   line-height: 1;
 }
@@ -379,25 +500,49 @@
   white-space: nowrap;
 }
 
-@keyframes burst {
+/* In from the side, a short rest, then away the way it came. */
+@keyframes drift-in {
+  0% {
+    opacity: 0;
+    transform: translateX(var(--drift, -24px));
+  }
+  10%,
+  80% {
+    opacity: 0.94;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(var(--drift, -24px));
+  }
+}
+
+@media (max-width: 600px) {
+  .band .burst {
+    --drift: 24px;
+  }
+}
+
+@keyframes rise {
   0% {
     opacity: 0;
     transform: translateY(12px) scale(0.9);
   }
   10%,
   80% {
-    opacity: 1;
+    opacity: 0.94;
     transform: none;
   }
   100% {
     opacity: 0;
-    transform: translateY(-16px);
+    transform: translateY(-20px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .panel,
-  .burst {
+  .burst,
+  .popEmoji {
     animation: none;
   }
 }
