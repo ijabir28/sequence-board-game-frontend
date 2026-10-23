@@ -80,3 +80,46 @@ export function currentLane(side: 'left' | 'right', extra: Element[] = []): Lane
     .map(({ left, top, right, bottom }) => ({ left, top, right, bottom }));
   return findLane(rects, window.innerWidth, window.innerHeight, side);
 }
+
+/** Where a reaction rises on a phone's game: from the board's top edge, up and off the screen. */
+export interface Rise {
+  /** The emoji's centre, across the screen. */
+  x: number;
+  /** Where it starts: the board's top edge. */
+  start: number;
+  /** How far it travels to leave the screen. */
+  distance: number;
+  /** The blank space between the turn container and the board: the only place the sender's name shows. */
+  gapTop: number;
+  gapHeight: number;
+}
+
+/** Room left beside the emoji for the sender's name. */
+const NAME_ROOM = 96;
+/** A rising emoji is this tall, so it travels this much further to be fully off the screen. */
+const RISE_SIZE = 36;
+
+/**
+ * The rise for a reaction over `board`, under the turn container `turn` (if any). `spot` (0 to 1) picks where along
+ * the board's top edge it starts, so reactions sent together don't stack.
+ */
+export function risePath(board: Rect, turn: Rect | null, spot: number): Rise {
+  const left = board.left + RISE_SIZE / 2;
+  const right = Math.max(left, board.right - NAME_ROOM);
+  const gapTop = turn ? Math.min(turn.bottom, board.top) : board.top;
+  return {
+    x: Math.round(left + (right - left) * Math.min(1, Math.max(0, spot))),
+    start: board.top,
+    distance: board.top + RISE_SIZE,
+    gapTop,
+    gapHeight: board.top - gapTop,
+  };
+}
+
+/** The rise on the current screen, or null where there is no board (the lobby) to rise from. */
+export function currentRise(spot: number): Rise | null {
+  const board = document.querySelector('[data-chat-anchor="board"]')?.getBoundingClientRect();
+  if (!board || board.width === 0) return null;
+  const turn = document.querySelector('[data-chat-anchor="turn"]')?.getBoundingClientRect();
+  return risePath(board, turn && turn.height > 0 ? turn : null, spot);
+}

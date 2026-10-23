@@ -387,7 +387,10 @@ covers the game (`src/chat/safeLane.ts`): the board, the hand strip, the turn pa
 hand) or a free column on the button's side. Lanes take no clicks and are drawn over the chat panel, which they don't avoid: a reaction lands in the same place
 whoever sent it and whether or not the panel is open. The panel and the reactions are frosted glass (low-alpha fills
 with a backdrop blur), so the game shows through them. Where nothing is free, the reaction pops on the chat
-button instead and messages only add to its unread count.
+button instead and messages only add to its unread count. On a phone's game, reactions (yours and everyone else's) rise instead:
+each starts on the board's top edge (`data-chat-anchor="board"`), spread along it, and floats up and off the screen,
+fading as it goes. The sender's name rides beside it only through the blank space between the board and the turn
+container (`data-chat-anchor="turn"`): it is drawn in a layer cut to that space, so above it only the emoji goes on.
 
 The page sends `open_table_chat` (again after each reconnect), gets the last 50 messages in `table_chat_history`, then
 hears `table_chat` and `table_reaction`; it speaks with `send_table_chat` and `send_table_reaction`, whose

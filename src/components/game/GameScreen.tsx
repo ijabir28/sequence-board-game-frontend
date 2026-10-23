@@ -711,7 +711,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         </header>
       )}
 
-      <div className={styles.status} hidden={view.status !== 'ready'} data-chat-avoid>
+      <div className={styles.status} hidden={view.status !== 'ready'} data-chat-avoid data-chat-anchor="turn">
         {coach}
         {/* Large screens give the turn panel a fixed slot, so the hand under it never moves. */}
         <div className={styles.turnSlot}>
