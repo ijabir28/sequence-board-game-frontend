@@ -16,6 +16,32 @@
   gap: var(--space-2);
   /* Only the button and the panel take clicks. */
   pointer-events: none;
+  /* Glass: the chat and the reactions let the game show through, blurred, with text kept readable over it. */
+  --glass: rgba(15, 23, 42, 0.32);
+  --glass-strong: rgba(15, 23, 42, 0.5);
+  --glass-tint: rgba(255, 255, 255, 0.08);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-blur: blur(18px) saturate(150%);
+}
+
+/* No tap highlight (Android's blue square) or focus ring when a control is tapped or held; the keyboard's
+   :focus-visible ring stays. */
+.root button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.root button:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Browsers without backdrop blur get a solid enough surface to read on. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .root {
+    --glass: rgba(15, 23, 42, 0.86);
+    --glass-strong: rgba(15, 23, 42, 0.92);
+  }
 }
 
 @media (max-width: 600px) {
@@ -34,6 +60,8 @@
   place-items: center;
   width: 48px;
   height: 48px;
+  /* The browser's button padding is uneven (1px 6px); the icon is centred on the circle alone. */
+  padding: 0;
   border: 1px solid var(--outline-strong);
   border-radius: 50%;
   background: var(--surface-highest);
@@ -42,6 +70,11 @@
   cursor: pointer;
   pointer-events: auto;
   transition: background var(--dur-fast), color var(--dur-fast);
+}
+
+.launcher svg,
+.popEmoji {
+  display: block;
 }
 
 .launcher:hover,
@@ -112,10 +145,13 @@
   flex-direction: column;
   width: min(22rem, calc(100vw - 2 * var(--gutter)));
   height: min(28rem, calc(100dvh - var(--chat-bottom) - 48px - var(--space-6)));
-  border: 1px solid var(--outline-strong);
+  border: 1px solid var(--glass-edge);
   border-radius: var(--radius-card);
-  background: var(--surface-container);
-  box-shadow: var(--shadow-raised);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
   pointer-events: auto;
   animation: panel-in var(--dur) var(--ease-out);
 }
@@ -153,7 +189,7 @@
   gap: var(--space-1);
   padding: 3px;
   border-radius: var(--radius-md);
-  background: var(--surface-lowest);
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .tab {
@@ -173,7 +209,7 @@
 }
 
 .tab[aria-selected='true'] {
-  background: var(--surface-high);
+  background: var(--glass-tint);
   color: var(--on-surface);
 }
 
@@ -195,8 +231,8 @@
   gap: var(--space-1);
   margin: 0;
   padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--outline-subtle);
-  color: var(--on-surface-muted);
+  border-bottom: 1px solid var(--glass-edge);
+  color: var(--on-surface);
   font-size: var(--text-xs);
 }
 
@@ -240,9 +276,9 @@
 .phrase {
   min-height: 40px;
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--outline-subtle);
+  border: 1px solid var(--glass-edge);
   border-radius: var(--radius-card);
-  background: var(--surface-high);
+  background: var(--glass-tint);
   color: var(--on-surface);
   font: inherit;
   font-size: var(--text-sm);
@@ -252,8 +288,9 @@
   transition: background var(--dur-fast), transform var(--dur-fast);
 }
 
-.phrase:hover {
-  background: var(--surface-bright);
+.phrase:hover,
+.phrase:active {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .phrase:active,
@@ -296,12 +333,12 @@
   max-width: 85%;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-card);
-  background: var(--surface-high);
+  background: var(--glass-tint);
 }
 
 .mine {
   align-self: flex-end;
-  background: rgba(78, 222, 163, 0.14);
+  background: rgba(78, 222, 163, 0.18);
 }
 
 .meta {
@@ -326,7 +363,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3) var(--space-3);
-  border-top: 1px solid var(--outline-subtle);
+  border-top: 1px solid var(--glass-edge);
 }
 
 .reactions {
@@ -350,8 +387,9 @@
   transition: background var(--dur-fast), transform var(--dur-fast);
 }
 
-.reactionButton:hover {
-  background: var(--surface-high);
+.reactionButton:hover,
+.reactionButton:active {
+  background: var(--glass-tint);
 }
 
 .error {
@@ -370,9 +408,9 @@
   min-width: 0;
   height: 40px;
   padding: 0 var(--space-3);
-  border: 1px solid var(--outline-strong);
+  border: 1px solid var(--glass-edge);
   border-radius: var(--radius-md);
-  background: var(--surface-lowest);
+  background: rgba(0, 0, 0, 0.25);
   color: var(--on-surface);
   /* 16px, so phones don't zoom into the field. */
   font: inherit;
@@ -398,7 +436,7 @@
 }
 
 .send:disabled {
-  background: var(--surface-high);
+  background: var(--glass-tint);
   color: var(--on-surface-muted);
   cursor: default;
 }
@@ -406,8 +444,8 @@
 .signIn {
   margin: 0;
   padding: var(--space-3);
-  border-top: 1px solid var(--outline-subtle);
-  color: var(--on-surface-muted);
+  border-top: 1px solid var(--glass-edge);
+  color: var(--on-surface);
   font-size: var(--text-sm);
 }
 
@@ -426,6 +464,8 @@
   gap: var(--space-2);
   overflow: hidden;
   pointer-events: none;
+  /* Over the panel, so a reaction shows in the same place whether or not the panel is open. */
+  z-index: 1;
 }
 
 /* A band across the screen: reactions come in from the button's edge and line up beside each other. */
@@ -461,12 +501,14 @@
   max-width: min(16rem, 100%);
   margin: 0;
   padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
-  border: 1px solid var(--outline-strong);
+  border: 1px solid var(--glass-edge);
   border-radius: 999px;
-  background: rgba(45, 52, 73, 0.88);
-  box-shadow: var(--shadow-raised);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: 0 4px 16px -6px rgba(0, 0, 0, 0.4);
   font-size: var(--text-sm);
-  opacity: 0.94;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 .band .burst {
@@ -508,7 +550,7 @@
   }
   10%,
   80% {
-    opacity: 0.94;
+    opacity: 1;
     transform: none;
   }
   100% {
@@ -530,7 +572,7 @@
   }
   10%,
   80% {
-    opacity: 0.94;
+    opacity: 1;
     transform: none;
   }
   100% {

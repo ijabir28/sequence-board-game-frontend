@@ -375,8 +375,8 @@ socket's `game_updated` triggers a re-fetch, with the 15 s poll as a safety net.
 The table page, its game and its watch page have a public chat with quick reactions (`src/chat/TableChat.tsx`,
 `src/api/tableChat.ts`). A round button (bottom-left on wide screens; bottom-right on phones, where the game's hand
 strip ends its last lines before it) opens a panel over the page, so play goes on while it is open. Its **Quick** tab,
-like a mobile game's message overlay, has twelve one-tap phrases and eight reactions; a tap sends and closes the panel,
-so the board is back in view. **Messages** has the conversation and a box to type in, and opens by itself when there
+like a mobile game's message overlay, has twelve one-tap phrases and six reactions (😮 👏 🎉 🔥 😂 ❤️). A phrase sends and closes the
+panel, so the board is back in view; reactions leave it open, so several can go in a row. **Messages** has the conversation and a box to type in, and opens by itself when there
 are unread messages. Everyone with the table open sees every message and reaction, players and spectators alike.
 **There are no private or direct messages**, so nobody can pass hints about their hand: nothing in the client or the
 server takes a recipient. Anyone may read along; only signed-in players speak.
@@ -384,7 +384,9 @@ server takes a recipient. Anyone may read along; only signed-in players speak.
 Reactions from the table (and, with the panel closed, new messages) float for a few seconds in a lane that never
 covers the game (`src/chat/safeLane.ts`): the board, the hand strip, the turn panel and the header are marked
 `data-chat-avoid`, and the lane is a free band across the screen (on a tall phone, the gap between the board and the
-hand) or a free column on the button's side. Lanes take no clicks. Where nothing is free, the reaction pops on the chat
+hand) or a free column on the button's side. Lanes take no clicks and are drawn over the chat panel, which they don't avoid: a reaction lands in the same place
+whoever sent it and whether or not the panel is open. The panel and the reactions are frosted glass (low-alpha fills
+with a backdrop blur), so the game shows through them. Where nothing is free, the reaction pops on the chat
 button instead and messages only add to its unread count.
 
 The page sends `open_table_chat` (again after each reconnect), gets the last 50 messages in `table_chat_history`, then

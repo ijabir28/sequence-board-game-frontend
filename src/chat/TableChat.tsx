@@ -104,7 +104,9 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
       timers.add(timer);
     };
     const float = (burst: Burst) => {
-      // Measured each time: the board and the hand move as the window and the game change.
+      // Measured each time: the board and the hand move as the window and the game change. Only the game and the chat
+      // button count, not the panel (the lane is drawn over it), so a reaction lands in the same place whoever sent it
+      // and whether or not this player has the panel open.
       const avoid = rootRef.current ? [...rootRef.current.querySelectorAll('[data-chat-self]')] : [];
       const found = currentLane(latest.current.phone ? 'right' : 'left', avoid);
       if (!found) {
@@ -191,7 +193,8 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
     inputRef.current?.focus();
   };
 
-  // A quick phrase or reaction is one tap: the panel closes again, so the board is back in view.
+  // A quick phrase is one tap and closes the panel again, so the board is back in view. Reactions leave it open, so
+  // several can go in a row.
   const onPhrase = async (text: string) => {
     if (sending) return;
     if (await say(text)) setOpen(false);
@@ -200,8 +203,7 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
   const onReact = async (reaction: ReactionId) => {
     setError(null);
     const result = await sendTableReaction(roomId, reaction);
-    if (result.ok) setOpen(false);
-    else setError(result.message);
+    if (!result.ok) setError(result.message);
   };
 
   const signedIn = you !== null;
@@ -228,7 +230,6 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
           id={panelId}
           className={styles.panel}
           aria-label="Table chat"
-          data-chat-self
         >
           <header className={styles.header}>
             <div className={styles.tabs} role="tablist" aria-label="Table chat">
@@ -267,7 +268,8 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
                       className={styles.reactionButton}
                       onClick={() => void onReact(reaction.id)}
                       aria-label={reaction.label}
-                      {...tipProps(`${reaction.label}: everyone at the table sees it`, 'top')}
+                      // A plain title, not a tooltip: a tooltip opens on a long press, and a held emoji should just send.
+                      title={reaction.label}
                     >
                       {reaction.emoji}
                     </button>
