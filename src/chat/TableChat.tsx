@@ -23,10 +23,6 @@ const BURST_MS = 3500;
 const MAX_BURSTS = 4;
 /** How long the chat button shows a reaction when there is no lane for it. */
 const POP_MS = 1800;
-/** How long a reaction takes to rise off a phone's screen (the animation in TableChat.module.css). */
-const RISE_MS = 3200;
-/** Steps along the board's top edge between one rising reaction and the next (the golden ratio spreads them evenly). */
-const RISE_STEP = 0.618034;
 
 /** One tap sends these to the table, like any message. */
 export const QUICK_PHRASES = [
@@ -118,13 +114,15 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
     };
     let rises = 0;
     const float = (burst: Burst) => {
-      // A phone's game: a reaction rises from the board's top edge, whoever sent it.
-      if (burst.emoji && latest.current.phone) {
-        const rise = currentRise((rises++ * RISE_STEP) % 1);
+      // On a game a reaction rises off the screen, whoever sent it: on a phone from the board's top edge, on a wider
+      // screen up a free channel beside the board. Elsewhere (the lobby, or no room) it floats in a lane.
+      if (burst.emoji) {
+        const self = rootRef.current ? [...rootRef.current.querySelectorAll('[data-chat-self]')] : [];
+        const rise = currentRise(rises++, latest.current.phone, self);
         if (rise) {
           const emoji = burst.emoji;
           setRising((current) => [...current, { ...rise, id: burst.id, name: burst.name, emoji }].slice(-MAX_BURSTS * 2));
-          later(() => setRising((current) => current.filter((r) => r.id !== burst.id)), RISE_MS);
+          later(() => setRising((current) => current.filter((r) => r.id !== burst.id)), rise.ms);
           return;
         }
       }
@@ -224,10 +222,10 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
     if (await say(text)) setOpen(false);
   };
 
-  const onReact = async (reaction: ReactionId) => {
-    setError(null);
-    const result = await sendTableReaction(roomId, reaction);
-    if (!result.ok) setError(result.message);
+  // Reactions are sent and forgotten: one that doesn't go through (tapped faster than the table allows, or offline)
+  // is simply dropped, with no message, so tapping away is never interrupted.
+  const onReact = (reaction: ReactionId) => {
+    void sendTableReaction(roomId, reaction);
   };
 
   const signedIn = you !== null;
@@ -255,7 +253,7 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
             <span
               key={rise.id}
               className={styles.riseEmoji}
-              style={{ left: rise.x, top: rise.start, '--rise': `${rise.distance}px` } as CSSProperties}
+              style={{ left: rise.x, top: rise.start, animationDuration: `${rise.ms}ms`, '--rise': `${rise.distance}px` } as CSSProperties}
             >
               <span aria-hidden="true">{rise.emoji}</span>
               <span className="visually-hidden">{rise.name} reacted {rise.emoji}</span>
@@ -263,17 +261,32 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
           ))}
         </div>
       )}
-      {/* The names ride with their emoji, but in a layer cut to the space between the turn container and the board, so
-          they show only there: above it, only the emoji goes on rising. */}
-      {rising.map((rise) =>
-        rise.gapHeight > 0 ? (
-          <div key={`${rise.id}-name`} className={styles.nameGap} style={{ top: rise.gapTop, height: rise.gapHeight }} aria-hidden="true">
-            <span className={styles.riseName} style={{ left: rise.x, top: rise.start - rise.gapTop, '--rise': `${rise.distance}px` } as CSSProperties}>
+      {/* The names ride with their emoji, but in a layer cut to their name box (on a phone the space between the turn
+          container and the board, beside the board the channel's first stretch), so they show only there: above it,
+          only the emoji goes on rising. */}
+      {rising.map((rise) => {
+        const box = rise.nameBox;
+        if (!box) return null;
+        // Beside the emoji (half its 36 px, and a gap), away from the board.
+        const edge = rise.nameSide === 'right' ? rise.x + 22 : rise.x - 22;
+        const across: CSSProperties =
+          rise.nameSide === 'right' ? { left: edge - box.left, maxWidth: box.right - edge } : { right: box.right - edge, maxWidth: edge - box.left };
+        return (
+          <div
+            key={`${rise.id}-name`}
+            className={styles.nameGap}
+            style={{ left: box.left, top: box.top, width: box.right - box.left, height: box.bottom - box.top }}
+            aria-hidden="true"
+          >
+            <span
+              className={styles.riseName}
+              style={{ ...across, top: rise.start - box.top, animationDuration: `${rise.ms}ms`, '--rise': `${rise.distance}px` } as CSSProperties}
+            >
               {rise.name}
             </span>
           </div>
-        ) : null,
-      )}
+        );
+      })}
 
       {open && (
         <section
@@ -316,7 +329,7 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
                       key={reaction.id}
                       type="button"
                       className={styles.reactionButton}
-                      onClick={() => void onReact(reaction.id)}
+                      onClick={() => onReact(reaction.id)}
                       aria-label={reaction.label}
                       // A plain title, not a tooltip: a tooltip opens on a long press, and a held emoji should just send.
                       title={reaction.label}

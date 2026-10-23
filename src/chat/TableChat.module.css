@@ -582,9 +582,11 @@
 }
 
 /*
- * A phone's game: reactions rise from the board's top edge (inline: left, top and --rise, the distance off the
- * screen) and fade as they leave. The name rides beside its emoji with the same animation, but inside .nameGap, cut
- * to the blank space between the turn container and the board, so it shows only there and fades out at its top.
+ * A game: reactions rise off the screen (inline: left, top, the duration and --rise, the distance), on a phone from
+ * the board's top edge, on a wider screen up a channel beside the board, and fade as they leave. The name rides beside
+ * its emoji with the same animation, but inside .nameGap, cut to its name box (on a phone the blank space between the
+ * turn container and the board, beside the board the channel's first stretch), so it shows only there and fades out
+ * at its top.
  */
 .rising {
   position: fixed;
@@ -610,8 +612,6 @@
 
 .nameGap {
   position: fixed;
-  left: 0;
-  right: 0;
   z-index: 2;
   overflow: hidden;
   pointer-events: none;
@@ -622,9 +622,11 @@
 
 .riseName {
   position: absolute;
-  /* Beside the emoji (18px is half its width), and centred on the same line. */
-  margin: -10px 0 0 22px;
+  /* Centred on the emoji's line; across, it is placed inline, beside the emoji and away from the board. */
+  margin-top: -10px;
   height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   padding: 0 var(--space-2);
   border: 1px solid var(--glass-edge);
   border-radius: 999px;
