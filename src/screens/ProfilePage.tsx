@@ -56,11 +56,11 @@ export function ProfilePage() {
             <IdentityCard profile={profile} refresh={refresh} />
             <NameCard profile={profile} refresh={refresh} />
             <EmailCard profile={profile} />
+            <FriendsCard profile={profile} refresh={refresh} />
             <DevicesCard />
           </div>
           <div className={own.column}>
             <PasswordCard />
-            <FriendsCard profile={profile} refresh={refresh} />
             <DeckCard />
           </div>
         </div>
