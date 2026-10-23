@@ -181,7 +181,9 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-2) 0 var(--space-3);
+  /* Even space round the tabs, and the line under them that separates the header from what follows. */
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--glass-edge);
 }
 
 .tabs {
@@ -223,21 +225,6 @@
   font-size: var(--text-xs);
   line-height: 18px;
   text-align: center;
-}
-
-.public {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin: 0;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--glass-edge);
-  color: var(--on-surface);
-  font-size: var(--text-xs);
-}
-
-.public svg {
-  flex: none;
 }
 
 .close {

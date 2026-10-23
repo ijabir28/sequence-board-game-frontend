@@ -322,10 +322,6 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
               <Icon name="close" size={18} />
             </button>
           </header>
-          <p className={styles.public}>
-            <Icon name="eye" size={12} />
-            Everyone at this table sees every message. There are no private messages.
-          </p>
 
           {tab === 'quick' ? (
             signedIn ? (
