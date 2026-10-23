@@ -370,6 +370,19 @@ socket's `game_updated` triggers a re-fetch, with the 15 s poll as a safety net.
 `watch_game` (again after each reconnect) so the server counts it; everyone sees "*n* watching", kept live by
 `spectators_updated`. A spectator doesn't count as being at the table, so their presence never pauses or resumes a turn.
 
+### Table chat
+
+The table page, its game and its watch page have a public chat with quick reactions (`src/chat/TableChat.tsx`,
+`src/api/tableChat.ts`): a round button in the bottom-left corner (on a phone's game, a tab on the right edge under the
+menu's pull tab) opens a panel that floats over the page, so play goes on while it is open. Everyone with the table
+open sees every message and reaction, players and spectators alike. **There are no private or direct messages**, so
+nobody can pass hints about their hand: nothing in the client or the server takes a recipient. Anyone may read along;
+only signed-in players speak. The page sends `open_table_chat` (again after each reconnect), gets the last 50 messages
+in `table_chat_history`, then hears `table_chat` and `table_reaction`; it speaks with `send_table_chat` and
+`send_table_reaction`, whose acknowledgement carries the server's error (too fast, too long, signed out). With the
+panel closed, reactions and new messages float up beside the button for a few seconds and an unread count shows on it.
+The server keeps the chat in memory, so it starts empty after a restart.
+
 ## Backend limitations
 
 These are workarounds for the current backend. Details are in `../sequence-board-game/docs/known-issues.md`, and the

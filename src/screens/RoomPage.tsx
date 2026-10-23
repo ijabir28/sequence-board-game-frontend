@@ -23,6 +23,7 @@ import { useMediaQuery } from '../game/useMediaQuery';
 import styles from './Forms.module.css';
 import own from './RoomPage.module.css';
 import { InviteFriendsDialog } from './InviteFriendsDialog';
+import { TableChat } from '../chat/TableChat';
 import { useRoom } from './useRoom';
 
 /** The table's messages share one toast, so the latest replaces the one before. */
@@ -199,6 +200,7 @@ export function RoomPage() {
         )}
         <PoweredBy />
       </div>
+      {state.status === 'ready' && <TableChat roomId={id} you={you} />}
     </>
   );
 }
