@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BAND_HEIGHT, findLane, freeIntervals, risePath, sidePath } from './safeLane';
+import { BAND_HEIGHT, findLane, freeIntervals, risePath, sidePath, wavyKeyframes } from './safeLane';
 
 const rect = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
 
@@ -43,6 +43,7 @@ describe('risePath', () => {
       ms: 3200,
       nameBox: rect(0, 126, 375, 175),
       nameSide: 'right',
+      wave: null,
     });
   });
 
@@ -62,27 +63,71 @@ describe('sidePath', () => {
   const board = rect(300, 60, 1000, 760);
   const walls = [rect(0, 0, 1440, 52), rect(1060, 52, 1440, 900)];
   const button = [rect(16, 836, 64, 884)];
+  const always = (value: number) => () => value;
 
-  it('rises up a narrow channel between the board and the rail, with no room for a name', () => {
-    // 44 px of channel: wide enough for the emoji, not for a name.
-    expect(sidePath(board, walls, button, 1440, 'right', 0)).toEqual({ x: 1026, start: 724, distance: 760, ms: 3800, nameBox: null, nameSide: 'right' });
-    expect(sidePath(board, walls, button, 1440, 'right', 1)!.x).toBe(1034);
+  it('rises up a narrow channel between the board and the rail, with no room for a name and a small wave', () => {
+    // 44 px of channel: wide enough for the emoji, not for a name; the wave keeps to the 4 px left either side.
+    expect(sidePath(board, walls, button, 1440, 'right', always(0))).toEqual({
+      x: 1030,
+      start: 724,
+      distance: 760,
+      ms: 3800,
+      nameBox: null,
+      nameSide: 'right',
+      wave: { amplitude: 4, cycles: 1.5, phase: 0 },
+    });
   });
 
-  it('keeps a name beside the board where the channel is wide', () => {
-    const rise = sidePath(board, walls, button, 1440, 'left', 0)!;
-    expect(rise).toMatchObject({ x: 274, start: 724, nameSide: 'left' });
+  it('keeps a name beside the board where the channel is wide, its wave on the board\'s side', () => {
+    const rise = sidePath(board, walls, button, 1440, 'left', always(0))!;
+    expect(rise).toMatchObject({ x: 264, start: 724, nameSide: 'left', wave: { amplitude: 10 } });
     expect(rise.nameBox).toEqual(rect(8, 584, 292, 742));
   });
 
   it('starts above the chat button where it floats in the channel, without narrowing the channel', () => {
     // The board reaches down past the chat button's top.
-    const rise = sidePath(rect(125, 69, 940, 884), walls, button, 1440, 'left', 0)!;
-    expect(rise).toMatchObject({ x: 99, start: 800, nameSide: 'left' });
+    const rise = sidePath(rect(125, 69, 940, 884), walls, button, 1440, 'left', always(0.5))!;
+    expect(rise).toMatchObject({ x: 80, start: 800, nameSide: 'left', wave: { amplitude: 19, cycles: 2.25, phase: 3.142 } });
     expect(rise.nameBox).toEqual(rect(8, 660, 117, 818));
   });
 
+  it('never lets the wave carry the emoji out of its channel, whatever is drawn', () => {
+    const draws = [0, 0.13, 0.5, 0.77, 0.999];
+    for (const [side, lo, hi] of [['left', 8, 292], ['right', 1008, 1052]] as const) {
+      for (const a of draws) {
+        for (const b of draws) {
+          const values = [a, b, a, b];
+          const rise = sidePath(board, walls, button, 1440, side, () => values.shift() ?? 0)!;
+          expect(rise.x - rise.wave!.amplitude - 18).toBeGreaterThanOrEqual(lo);
+          expect(rise.x + rise.wave!.amplitude + 18).toBeLessThanOrEqual(hi);
+        }
+      }
+    }
+  });
+
   it('has no channel where the board meets the screen edge', () => {
-    expect(sidePath(rect(10, 60, 1430, 760), [], [], 1440, 'left', 0)).toBeNull();
+    expect(sidePath(rect(10, 60, 1430, 760), [], [], 1440, 'left', always(0))).toBeNull();
+  });
+});
+
+describe('wavyKeyframes', () => {
+  const across = (frame: Keyframe) => Number(/translate\((-?[\d.]+)px/.exec(String(frame.transform))![1]);
+  const up = (frame: Keyframe) => Number(/, (-?[\d.]+)px\)/.exec(String(frame.transform))![1]);
+
+  it('pops in where it starts, rises the whole distance and fades out', () => {
+    const frames = wavyKeyframes(760, { amplitude: 20, cycles: 2, phase: 1 });
+    expect(frames[0]).toMatchObject({ offset: 0, opacity: 0 });
+    expect(across(frames[0])).toBe(0);
+    expect(frames.at(-1)).toMatchObject({ offset: 1, opacity: 0 });
+    expect(up(frames.at(-1)!)).toBe(-760);
+  });
+
+  it('waves across within its amplitude, and differently for another draw', () => {
+    const one = wavyKeyframes(760, { amplitude: 20, cycles: 2, phase: 1 }).map(across);
+    const other = wavyKeyframes(760, { amplitude: 20, cycles: 2.8, phase: 4 }).map(across);
+    expect(Math.max(...one.map(Math.abs))).toBeLessThanOrEqual(20);
+    expect(Math.max(...one)).toBeGreaterThan(15);
+    expect(Math.min(...one)).toBeLessThan(-15);
+    expect(other).not.toEqual(one);
   });
 });
