@@ -52,7 +52,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '^/(api|user|room|game|board|images|matchmaking)/': { target: BACKEND, changeOrigin: true },
+      '^/(api|user|room|game|board|images|matchmaking|friends)/': { target: BACKEND, changeOrigin: true },
       '/socket.io': { target: BACKEND, changeOrigin: true, ws: true },
     },
   },

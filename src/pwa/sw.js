@@ -17,7 +17,7 @@ const PRECACHE = /** @type {string[]} */ (__SW_PRECACHE__);
 
 const SHELL_CACHE = `shell-${VERSION}`;
 const RUNTIME_CACHE = 'runtime-v1';
-const LIVE_PREFIXES = ['/api/', '/user/', '/room/', '/game/', '/board/', '/matchmaking/', '/socket.io/', '/health'];
+const LIVE_PREFIXES = ['/api/', '/user/', '/room/', '/game/', '/board/', '/matchmaking/', '/friends/', '/socket.io/', '/health'];
 const RUNTIME_PREFIXES = ['/decks/', '/images/', '/icons/'];
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
