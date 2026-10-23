@@ -2,7 +2,9 @@ import { ApiError, UNREADABLE_RESPONSE, readJson, request } from './http';
 
 // The leaderboards on the backend (see its docs/api.md): GET /user/leaderboard for private tables and
 // GET /matchmaking/leaderboard for Quick Match, each with ratings of its own. Ratings are team Elo from 1200, changed by
-// every round won; the weekly and daily boards rank by the rating gained in the last 7 days / 24 hours.
+// every round won; the weekly and daily boards rank by the rating gained in the last 7 days / 24 hours. Each board
+// shows the signed-in player and their friends (`friends`); the server may also offer everyone's (`global`), which is
+// off unless its GLOBAL_LEADERBOARD setting turns it on, and says which in `scopes`.
 
 export type LeaderboardPeriod = 'all' | 'week' | 'day';
 
@@ -12,6 +14,11 @@ export const LEADERBOARD_PERIODS: LeaderboardPeriod[] = ['all', 'week', 'day'];
 export type LeaderboardLadder = 'custom' | 'matchmaking';
 
 export const LEADERBOARD_LADDERS: LeaderboardLadder[] = ['custom', 'matchmaking'];
+
+/** Whose standings: the player and their friends, or every rated player. */
+export type LeaderboardScope = 'friends' | 'global';
+
+export const LEADERBOARD_SCOPES: LeaderboardScope[] = ['friends', 'global'];
 
 const LADDER_PATHS: Record<LeaderboardLadder, string> = {
   custom: '/user/leaderboard',
@@ -39,6 +46,9 @@ export interface LeaderboardEntry {
 }
 
 export interface LeaderboardPage {
+  scope: LeaderboardScope;
+  /** The scopes this server offers; always has `friends`. */
+  scopes: LeaderboardScope[];
   period: LeaderboardPeriod;
   players: LeaderboardEntry[];
   /** The signed-in player's entry and the page it is on, or null when they aren't on this board. */
@@ -74,11 +84,15 @@ export function sanitizeEntry(raw: Record<string, unknown>): LeaderboardEntry {
   };
 }
 
-export function sanitizeLeaderboard(raw: Record<string, unknown>, period: LeaderboardPeriod): LeaderboardPage {
+export function sanitizeLeaderboard(raw: Record<string, unknown>, period: LeaderboardPeriod, scope: LeaderboardScope = 'friends'): LeaderboardPage {
+  const offered = Array.isArray(raw.scopes) ? LEADERBOARD_SCOPES.filter((s) => (raw.scopes as unknown[]).includes(s)) : [];
+  const scopes: LeaderboardScope[] = offered.includes('friends') ? offered : ['friends', ...offered];
   const players = Array.isArray(raw.players) ? (raw.players as Record<string, unknown>[]).map(sanitizeEntry) : [];
   const you = raw.you && typeof raw.you === 'object' ? (raw.you as Record<string, unknown>) : null;
   const pages = Math.max(1, int(raw.pages, 1));
   return {
+    scope: LEADERBOARD_SCOPES.includes(raw.scope as LeaderboardScope) ? (raw.scope as LeaderboardScope) : scope,
+    scopes,
     period: LEADERBOARD_PERIODS.includes(raw.period as LeaderboardPeriod) ? (raw.period as LeaderboardPeriod) : period,
     players,
     you: you ? { ...sanitizeEntry(you), page: Math.min(pages, Math.max(1, int(you.page, 1))) } : null,
@@ -95,9 +109,10 @@ export async function getLeaderboard(
   page = 1,
   perPage = 20,
   ladder: LeaderboardLadder = 'custom',
+  scope: LeaderboardScope = 'friends',
 ): Promise<LeaderboardPage> {
-  const query = new URLSearchParams({ period, page: String(page), per_page: String(perPage) });
+  const query = new URLSearchParams({ scope, period, page: String(page), per_page: String(perPage) });
   const body = await readJson<Record<string, unknown>>(await request(`${LADDER_PATHS[ladder]}?${query}`));
   if (!body) throw new ApiError('unexpected', UNREADABLE_RESPONSE);
-  return sanitizeLeaderboard(body, period);
+  return sanitizeLeaderboard(body, period, scope);
 }

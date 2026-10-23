@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { errorMessage } from '../api/http';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ApiError, errorMessage } from '../api/http';
 import {
   getLeaderboard,
   LEADERBOARD_LADDERS,
   LEADERBOARD_PERIODS,
+  LEADERBOARD_SCOPES,
   type LeaderboardEntry,
   type LeaderboardLadder,
   type LeaderboardPage,
   type LeaderboardPeriod,
+  type LeaderboardScope,
 } from '../api/leaderboard';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
@@ -23,25 +25,33 @@ import own from './LeaderboardPage.module.css';
 
 const PER_PAGE = 20;
 
-const PERIODS: Record<LeaderboardPeriod, { label: string; tip: string; scoreLabel: string; empty: string }> = {
+const PERIODS: Record<LeaderboardPeriod, { label: string; tip: string; scoreLabel: string; empty: string; friendsEmpty: string }> = {
   all: {
     label: 'All time',
-    tip: 'Everyone who has won or lost a round, by rating',
+    tip: 'Everyone on the board who has won or lost a round, by rating',
     scoreLabel: 'Rating',
     empty: 'No rounds have been won yet. Finish a game and the first names go up here.',
+    friendsEmpty: "Neither you nor your friends have finished a round yet. Play a game together and you'll go up here.",
   },
   week: {
     label: 'This week',
     tip: 'Rating gained over the last 7 days',
     scoreLabel: 'Gained',
     empty: 'Nobody has finished a round in the last 7 days.',
+    friendsEmpty: 'Neither you nor your friends have finished a round in the last 7 days.',
   },
   day: {
     label: 'Today',
     tip: 'Rating gained over the last 24 hours',
     scoreLabel: 'Gained',
     empty: 'Nobody has finished a round in the last 24 hours.',
+    friendsEmpty: 'Neither you nor your friends have finished a round in the last 24 hours.',
   },
+};
+
+const SCOPES: Record<LeaderboardScope, { label: string; tip: string }> = {
+  friends: { label: 'Friends', tip: 'You and your friends' },
+  global: { label: 'Everyone', tip: 'Every rated player' },
 };
 
 const LADDERS: Record<LeaderboardLadder, { label: string; tip: string; intro: string }> = {
@@ -63,6 +73,10 @@ type State =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | ({ status: 'ready'; ladder: LeaderboardLadder } & LeaderboardPage);
+
+function readScope(value: string | null): LeaderboardScope {
+  return LEADERBOARD_SCOPES.includes(value as LeaderboardScope) ? (value as LeaderboardScope) : 'friends';
+}
 
 function readLadder(value: string | null): LeaderboardLadder {
   return LEADERBOARD_LADDERS.includes(value as LeaderboardLadder) ? (value as LeaderboardLadder) : 'custom';
@@ -90,44 +104,50 @@ export function percent(rate: number): string {
 }
 
 /**
- * The leaderboards: private tables' or Quick Match's, each with every rated player by Elo rating, or by the rating
- * gained this week or today. The board, period and page are in the address, so the back button and a shared link land
+ * The leaderboards: private tables' or Quick Match's, each ranking the player and their friends by Elo rating, or by
+ * the rating gained this week or today. Players who aren't friends are never listed. When the server offers the
+ * global board too (its GLOBAL_LEADERBOARD setting), a Friends / Everyone switch appears. The board, period and page are in the address, so the back button and a shared link land
  * on the same board. The signed-in player's row is highlighted, and pinned under the list when they are on another page.
  */
 export function LeaderboardPage() {
   const { profile } = useAuth();
   const [params, setParams] = useSearchParams();
+  const scope = readScope(params.get('scope'));
   const ladder = readLadder(params.get('ladder'));
   const period = readPeriod(params.get('period'));
   const page = readPage(params.get('page'));
   const [state, setState] = useState<State>({ status: 'loading' });
 
   const go = useCallback(
-    (next: { ladder?: LeaderboardLadder; period?: LeaderboardPeriod; page?: number }) => {
+    (next: { scope?: LeaderboardScope; ladder?: LeaderboardLadder; period?: LeaderboardPeriod; page?: number }) => {
+      const nextScope = next.scope ?? scope;
       const nextLadder = next.ladder ?? ladder;
       const nextPeriod = next.period ?? period;
       const nextPage = next.page ?? 1;
       const query: Record<string, string> = {};
+      if (nextScope !== 'friends') query.scope = nextScope;
       if (nextLadder !== 'custom') query.ladder = nextLadder;
       if (nextPeriod !== 'all') query.period = nextPeriod;
       if (nextPage > 1) query.page = String(nextPage);
       setParams(query);
     },
-    [ladder, period, setParams],
+    [scope, ladder, period, setParams],
   );
 
   const load = useCallback(async () => {
     // Keep the current board on screen while the next page loads, so the list doesn't jump.
     setState((prev) => (prev.status === 'ready' ? prev : { status: 'loading' }));
     try {
-      const result = await getLeaderboard(period, page, PER_PAGE, ladder);
+      const result = await getLeaderboard(period, page, PER_PAGE, ladder, scope);
       // A page past the end (the board shrank, or an old link): show the last page that exists.
       if (result.players.length === 0 && page > result.pages) return go({ page: result.pages });
       setState({ status: 'ready', ladder, ...result });
     } catch (e) {
+      // An old link to the global board, now that it is off: show the friends board instead.
+      if (scope === 'global' && e instanceof ApiError && e.status === 403) return go({ scope: 'friends' });
       setState({ status: 'error', message: errorMessage(e) });
     }
-  }, [ladder, period, page, go]);
+  }, [scope, ladder, period, page, go]);
 
   useEffect(() => {
     void load();
@@ -135,7 +155,10 @@ export function LeaderboardPage() {
 
   const ready = state.status === 'ready' ? state : null;
   // While another board loads, the one on screen belongs to the previous choice.
-  const stale = ready !== null && (ready.ladder !== ladder || ready.period !== period || ready.page !== page);
+  const stale = ready !== null && (ready.scope !== scope || ready.ladder !== ladder || ready.period !== period || ready.page !== page);
+  const friendsOnly = scope === 'friends';
+  // Only the player is on their friends board: nobody to compare with yet.
+  const alone = ready !== null && friendsOnly && ready.total <= 1;
   const meta = PERIODS[period];
   const you = ready?.you ?? null;
   const youOnPage = you !== null && ready !== null && you.page === ready.page;
@@ -152,8 +175,29 @@ export function LeaderboardPage() {
                 <Icon name="trophy" size={26} />
                 Leaderboard
               </h1>
-              <p>{LADDERS[ladder].intro}</p>
+              <p>
+                {friendsOnly ? 'You and your friends. ' : ''}
+                {LADDERS[ladder].intro}
+              </p>
             </div>
+            {ready && ready.scopes.length > 1 && (
+              <div className={own.tabs} role="tablist" aria-label="Players">
+                {ready.scopes.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={key === scope}
+                    aria-controls="leaderboard-list"
+                    className={own.tab}
+                    onClick={() => key !== scope && go({ scope: key })}
+                    {...tipProps(SCOPES[key].tip)}
+                  >
+                    {SCOPES[key].label}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className={own.tabs} role="tablist" aria-label="Board">
               {LEADERBOARD_LADDERS.map((key) => (
                 <button
@@ -216,7 +260,9 @@ export function LeaderboardPage() {
               </div>
             )}
 
-            {ready && ready.players.length === 0 && <p className={styles.help}>{meta.empty}</p>}
+            {ready && ready.players.length === 0 && (
+              <p className={styles.help}>{friendsOnly ? meta.friendsEmpty : meta.empty}</p>
+            )}
 
             {ready && ready.players.length > 0 && (
               <ol className={[own.list, stale && own.stale].filter(Boolean).join(' ')} aria-label={`${meta.label} leaderboard`}>
@@ -241,6 +287,14 @@ export function LeaderboardPage() {
               </ol>
             )}
           </div>
+
+          {alone && (
+            <p className={own.standing}>
+              <span className={own.standingText}>
+                The leaderboard only shows you and your friends. <Link to="/friends">Add friends</Link> to see how you compare.
+              </span>
+            </p>
+          )}
 
           {ready && <Pager page={ready.page} pages={ready.pages} total={ready.total} busy={stale} onPage={(p) => go({ page: p })} />}
         </section>
