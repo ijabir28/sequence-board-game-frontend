@@ -13,6 +13,11 @@
   box-shadow: var(--shadow-raised);
 }
 
+/* Focused on open so no control starts focused; the panel itself needs no ring. */
+.drawer:focus {
+  outline: none;
+}
+
 /* Phones: the same glass as the table chat, so the game shows through, blurred, with the text kept readable. */
 @media (max-width: 600px) {
   .drawer {
