@@ -387,14 +387,10 @@ covers the game (`src/chat/safeLane.ts`): the board, the hand strip, the turn pa
 hand) or a free column on the button's side. Lanes take no clicks and are drawn over the chat panel, which they don't avoid: a reaction lands in the same place
 whoever sent it and whether or not the panel is open. The panel and the reactions are frosted glass (low-alpha fills
 with a backdrop blur), so the game shows through them. Where nothing is free, the reaction pops on the chat
-button instead and messages only add to its unread count. On a game, reactions (yours and everyone else's) rise instead, up and
-off the screen, fading as they go. On a phone each starts on the board's top edge (`data-chat-anchor="board"`),
-spread along it, and the sender's name rides beside it only through the blank space between the board and the turn
-container (`data-chat-anchor="turn"`). On a wider screen they rise up the free channels left and right of the board
-(bounded by the screen's edge or the side rail, starting above the chat button), alternating sides, and the name shows
-beside the emoji, away from the board, over the first 140 px of the rise, where the channel has room for it. Either
-way the name is drawn in a layer cut to its box, so beyond it only the emoji goes on. Where neither fits, reactions
-use the lanes above. A reaction that doesn't go through (sent faster than the table allows) is dropped silently.
+button instead and messages only add to its unread count. On a phone's game, reactions (yours and everyone else's) rise instead:
+each starts on the board's top edge (`data-chat-anchor="board"`), spread along it, and floats up and off the screen,
+fading as it goes. The sender's name rides beside it only through the blank space between the board and the turn
+container (`data-chat-anchor="turn"`): it is drawn in a layer cut to that space, so above it only the emoji goes on.
 
 The page sends `open_table_chat` (again after each reconnect), gets the last 50 messages in `table_chat_history`, then
 hears `table_chat` and `table_reaction`; it speaks with `send_table_chat` and `send_table_reaction`, whose

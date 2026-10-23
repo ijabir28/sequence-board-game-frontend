@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BAND_HEIGHT, findLane, freeIntervals, risePath, sidePath } from './safeLane';
+import { BAND_HEIGHT, findLane, freeIntervals, risePath } from './safeLane';
 
 const rect = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
 
@@ -36,53 +36,16 @@ describe('risePath', () => {
   const turn = rect(0, 0, 375, 126);
 
   it('starts on the board\'s top edge and leaves the screen, with the name confined to the gap above the board', () => {
-    expect(risePath(board, turn, 375, 0)).toEqual({
-      x: 30,
-      start: 175,
-      distance: 211,
-      ms: 3200,
-      nameBox: rect(0, 126, 375, 175),
-      nameSide: 'right',
-    });
+    expect(risePath(board, turn, 0)).toEqual({ x: 30, start: 175, distance: 211, gapTop: 126, gapHeight: 49 });
   });
 
   it('spreads reactions along the board, leaving room for the name', () => {
-    expect(risePath(board, turn, 375, 1).x).toBe(267);
-    expect(risePath(board, turn, 375, 0.5).x).toBe(149);
+    expect(risePath(board, turn, 1).x).toBe(267);
+    expect(risePath(board, turn, 0.5).x).toBe(149);
   });
 
-  it('has no name when the turn container reaches the board', () => {
-    expect(risePath(board, rect(0, 0, 375, 200), 375, 0.5).nameBox).toBeNull();
-    expect(risePath(board, null, 375, 0.5).nameBox).toBeNull();
-  });
-});
-
-describe('sidePath', () => {
-  // A wide screen: header, board, rail on the right, chat button in the bottom-left corner.
-  const board = rect(300, 60, 1000, 760);
-  const walls = [rect(0, 0, 1440, 52), rect(1060, 52, 1440, 900)];
-  const button = [rect(16, 836, 64, 884)];
-
-  it('rises up a narrow channel between the board and the rail, with no room for a name', () => {
-    // 44 px of channel: wide enough for the emoji, not for a name.
-    expect(sidePath(board, walls, button, 1440, 'right', 0)).toEqual({ x: 1026, start: 724, distance: 760, ms: 3800, nameBox: null, nameSide: 'right' });
-    expect(sidePath(board, walls, button, 1440, 'right', 1)!.x).toBe(1034);
-  });
-
-  it('keeps a name beside the board where the channel is wide', () => {
-    const rise = sidePath(board, walls, button, 1440, 'left', 0)!;
-    expect(rise).toMatchObject({ x: 274, start: 724, nameSide: 'left' });
-    expect(rise.nameBox).toEqual(rect(8, 584, 292, 742));
-  });
-
-  it('starts above the chat button where it floats in the channel, without narrowing the channel', () => {
-    // The board reaches down past the chat button's top.
-    const rise = sidePath(rect(125, 69, 940, 884), walls, button, 1440, 'left', 0)!;
-    expect(rise).toMatchObject({ x: 99, start: 800, nameSide: 'left' });
-    expect(rise.nameBox).toEqual(rect(8, 660, 117, 818));
-  });
-
-  it('has no channel where the board meets the screen edge', () => {
-    expect(sidePath(rect(10, 60, 1430, 760), [], [], 1440, 'left', 0)).toBeNull();
+  it('has no gap for the name when the turn container reaches the board', () => {
+    expect(risePath(board, rect(0, 0, 375, 200), 0.5)).toMatchObject({ gapTop: 175, gapHeight: 0 });
+    expect(risePath(board, null, 0.5)).toMatchObject({ gapHeight: 0 });
   });
 });
