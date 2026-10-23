@@ -14,7 +14,7 @@ import { Icon } from '../components/ui/Icon';
 import { tipProps } from '../components/ui/TooltipLayer';
 import { useMediaQuery } from '../game/useMediaQuery';
 import { appendMessage, countUnseen, mergeHistory } from './chatLog';
-import { currentLane, currentRise, type Lane, type Rise } from './safeLane';
+import { currentLane, type Lane } from './safeLane';
 import styles from './TableChat.module.css';
 
 /** How long a reaction (or, with the chat closed, a message) floats in its lane. */
@@ -23,10 +23,6 @@ const BURST_MS = 3500;
 const MAX_BURSTS = 4;
 /** How long the chat button shows a reaction when there is no lane for it. */
 const POP_MS = 1800;
-/** How long a reaction takes to rise off a phone's screen (the animation in TableChat.module.css). */
-const RISE_MS = 3200;
-/** Steps along the board's top edge between one rising reaction and the next (the golden ratio spreads them evenly). */
-const RISE_STEP = 0.618034;
 
 /** One tap sends these to the table, like any message. */
 export const QUICK_PHRASES = [
@@ -51,12 +47,6 @@ interface Burst {
   text?: string;
 }
 
-interface Rising extends Rise {
-  id: string;
-  name: string;
-  emoji: string;
-}
-
 type Tab = 'quick' | 'messages';
 
 interface TableChatProps {
@@ -74,9 +64,7 @@ interface TableChatProps {
  *
  * A round button (bottom-left on wide screens, bottom-right on phones) opens a panel over the page: quick phrases and
  * reactions, which send with one tap and close it again, and the messages with a box to type in. Reactions from the
- * table float in a lane clear of the board, the hand and the turn panel (see safeLane.ts), or pop on the button. On a
- * phone's game they rise from the board's top edge and off the screen instead, with the sender's name beside them only
- * while they pass through the blank space between the board and the turn container.
+ * table float in a lane clear of the board, the hand and the turn panel (see safeLane.ts), or pop on the button.
  */
 export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -86,7 +74,6 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
   const [bursts, setBursts] = useState<Burst[]>([]);
   const [lane, setLane] = useState<Lane | null>(null);
   const [pop, setPop] = useState<{ id: string; emoji: string } | null>(null);
-  const [rising, setRising] = useState<Rising[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,18 +103,7 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
       }, ms);
       timers.add(timer);
     };
-    let rises = 0;
     const float = (burst: Burst) => {
-      // A phone's game: a reaction rises from the board's top edge, whoever sent it.
-      if (burst.emoji && latest.current.phone) {
-        const rise = currentRise((rises++ * RISE_STEP) % 1);
-        if (rise) {
-          const emoji = burst.emoji;
-          setRising((current) => [...current, { ...rise, id: burst.id, name: burst.name, emoji }].slice(-MAX_BURSTS * 2));
-          later(() => setRising((current) => current.filter((r) => r.id !== burst.id)), RISE_MS);
-          return;
-        }
-      }
       // Measured each time: the board and the hand move as the window and the game change. Only the game and the chat
       // button count, not the panel (the lane is drawn over it), so a reaction lands in the same place whoever sent it
       // and whether or not this player has the panel open.
@@ -247,32 +223,6 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
             </p>
           ))}
         </div>
-      )}
-
-      {rising.length > 0 && (
-        <div className={styles.rising} aria-live="polite">
-          {rising.map((rise) => (
-            <span
-              key={rise.id}
-              className={styles.riseEmoji}
-              style={{ left: rise.x, top: rise.start, '--rise': `${rise.distance}px` } as CSSProperties}
-            >
-              <span aria-hidden="true">{rise.emoji}</span>
-              <span className="visually-hidden">{rise.name} reacted {rise.emoji}</span>
-            </span>
-          ))}
-        </div>
-      )}
-      {/* The names ride with their emoji, but in a layer cut to the space between the turn container and the board, so
-          they show only there: above it, only the emoji goes on rising. */}
-      {rising.map((rise) =>
-        rise.gapHeight > 0 ? (
-          <div key={`${rise.id}-name`} className={styles.nameGap} style={{ top: rise.gapTop, height: rise.gapHeight }} aria-hidden="true">
-            <span className={styles.riseName} style={{ left: rise.x, top: rise.start - rise.gapTop, '--rise': `${rise.distance}px` } as CSSProperties}>
-              {rise.name}
-            </span>
-          </div>
-        ) : null,
       )}
 
       {open && (

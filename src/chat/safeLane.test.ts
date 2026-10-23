@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BAND_HEIGHT, findLane, freeIntervals, risePath } from './safeLane';
+import { BAND_HEIGHT, findLane, freeIntervals } from './safeLane';
 
 const rect = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
 
@@ -28,24 +28,5 @@ describe('findLane', () => {
     // Header, board in the middle, rail on the right, chat button bottom-left.
     const wide = [rect(0, 0, 1440, 52), rect(400, 60, 1040, 700), rect(1060, 52, 1440, 900), rect(16, 836, 64, 884)];
     expect(findLane(wide, 1440, 900, 'left')).toEqual({ left: 0, top: 832 - 260, width: 220, height: 260, direction: 'column' });
-  });
-});
-
-describe('risePath', () => {
-  const board = rect(12, 175, 363, 526);
-  const turn = rect(0, 0, 375, 126);
-
-  it('starts on the board\'s top edge and leaves the screen, with the name confined to the gap above the board', () => {
-    expect(risePath(board, turn, 0)).toEqual({ x: 30, start: 175, distance: 211, gapTop: 126, gapHeight: 49 });
-  });
-
-  it('spreads reactions along the board, leaving room for the name', () => {
-    expect(risePath(board, turn, 1).x).toBe(267);
-    expect(risePath(board, turn, 0.5).x).toBe(149);
-  });
-
-  it('has no gap for the name when the turn container reaches the board', () => {
-    expect(risePath(board, rect(0, 0, 375, 200), 0.5)).toMatchObject({ gapTop: 175, gapHeight: 0 });
-    expect(risePath(board, null, 0.5)).toMatchObject({ gapHeight: 0 });
   });
 });
