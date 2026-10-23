@@ -100,9 +100,13 @@
   color: var(--on-surface-muted);
 }
 
-.close:hover {
-  background: var(--surface-high);
-  color: var(--on-surface);
+/* Real hover only: on a phone the close button sits where the menu button was tapped, and a sticky :hover left it
+   looking selected as the drawer opened. */
+@media (hover: hover) {
+  .close:hover {
+    background: var(--surface-high);
+    color: var(--on-surface);
+  }
 }
 
 .close:focus-visible {
