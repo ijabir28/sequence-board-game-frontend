@@ -8,14 +8,12 @@ export const MAX_MESSAGE_LENGTH = 200;
 
 /** The quick reactions the server accepts, in the order the picker shows them. */
 export const REACTIONS = [
-  { id: 'thumbs_up', emoji: '👍', label: 'Thumbs up' },
-  { id: 'clap', emoji: '👏', label: 'Applause' },
-  { id: 'fire', emoji: '🔥', label: 'On fire' },
   { id: 'wow', emoji: '😮', label: 'Wow' },
-  { id: 'laugh', emoji: '😂', label: 'Ha ha' },
-  { id: 'oops', emoji: '😅', label: 'Oops' },
+  { id: 'clap', emoji: '👏', label: 'Clap' },
   { id: 'party', emoji: '🎉', label: 'Party' },
-  { id: 'gg', emoji: 'GG', label: 'Good game' },
+  { id: 'fire', emoji: '🔥', label: 'Fire' },
+  { id: 'laugh', emoji: '😂', label: 'Ha ha' },
+  { id: 'heart', emoji: '❤️', label: 'Heart' },
 ] as const;
 
 export type ReactionId = (typeof REACTIONS)[number]['id'];

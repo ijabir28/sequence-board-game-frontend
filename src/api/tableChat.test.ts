@@ -25,7 +25,7 @@ describe('sanitizeReaction', () => {
       author: { handle: 'ben', name: 'Ben' },
       reaction: 'clap',
     });
-    expect(sanitizeReaction({ id: 'r-1', author: { handle: 'ben' }, reaction: 'skull' })).toBeNull();
-    expect(reactionEmoji('gg')).toBe('GG');
+    expect(sanitizeReaction({ id: 'r-1', author: { handle: 'ben' }, reaction: 'gg' })).toBeNull();
+    expect(reactionEmoji('heart')).toBe('❤️');
   });
 });
