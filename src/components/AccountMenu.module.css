@@ -161,3 +161,15 @@
 .avatarOnly .dot {
   left: calc(var(--space-1) + 24px);
 }
+
+/* Phones: the drawer is glass (Drawer.module.css), so its items are tinted glass too rather than solid. */
+@media (max-width: 600px) {
+  .drawerItem {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .drawerItem:hover {
+    background: rgba(255, 255, 255, 0.16);
+  }
+}
