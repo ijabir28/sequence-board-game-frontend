@@ -14,7 +14,7 @@ import { Icon } from '../components/ui/Icon';
 import { tipProps } from '../components/ui/TooltipLayer';
 import { useMediaQuery } from '../game/useMediaQuery';
 import { appendMessage, countUnseen, mergeHistory } from './chatLog';
-import { currentLane, currentRise, wavyKeyframes, type Lane, type Rise } from './safeLane';
+import { currentLane, currentRise, type Lane, type Rise } from './safeLane';
 import styles from './TableChat.module.css';
 
 /** How long a reaction (or, with the chat closed, a message) floats in its lane. */
@@ -51,16 +51,6 @@ interface Rising extends Rise {
   id: string;
   name: string;
   emoji: string;
-}
-
-/**
- * Plays a rise's wave on its emoji or its name (both get the same keyframes, so the name rides with its emoji). The
- * wave is drawn afresh for every reaction, which CSS keyframes can't do, so it runs on the Web Animations API.
- */
-function playWave(element: HTMLElement | null, rise: Rising) {
-  if (!element || !rise.wave || element.dataset.waving) return;
-  element.dataset.waving = 'true';
-  element.animate(wavyKeyframes(rise.distance, rise.wave), { duration: rise.ms, easing: 'linear', fill: 'forwards' });
 }
 
 type Tab = 'quick' | 'messages';
@@ -101,8 +91,6 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
   const phone = useMediaQuery('(max-width: 600px)');
-  // Without motion a rise just fades where it starts (TableChat.module.css), wave or not.
-  const still = useMediaQuery('(prefers-reduced-motion: reduce)');
   // The listeners read these through a ref, so the chat isn't reopened whenever they change.
   const latest = useRef({ open, you, messages, phone });
   latest.current = { open, you, messages, phone };
@@ -264,8 +252,7 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
           {rising.map((rise) => (
             <span
               key={rise.id}
-              ref={still ? undefined : (element) => playWave(element, rise)}
-              className={[styles.riseEmoji, rise.wave && !still ? styles.wavy : ''].join(' ')}
+              className={styles.riseEmoji}
               style={{ left: rise.x, top: rise.start, animationDuration: `${rise.ms}ms`, '--rise': `${rise.distance}px` } as CSSProperties}
             >
               <span aria-hidden="true">{rise.emoji}</span>
@@ -292,8 +279,7 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
             aria-hidden="true"
           >
             <span
-              ref={still ? undefined : (element) => playWave(element, rise)}
-              className={[styles.riseName, rise.wave && !still ? styles.wavy : ''].join(' ')}
+              className={styles.riseName}
               style={{ ...across, top: rise.start - box.top, animationDuration: `${rise.ms}ms`, '--rise': `${rise.distance}px` } as CSSProperties}
             >
               {rise.name}

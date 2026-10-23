@@ -391,9 +391,7 @@ button instead and messages only add to its unread count. On a game, reactions (
 off the screen, fading as they go. On a phone each starts on the board's top edge (`data-chat-anchor="board"`),
 spread along it, and the sender's name rides beside it only through the blank space between the board and the turn
 container (`data-chat-anchor="turn"`). On a wider screen they rise up the free channels left and right of the board
-(bounded by the screen's edge or the side rail, starting above the chat button), on a side drawn at random for each
-reaction, along a wavy path whose width, number of waves and starting point are drawn afresh each time (keyframes
-from `wavyKeyframes`, played with the Web Animations API, always inside the channel), and the name shows
+(bounded by the screen's edge or the side rail, starting above the chat button), alternating sides, and the name shows
 beside the emoji, away from the board, over the first 140 px of the rise, where the channel has room for it. Either
 way the name is drawn in a layer cut to its box, so beyond it only the emoji goes on. Where neither fits, reactions
 use the lanes above. A reaction that doesn't go through (sent faster than the table allows) is dropped silently.

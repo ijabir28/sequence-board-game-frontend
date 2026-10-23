@@ -101,15 +101,6 @@ export interface Rise {
   nameBox: Rect | null;
   /** Which side of the emoji the name goes: away from the board. */
   nameSide: 'left' | 'right';
-  /** Beside the board, the wave it follows up the channel (see wavyKeyframes); a phone's rise has none. */
-  wave: Wave | null;
-}
-
-/** A sine wave across the channel: its half-width in px, how many waves the whole rise makes, and where it begins. */
-export interface Wave {
-  amplitude: number;
-  cycles: number;
-  phase: number;
 }
 
 /** A rising emoji is this wide and tall, so it travels this much further to be fully off the screen. */
@@ -125,11 +116,6 @@ const CHANNEL_INSET = 8;
 const PHONE_RISE_MS = 3200;
 const RISE_PX_PER_S = 200;
 const MAX_RISE_MS = 5200;
-/** A wave's half-width and number of waves over the whole rise are drawn from these ranges. */
-const MIN_AMPLITUDE = 10;
-const MAX_AMPLITUDE = 28;
-const MIN_CYCLES = 1.5;
-const MAX_CYCLES = 3;
 
 function clamp(value: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, value));
@@ -150,7 +136,6 @@ export function risePath(board: Rect, turn: Rect | null, width: number, spot: nu
     ms: PHONE_RISE_MS,
     nameBox: board.top > gapTop ? { left: 0, top: gapTop, right: width, bottom: board.top } : null,
     nameSide: 'right',
-    wave: null,
   };
 }
 
@@ -158,18 +143,10 @@ export function risePath(board: Rect, turn: Rect | null, width: number, spot: nu
  * A wider screen: the rise up the free channel on `side` of `board`, between it and the screen's edge or the nearest
  * of `walls` beside it (the side rail), or null if the channel is too narrow for an emoji. It starts near the board's
  * bottom, above anything of `below` in the channel there (the chat button, which floats over the channel rather than
- * bounding it), and waves its way up: `random` (0 to 1, like Math.random) draws the wave, so no two rises take the
- * same path. The wave always stays inside the channel. The name shows beside the emoji, away from the board, over
- * the first stretch of the rise, where the channel is wide enough for one.
+ * bounding it). The name shows beside the emoji, away from the board, over the first stretch of the rise, where the
+ * channel is wide enough for one.
  */
-export function sidePath(
-  board: Rect,
-  walls: Rect[],
-  below: Rect[],
-  width: number,
-  side: 'left' | 'right',
-  random: () => number,
-): Rise | null {
+export function sidePath(board: Rect, walls: Rect[], below: Rect[], width: number, side: 'left' | 'right', spot: number): Rise | null {
   const beside = walls.filter((r) => r.bottom > board.top && r.top < board.bottom);
   const outer =
     side === 'left'
@@ -186,19 +163,11 @@ export function sidePath(
   );
   const start = Math.round(floor);
   const withName = hi - lo >= RISE_SIZE + CHANNEL_INSET + MIN_NAME_WIDTH;
-  // The wave may swing this far either way and keep the emoji in the channel.
-  const room = (hi - lo - RISE_SIZE) / 2;
-  const amplitude = Math.round(Math.min(room, MIN_AMPLITUDE + (MAX_AMPLITUDE - MIN_AMPLITUDE) * random()));
-  const wave = {
-    amplitude,
-    cycles: Math.round((MIN_CYCLES + (MAX_CYCLES - MIN_CYCLES) * random()) * 100) / 100,
-    phase: Math.round(random() * 2 * Math.PI * 1000) / 1000,
-  };
-  // With a name, the emoji's wave keeps to the board's side of the channel and the name takes the rest; without one,
-  // the wave runs anywhere across the channel.
-  const near = side === 'left' ? hi - RISE_SIZE / 2 - amplitude : lo + RISE_SIZE / 2 + amplitude;
-  const drift = withName ? 0 : (hi - lo - RISE_SIZE - 2 * amplitude) * random();
-  const x = Math.round(side === 'left' ? near - drift : near + drift);
+  // With a name, the emoji keeps to the board's side of the channel and the name takes the rest; without one, it
+  // drifts a little across the channel so a stream of reactions doesn't stack.
+  const near = side === 'left' ? hi - RISE_SIZE / 2 : lo + RISE_SIZE / 2;
+  const sway = withName ? 0 : (hi - lo - RISE_SIZE) * clamp(spot, 0, 1);
+  const x = Math.round(side === 'left' ? near - sway : near + sway);
   const distance = start + RISE_SIZE;
   return {
     x,
@@ -207,38 +176,7 @@ export function sidePath(
     ms: Math.round(clamp((distance / RISE_PX_PER_S) * 1000, PHONE_RISE_MS, MAX_RISE_MS)),
     nameBox: withName ? { left: lo, top: Math.max(0, start - NAME_SPAN), right: hi, bottom: start + RISE_SIZE / 2 } : null,
     nameSide: side === 'left' ? 'left' : 'right',
-    wave,
   };
-}
-
-/** How many steps the wavy keyframes take; the browser runs straight between them, too short to see. */
-const WAVE_STEPS = 48;
-/** Over this much of the rise the wave grows from nothing, so the emoji leaves its start (and its name) gently. */
-const WAVE_EASE_IN = 0.3;
-
-/**
- * The keyframes for a rise that follows `wave`, for the Web Animations API: the same pop, rise and fade as a phone's
- * (rise-off in TableChat.module.css) with the wave across it. The name gets the same keyframes, so it rides with its
- * emoji.
- */
-export function wavyKeyframes(distance: number, wave: Wave): Keyframe[] {
-  const frames: Keyframe[] = [];
-  for (let i = 0; i <= WAVE_STEPS; i++) {
-    const t = i / WAVE_STEPS;
-    // A quick pop over the first 8%, then a steady rise.
-    const up = clamp((t - 0.08) / 0.92, 0, 1);
-    const grow = clamp(up / WAVE_EASE_IN, 0, 1);
-    const ease = grow * grow * (3 - 2 * grow);
-    const across = wave.amplitude * ease * Math.sin(2 * Math.PI * wave.cycles * up + wave.phase);
-    const scale = t < 0.08 ? 0.5 + (t / 0.08) * 0.65 : t < 0.14 ? 1.15 - ((t - 0.08) / 0.06) * 0.15 : 1;
-    const opacity = t < 0.08 ? t / 0.08 : t <= 0.65 ? 1 : 1 - (t - 0.65) / 0.35;
-    frames.push({
-      offset: t,
-      opacity: Math.round(opacity * 1000) / 1000,
-      transform: `translate(${across.toFixed(2)}px, ${(-distance * up).toFixed(2)}px) scale(${scale.toFixed(3)})`,
-    });
-  }
-  return frames;
 }
 
 /**
@@ -249,19 +187,19 @@ export function currentRise(count: number, phone: boolean, extra: Element[] = []
   const boardElement = document.querySelector('[data-chat-anchor="board"]');
   const board = boardElement?.getBoundingClientRect();
   if (!board || board.width === 0) return null;
+  // The golden ratio spreads one reaction's spot from the next.
+  const spot = (count * 0.618034) % 1;
   if (phone) {
-    // The golden ratio spreads one reaction's spot along the board's edge from the next.
-    const spot = (count * 0.618034) % 1;
     const turn = document.querySelector('[data-chat-anchor="turn"]')?.getBoundingClientRect();
     return risePath(board, turn && turn.height > 0 ? turn : null, window.innerWidth, spot);
   }
   const rects = (elements: Element[]) => elements.map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
   const walls = rects([...document.querySelectorAll('[data-chat-avoid]')].filter((el) => el !== boardElement));
   const below = rects(extra);
-  // A side at random for every reaction, falling back to the other if it has no room.
-  const sides = Math.random() < 0.5 ? (['left', 'right'] as const) : (['right', 'left'] as const);
+  // Alternate sides, falling back to whichever has room.
+  const sides = count % 2 === 0 ? (['right', 'left'] as const) : (['left', 'right'] as const);
   for (const side of sides) {
-    const rise = sidePath(board, walls, below, window.innerWidth, side, Math.random);
+    const rise = sidePath(board, walls, below, window.innerWidth, side, spot);
     if (rise) return rise;
   }
   return null;

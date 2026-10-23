@@ -629,13 +629,6 @@
   animation: rise-off 3200ms linear forwards;
 }
 
-/* Beside the board the rise waves its way up, on keyframes drawn afresh for each reaction (playWave in
-   TableChat.tsx); until they start, it is hidden rather than shown at its start. */
-.wavy {
-  animation: none;
-  opacity: 0;
-}
-
 /* A quick pop on the board's edge, then a steady float up and off the screen, swaying a little, fading at the end. */
 @keyframes rise-off {
   0% {
