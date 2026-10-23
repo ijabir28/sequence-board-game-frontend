@@ -417,6 +417,17 @@
   }
 }
 
+/*
+ * A table game's chat button sits in a phone's bottom-right corner (src/chat/TableChat.module.css), so the hand
+ * strip's last lines (the tip, Pass turn and Hint, the deck count) end before it.
+ */
+@media (max-width: 600px) {
+  :global(body[data-table-chat]) .actions,
+  :global(body[data-table-chat]) .railNote {
+    padding-right: calc(48px + var(--space-3));
+  }
+}
+
 @media (max-width: 420px) {
   .brand {
     display: none;

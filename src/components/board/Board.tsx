@@ -106,6 +106,8 @@ export function Board({
         .join(' ')}
       data-suits={deck.suits}
       data-cells={boardStyle}
+      // The table chat's reactions never float over the board (src/chat/safeLane.ts).
+      data-chat-avoid
       style={
         {
           '--deck-face': deck.face,
