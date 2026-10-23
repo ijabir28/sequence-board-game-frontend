@@ -1,0 +1,403 @@
+/*
+ * The chat floats in the bottom-left corner, over the page, so the lobby and the game go on underneath. The panel
+ * opens above its button; reactions (and, with the chat closed, new messages) float up beside it for a moment.
+ */
+.root {
+  --chat-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  --chat-left: max(var(--gutter), env(safe-area-inset-left));
+  position: fixed;
+  left: var(--chat-left);
+  bottom: var(--chat-bottom);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  /* Only the button, the panel and the bursts take clicks. */
+  pointer-events: none;
+}
+
+/*
+ * A phone's game fills the screen down to the hand strip, so the chat hangs from the right edge instead, under the
+ * game menu's pull tab and looking like it, and opens downwards.
+ */
+@media (max-width: 600px) {
+  .game {
+    --chat-top: calc(max(var(--space-2), env(safe-area-inset-top)) + 54px);
+    top: var(--chat-top);
+    bottom: auto;
+    left: auto;
+    right: 0;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+  }
+
+  .game .launcher {
+    width: 28px;
+    height: 46px;
+    border-right: 0;
+    border-radius: var(--radius-card) 0 0 var(--radius-card);
+  }
+
+  .game .launcher svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .game .badge {
+    top: -6px;
+    right: auto;
+    left: -8px;
+  }
+
+  .game .panel {
+    margin-right: var(--gutter);
+    height: min(28rem, calc(100dvh - var(--chat-top) - 46px - var(--space-6)));
+  }
+
+  .game .bursts {
+    align-items: flex-end;
+    margin-right: var(--gutter);
+  }
+
+  .game:has(.panel) .bursts {
+    display: none;
+  }
+}
+
+.launcher {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--outline-strong);
+  border-radius: 50%;
+  background: var(--surface-highest);
+  color: var(--on-surface);
+  box-shadow: var(--shadow-raised);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+
+.launcher:hover,
+.launcher[aria-expanded='true'] {
+  background: var(--surface-bright);
+  color: var(--primary);
+}
+
+.launcher:focus-visible,
+.close:focus-visible,
+.reactionButton:focus-visible,
+.send:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: min(22rem, calc(100vw - 2 * var(--gutter)));
+  height: min(28rem, calc(100dvh - var(--chat-bottom) - 48px - var(--space-6)));
+  border: 1px solid var(--outline-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface-container);
+  box-shadow: var(--shadow-raised);
+  pointer-events: auto;
+  animation: panel-in var(--dur) var(--ease-out);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--outline-subtle);
+}
+
+.header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+}
+
+.public {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 2px 0 0;
+  color: var(--on-surface-muted);
+  font-size: var(--text-xs);
+}
+
+.public svg {
+  flex: none;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--on-surface-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--surface-high);
+  color: var(--on-surface);
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  /* The game screen turns text selection off; messages may be copied. */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.empty {
+  margin: auto 0;
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  max-width: 85%;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-card);
+  background: var(--surface-high);
+}
+
+.mine {
+  align-self: flex-end;
+  background: rgba(78, 222, 163, 0.14);
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--on-surface-muted);
+}
+
+.meta strong {
+  color: var(--on-surface);
+}
+
+.text {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.compose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-top: 1px solid var(--outline-subtle);
+}
+
+.reactions {
+  display: flex;
+  justify-content: space-between;
+  gap: 2px;
+}
+
+.reactionButton {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--on-surface);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-fast), transform var(--dur-fast);
+}
+
+.reactionButton:hover {
+  background: var(--surface-high);
+}
+
+.reactionButton:active {
+  transform: scale(0.9);
+}
+
+.error {
+  margin: 0;
+  color: var(--error);
+  font-size: var(--text-xs);
+}
+
+.form {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--outline-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-lowest);
+  color: var(--on-surface);
+  /* 16px, so phones don't zoom into the field. */
+  font: inherit;
+  font-size: var(--text-md);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.send {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--on-primary);
+  cursor: pointer;
+}
+
+.send:disabled {
+  background: var(--surface-high);
+  color: var(--on-surface-muted);
+  cursor: default;
+}
+
+.signIn {
+  margin: 0;
+  padding: var(--space-3);
+  border-top: 1px solid var(--outline-subtle);
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+}
+
+.signIn a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.bursts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+/* With the panel open, the bursts would cover the conversation: they float beside the button instead. */
+.root:has(.panel) .bursts {
+  position: absolute;
+  left: calc(48px + var(--space-2));
+  bottom: 0;
+}
+
+.burst {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(18rem, calc(100vw - 2 * var(--gutter)));
+  margin: 0;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border: 1px solid var(--outline-strong);
+  border-radius: 999px;
+  background: var(--surface-highest);
+  box-shadow: var(--shadow-raised);
+  font-size: var(--text-sm);
+  animation: burst 3500ms var(--ease-out) forwards;
+}
+
+.burstEmoji {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.burstText {
+  display: flex;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.burstText span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes burst {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.9);
+  }
+  10%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .burst {
+    animation: none;
+  }
+}
