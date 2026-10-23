@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { Profile } from '../api/user';
 import { useInstallOption } from '../pwa/install';
 import { useAuth } from '../auth/AuthContext';
+import { useFriends } from '../friends/FriendsContext';
 import { useMediaQuery } from '../game/useMediaQuery';
 import { Avatar } from './Avatar';
 import { PoweredBy } from './PoweredBy';
@@ -14,7 +15,8 @@ import { useMenu } from './ui/useMenu';
 import menuStyles from './ui/Menu.module.css';
 import styles from './AccountMenu.module.css';
 
-type Item = { key: string; icon: IconName; label: string; tip: string } & ({ to: string } | { onSelect: () => void });
+/** `badge`: how many things wait there for an answer, shown as a count. */
+type Item = { key: string; icon: IconName; label: string; tip: string; badge?: number } & ({ to: string } | { onSelect: () => void });
 
 /** The account's places and actions, the same list in the desktop dropdown and the phone drawer. */
 function useItems(): Item[] {
@@ -22,6 +24,7 @@ function useItems(): Item[] {
   const navigate = useNavigate();
   const toast = useToast();
   const install = useInstallOption();
+  const { waiting } = useFriends();
   const installItem: Item[] = !install
     ? []
     : [
@@ -45,10 +48,18 @@ function useItems(): Item[] {
       to: '/profile',
     },
     {
+      key: 'friends',
+      icon: 'users',
+      label: 'Friends',
+      tip: waiting > 0 ? `Friends: ${waiting} request${waiting === 1 ? '' : 's'} or invitation${waiting === 1 ? '' : 's'} waiting` : 'Find players, add friends and invite them to your tables',
+      to: '/friends',
+      badge: waiting,
+    },
+    {
       key: 'leaderboard',
       icon: 'trophy',
       label: 'Leaderboard',
-      tip: 'Player rankings: ratings, wins and win rates, all time, this week and today',
+      tip: 'How you rank among your friends: ratings, wins and win rates, all time, this week and today',
       to: '/leaderboard',
     },
     {
@@ -75,6 +86,23 @@ export function AccountMenu({ profile }: { profile: Profile }) {
   return phone ? <AccountDrawer profile={profile} /> : <AccountDropdown profile={profile} />;
 }
 
+/** A count of what's waiting, or nothing. */
+function Badge({ count }: { count?: number }) {
+  if (!count) return null;
+  return (
+    <span className={styles.badge} aria-label={`${count} waiting`}>
+      {count > 9 ? '9+' : count}
+    </span>
+  );
+}
+
+/** A dot on the menu's button while something waits inside. */
+function WaitingDot() {
+  const { waiting } = useFriends();
+  if (waiting === 0) return null;
+  return <span className={styles.dot} aria-label={`${waiting} friend request${waiting === 1 ? '' : 's'} or invitation${waiting === 1 ? '' : 's'} waiting`} />;
+}
+
 function AccountDropdown({ profile }: { profile: Profile }) {
   const items = useItems();
   const { pathname } = useLocation();
@@ -86,9 +114,10 @@ function AccountDropdown({ profile }: { profile: Profile }) {
         type="button"
         className={styles.trigger}
         {...triggerProps}
-        {...(open ? {} : tipProps('Your account: profile settings, leaderboard, how to play and sign out', 'bottom', 'end'))}
+        {...(open ? {} : tipProps('Your account: profile settings, friends, leaderboard, how to play and sign out', 'bottom', 'end'))}
       >
         <Avatar name={profile.name} handle={profile.handle} image={profile.image} size={32} />
+        <WaitingDot />
         <span className={styles.name}>{profile.name}</span>
         <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} className={styles.caret} />
       </button>
@@ -103,6 +132,7 @@ function AccountDropdown({ profile }: { profile: Profile }) {
               <>
                 <Icon name={item.icon} size={18} />
                 <span>{item.label}</span>
+                <Badge count={item.badge} />
               </>
             );
             const className = [menuStyles.item, item.key === 'signout' && menuStyles.danger].filter(Boolean).join(' ');
@@ -155,9 +185,10 @@ function AccountDrawer({ profile }: { profile: Profile }) {
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
-        {...tipProps('Your account: profile settings, leaderboard, how to play and sign out', 'bottom', 'end')}
+        {...tipProps('Your account: profile settings, friends, leaderboard, how to play and sign out', 'bottom', 'end')}
       >
         <Avatar name={profile.name} handle={profile.handle} image={profile.image} size={32} />
+        <WaitingDot />
       </button>
       <Drawer
         open={open}
@@ -177,6 +208,7 @@ function AccountDrawer({ profile }: { profile: Profile }) {
             <>
               <Icon name={item.icon} />
               <span>{item.label}</span>
+              <Badge count={item.badge} />
             </>
           );
           const className = [styles.drawerItem, item.key === 'signout' && styles.drawerSignOut].filter(Boolean).join(' ');

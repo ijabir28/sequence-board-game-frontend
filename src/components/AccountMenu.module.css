@@ -5,6 +5,7 @@
 
 /* The picture and display name, nothing else, until it is pressed. */
 .trigger {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -129,4 +130,34 @@
 
 .drawerCredit {
   padding-bottom: var(--space-2);
+}
+
+/* Requests and invitations waiting: a count on the Friends item, a dot on the avatar. */
+.badge {
+  margin-left: auto;
+  min-width: 1.25rem;
+  padding: 0 var(--space-1);
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.dot {
+  position: absolute;
+  top: 6px;
+  left: calc(var(--space-2) + 24px);
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.avatarOnly .dot {
+  left: calc(var(--space-1) + 24px);
 }

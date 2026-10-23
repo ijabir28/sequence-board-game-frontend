@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, RequireAuth, SessionCheck, useAuth } from './auth/AuthContext';
 import { ToastProvider } from './components/toast/Toaster';
 import { TooltipLayer } from './components/ui/TooltipLayer';
+import { FriendsProvider } from './friends/FriendsContext';
 import { Lobby } from './screens/Lobby';
 import { SignIn } from './screens/SignIn';
 import { SignUp } from './screens/SignUp';
@@ -13,6 +14,7 @@ import { UpdateNotice } from './pwa/UpdateNotice';
 // chunk, so after the first visit they open at once, offline too.
 const LocalGamePage = lazy(() => import('./screens/LocalGamePage').then((m) => ({ default: m.LocalGamePage })));
 const QuickMatchPage = lazy(() => import('./screens/QuickMatchPage').then((m) => ({ default: m.QuickMatchPage })));
+const FriendsPage = lazy(() => import('./screens/FriendsPage').then((m) => ({ default: m.FriendsPage })));
 const LeaderboardPage = lazy(() => import('./screens/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const ProfilePage = lazy(() => import('./screens/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const RoomGamePage = lazy(() => import('./screens/RoomGamePage').then((m) => ({ default: m.RoomGamePage })));
@@ -25,11 +27,13 @@ const ResetPassword = lazy(() => import('./screens/ResetPassword').then((m) => (
 const ServerGamePage = lazy(() => import('./screens/ServerGamePage').then((m) => ({ default: m.ServerGamePage })));
 const TrainingPage = lazy(() => import('./tutorial/TrainingPage').then((m) => ({ default: m.TrainingPage })));
 
-// SPA routes must not start with a proxied backend prefix (/api, /user, /room, /game, /board, /images, /matchmaking).
+// SPA routes must not start with a proxied backend prefix (/api/, /user/, /room/, /game/, /board/, /images/,
+// /matchmaking/, /friends/). Bare /friends is the friends page: the backend answers nothing there but the app.
 export function App() {
   return (
     <ToastProvider>
       <AuthProvider>
+        <FriendsProvider>
         <Suspense fallback={null}>
           <Routes>
             <Route path="/signin" element={<SignIn />} />
@@ -59,6 +63,14 @@ export function App() {
               element={
                 <RequireAuth>
                   <QuickMatchPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/friends"
+              element={
+                <RequireAuth>
+                  <FriendsPage />
                 </RequireAuth>
               }
             />
@@ -102,6 +114,7 @@ export function App() {
             <Route path="*" element={<Home />} />
           </Routes>
         </Suspense>
+        </FriendsProvider>
       </AuthProvider>
       <TooltipLayer />
       <UpdateNotice />
