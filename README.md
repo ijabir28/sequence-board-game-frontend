@@ -291,7 +291,8 @@ session on the server.
 
 `/friends` (from the dashboard and the account menu) finds players by name or username, sends friend requests and
 answers them, removes friends, and lists table invitations from friends (`src/api/friends.ts`). Friends show whether
-they are online or in a game (with a link to watch it). The list lives in `src/friends/FriendsContext.tsx` for every
+they are online or in a game; the game comes with a Watch link only when that friend turned on **Friends can watch my
+games** in their profile (off by default). The list lives in `src/friends/FriendsContext.tsx` for every
 page: the server sends `friends_updated` and `table_invitation` only to the player's own sockets, which it identifies
 from the session cookie as they connect, so the socket reconnects after signing in or out. A new request or invitation
 pops up a message (with View / Join), and the account menu counts what is waiting. On a table's page, anyone seated

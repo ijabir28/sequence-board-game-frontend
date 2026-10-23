@@ -27,6 +27,7 @@ const PROFILE_BODY = {
   image: null,
   card_deck: 'jumbo',
   board_style: 'cards',
+  friends_can_watch: true,
   created_at: '2026-10-01T10:00:00.000Z',
   stats: { played: 5, won: 3, playing: 1 },
 };
@@ -38,6 +39,7 @@ const PROFILE = {
   image: null,
   cardDeck: 'jumbo',
   boardStyle: 'cards',
+  friendsCanWatch: true,
   createdAt: '2026-10-01T10:00:00.000Z',
   stats: { played: 5, won: 3, playing: 1 },
 };

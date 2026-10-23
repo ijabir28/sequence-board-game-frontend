@@ -15,8 +15,10 @@ export interface Friend extends Player {
   since: number | null;
   /** Has the app open right now. */
   online: boolean;
-  /** The table code of a game in progress they have a seat at, or null. */
-  playing: string | null;
+  /** Has a seat at a table game in progress. */
+  playing: boolean;
+  /** That game's table code, only when the friend lets friends watch their games (their profile setting); else null. */
+  watch: string | null;
 }
 
 export interface FriendRequest extends Player {
@@ -80,7 +82,8 @@ export function sanitizeOverview(raw: Raw): FriendsOverview {
       ...sanitizePlayer(friend),
       since: time(friend.since),
       online: friend.online === true,
-      playing: typeof friend.playing === 'string' && friend.playing ? friend.playing : null,
+      playing: friend.playing === true,
+      watch: typeof friend.watch === 'string' && friend.watch ? friend.watch : null,
     })),
     incoming: list(raw.incoming).map((r) => ({ ...sanitizePlayer(r), sentAt: time(r.sent_at) })),
     outgoing: list(raw.outgoing).map((r) => ({ ...sanitizePlayer(r), sentAt: time(r.sent_at) })),

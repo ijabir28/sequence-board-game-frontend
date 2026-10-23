@@ -14,7 +14,10 @@ function respond(status: number, body: unknown) {
 describe('sanitizeOverview', () => {
   it('reads friends, requests and invitations', () => {
     const overview = sanitizeOverview({
-      friends: [{ handle: 'sakib', name: 'Sakib', image: null, since: '2026-10-20T10:00:00.000Z', online: true, playing: 'otter-k3m9' }],
+      friends: [
+        { handle: 'sakib', name: 'Sakib', image: null, since: '2026-10-20T10:00:00.000Z', online: true, playing: true, watch: 'otter-k3m9' },
+        { handle: 'tanvir', name: 'Tanvir', online: false, playing: true, watch: null },
+      ],
       incoming: [{ handle: 'rafi', name: '', sent_at: '2026-10-21T10:00:00.000Z' }],
       outgoing: [],
       invitations: [
@@ -23,7 +26,9 @@ describe('sanitizeOverview', () => {
       ],
     });
     expect(overview.friends).toEqual([
-      { handle: 'sakib', name: 'Sakib', image: null, since: Date.parse('2026-10-20T10:00:00.000Z'), online: true, playing: 'otter-k3m9' },
+      { handle: 'sakib', name: 'Sakib', image: null, since: Date.parse('2026-10-20T10:00:00.000Z'), online: true, playing: true, watch: 'otter-k3m9' },
+      // Playing, but hasn't let friends watch: no table to link to.
+      { handle: 'tanvir', name: 'Tanvir', image: null, since: null, online: false, playing: true, watch: null },
     ]);
     expect(overview.incoming).toEqual([{ handle: 'rafi', name: 'rafi', image: null, sentAt: Date.parse('2026-10-21T10:00:00.000Z') }]);
     expect(overview.invitations).toEqual([

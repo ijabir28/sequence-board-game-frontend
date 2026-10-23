@@ -15,6 +15,8 @@ export interface Profile {
   cardDeck: string | null;
   /** How the board's cells look, chosen on the account (src/decks/decks.ts), or null before one is chosen. */
   boardStyle: string | null;
+  /** Whether friends get a link to watch this player's table games from their friends list. Off by default. */
+  friendsCanWatch: boolean;
   /** When the account was made (ISO 8601), or null if the server didn't say. */
   createdAt: string | null;
   /** Table games: finished ones played and won, and the ones in progress. */
@@ -95,6 +97,7 @@ function toProfile(body: Record<string, unknown> | null): Profile {
     image: typeof body.image === 'string' ? body.image : null,
     cardDeck: typeof body.card_deck === 'string' ? body.card_deck : null,
     boardStyle: typeof body.board_style === 'string' ? body.board_style : null,
+    friendsCanWatch: body.friends_can_watch === true,
     createdAt: typeof body.created_at === 'string' ? body.created_at : null,
     stats: { played: count(stats.played), won: count(stats.won), playing: count(stats.playing) },
   };
@@ -209,6 +212,11 @@ export async function saveCardDeck(cardDeck: string): Promise<void> {
 /** Saves how the board's cells look on the account, so it follows the player to every device. */
 export async function saveBoardStyle(boardStyle: string): Promise<void> {
   await putJson('/user/board-style', { board_style: boardStyle });
+}
+
+/** Lets friends watch this player's table games from their friends list, or stops them. */
+export async function saveFriendsCanWatch(friendsCanWatch: boolean): Promise<void> {
+  await putJson('/user/friends-can-watch', { friends_can_watch: friendsCanWatch });
 }
 
 export interface DeviceSession {

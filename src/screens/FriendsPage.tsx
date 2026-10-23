@@ -252,8 +252,9 @@ export function FriendsPage() {
               <ul className={own.list}>
                 {friends.map((friend) => (
                   <PlayerRow key={friend.handle} player={friend} status={friend}>
-                    {friend.playing && (
-                      <Link to={`/watch/${friend.playing}`} className={own.linkButton} {...tipProps(`Watch ${friend.name}'s game live`)}>
+                    {/* Only when the friend has turned on "Friends can watch my games" in their profile. */}
+                    {friend.watch && (
+                      <Link to={`/watch/${friend.watch}`} className={own.linkButton} {...tipProps(`Watch ${friend.name}'s game live`)}>
                         <Icon name="eye" size={16} />
                         Watch
                       </Link>
