@@ -287,3 +287,8 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+.invite {
+  display: flex;
+  margin-top: var(--space-3);
+}

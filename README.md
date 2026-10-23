@@ -113,11 +113,11 @@ repository secret `RENDER_DEPLOY_HOOK_URL`. A failing test stops the deploy. Run
 
 ### Talking to the backend
 
-The backend has no CORS, so the Vite dev server proxies `/api`, `/user`, `/room`, `/game`, `/board`, `/images` and
-`/socket.io` (websockets included) to `http://localhost:3000`. The session cookie `sequence.session_token` stays
+The backend has no CORS, so the Vite dev server proxies `/api`, `/user`, `/room`, `/game`, `/board`, `/images`, `/matchmaking`, `/friends` (each with a
+trailing slash) and `/socket.io` (websockets included) to `http://localhost:3000`. The session cookie `sequence.session_token` stays
 same-origin. App routes are
 chosen so they never start with a proxied prefix: `/signin`, `/signup`, `/email-verified`, `/forgot-password`,
-`/reset-password`, `/profile`, `/leaderboard`, `/lobby`, `/table/:id`, `/watch/:id`, `/local` and `/server-game`.
+`/reset-password`, `/profile`, `/friends` (bare: the API is under `/friends/`), `/leaderboard`, `/lobby`, `/table/:id`, `/watch/:id`, `/local` and `/server-game`.
 
 ### Code map
 
@@ -289,8 +289,18 @@ The header's avatar opens `/profile`: the player's picture, game stats and accou
 app asks `GET /user/profile` who is signed in; nothing about the user is stored in the browser. "Sign out" ends the
 session on the server.
 
-`/leaderboard` (from the dashboard and the account menu) ranks players by their Elo rating, which the backend changes
-with every round won (`GET /user/leaderboard`, `src/api/leaderboard.ts`). Tabs switch between all time, this week and
+`/friends` (from the dashboard and the account menu) finds players by name or username, sends friend requests and
+answers them, removes friends, and lists table invitations from friends (`src/api/friends.ts`). Friends show whether
+they are online or in a game; the game comes with a Watch link only when that friend turned on **Friends can watch my
+games** in their profile (off by default). The list lives in `src/friends/FriendsContext.tsx` for every
+page: the server sends `friends_updated` and `table_invitation` only to the player's own sockets, which it identifies
+from the session cookie as they connect, so the socket reconnects after signing in or out. A new request or invitation
+pops up a message (with View / Join), and the account menu counts what is waiting. On a table's page, anyone seated
+(or the host) can **Invite friends** to its open seats until the game starts.
+
+`/leaderboard` (from the dashboard and the account menu) ranks the player and their friends, never anyone else, by
+their Elo rating, which the backend changes with every round won (`GET /user/leaderboard`, `src/api/leaderboard.ts`).
+When the backend turns its global board back on (`GLOBAL_LEADERBOARD`), a Friends / Everyone switch appears. Tabs switch between all time, this week and
 today (rating gained over the last 7 days / 24 hours); the period and page are in the address. The signed-in player's
 own numbers sit above the list, their row is highlighted, and when they are on a later page their row is pinned under
 the list with a button to jump there.

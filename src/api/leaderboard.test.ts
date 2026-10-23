@@ -52,8 +52,21 @@ describe('sanitizeLeaderboard', () => {
     expect(page.you).toMatchObject({ handle: 'jabir', page: 2 });
   });
 
+  it('reads the scope and which scopes the server offers, friends always among them', () => {
+    expect(sanitizeLeaderboard({ scope: 'global', scopes: ['friends', 'global'] }, 'all')).toMatchObject({
+      scope: 'global',
+      scopes: ['friends', 'global'],
+    });
+    expect(sanitizeLeaderboard({ scope: 'nobody', scopes: ['global', 'other'] }, 'all', 'global')).toMatchObject({
+      scope: 'global',
+      scopes: ['friends', 'global'],
+    });
+  });
+
   it('copes with an empty board', () => {
     expect(sanitizeLeaderboard({ players: [], you: null }, 'day')).toEqual({
+      scope: 'friends',
+      scopes: ['friends'],
       period: 'day',
       players: [],
       you: null,
@@ -72,7 +85,7 @@ describe('getLeaderboard', () => {
     const fetch = vi.fn(async () => new Response(JSON.stringify({ period: 'day', players: [], you: null, page: 2, per_page: 10, total: 0, pages: 1 })));
     vi.stubGlobal('fetch', fetch);
     const page = await getLeaderboard('day', 2, 10);
-    expect(fetch).toHaveBeenCalledWith('/user/leaderboard?period=day&page=2&per_page=10', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('/user/leaderboard?scope=friends&period=day&page=2&per_page=10', expect.anything());
     expect(page.period).toBe('day');
   });
 

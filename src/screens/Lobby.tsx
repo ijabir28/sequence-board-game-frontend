@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useFriends } from '../friends/FriendsContext';
 import { AppHeader } from '../components/AppHeader';
 import { PoweredBy } from '../components/PoweredBy';
 import { devToolsEnabled } from '../components/game/DevAdapterToggle';
@@ -16,6 +17,7 @@ import { CurrentGame, YourTablesDialog } from './YourTables';
 /** The dashboard: start or join a game. Each flow opens in its own dialog, so the page stays uncluttered. */
 export function Lobby() {
   const { profile } = useAuth();
+  const { waiting } = useFriends();
   const navigate = useNavigate();
   const [dialog, setDialog] = useState<'new' | 'join' | 'tables' | null>(null);
 
@@ -29,7 +31,7 @@ export function Lobby() {
           <section className={[styles.card, own.hero].join(' ')} aria-labelledby="lobby-title">
             <header className={styles.header}>
               <h1 id="lobby-title">{profile ? `Ready to play, ${profile.name}?` : 'Ready to play?'}</h1>
-              <p>Find an opponent with Quick Match, start a new game and invite friends with its code, or join a table someone shared with you.</p>
+              <p>Find an opponent with Quick Match, start a new game and invite your friends to it, or join a table someone shared with you.</p>
             </header>
             <div className={own.primaryActions}>
               <Button variant="primary" onClick={() => navigate('/quick-match')} tip="Play someone new now: no code to share">
@@ -51,7 +53,12 @@ export function Lobby() {
                   <Icon name="log" size={18} />
                   Your tables
                 </Button>
-                <Link to="/leaderboard" className={own.leaderboardLink} {...tipProps('See where you rank: ratings, wins and win rates')}>
+                <Link to="/friends" className={own.leaderboardLink} {...tipProps('Add friends, answer requests and invitations to their tables')}>
+                  <Icon name="users" size={18} />
+                  Friends
+                  {waiting > 0 && <span className={own.count}>{waiting}</span>}
+                </Link>
+                <Link to="/leaderboard" className={own.leaderboardLink} {...tipProps('See where you rank among your friends: ratings, wins and win rates')}>
                   <Icon name="trophy" size={18} />
                   Leaderboard
                 </Link>

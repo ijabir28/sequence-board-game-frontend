@@ -8,6 +8,7 @@ import {
   listSessions,
   removeAvatar,
   resendVerification,
+  saveFriendsCanWatch,
   updateName,
   uploadAvatar,
   type DeviceSession,
@@ -23,6 +24,7 @@ import { useToast } from '../components/toast/Toaster';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import menuStyles from '../components/ui/Menu.module.css';
+import switchStyles from '../components/RoomOptions.module.css';
 import { tipProps } from '../components/ui/TooltipLayer';
 import { useMenu } from '../components/ui/useMenu';
 import { AvatarCropDialog } from '../profile/AvatarCropDialog';
@@ -54,6 +56,7 @@ export function ProfilePage() {
             <IdentityCard profile={profile} refresh={refresh} />
             <NameCard profile={profile} refresh={refresh} />
             <EmailCard profile={profile} />
+            <FriendsCard profile={profile} refresh={refresh} />
             <DevicesCard />
           </div>
           <div className={own.column}>
@@ -294,6 +297,66 @@ function NameCard({ profile, refresh }: CardProps) {
         </Button>
       </div>
     </form>
+  );
+}
+
+/** Whether friends may watch this player's games: off unless they turn it on. */
+function FriendsCard({ profile, refresh }: CardProps) {
+  const toast = useToast();
+  const [saving, setSaving] = useState(false);
+  // Shown at once while it saves, and put back if saving fails.
+  const [value, setValue] = useState(profile.friendsCanWatch);
+  useEffect(() => setValue(profile.friendsCanWatch), [profile.friendsCanWatch]);
+
+  const change = async (next: boolean) => {
+    setValue(next);
+    setSaving(true);
+    try {
+      await saveFriendsCanWatch(next);
+      await refresh();
+      toast.success(next ? 'Your friends can now watch your games.' : 'Your friends can no longer watch your games.', { id: 'friends-can-watch' });
+    } catch (e) {
+      setValue(!next);
+      toast.error(problem(e), { id: 'friends-can-watch' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className={styles.card} aria-labelledby="friends-title">
+      <header className={styles.header}>
+        <h2 id="friends-title" className={own.title}>
+          Friends
+        </h2>
+        <p>What your friends see of you on their friends page.</p>
+      </header>
+      <label
+        className={switchStyles.row}
+        {...tipProps(value ? 'Turn off: friends see only that you are playing' : 'Turn on: friends get a Watch link to your game', 'top', 'end')}
+      >
+        <span className={switchStyles.text}>
+          <span className={switchStyles.label} id="friends-can-watch-label">
+            Friends can watch my games
+          </span>
+          <span className={switchStyles.description} id="friends-can-watch-description">
+            {value
+              ? 'While you play at a table, your friends get a Watch link to follow the game live. They never see your hand.'
+              : 'Your friends see that you are playing, but get no link to watch.'}
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          aria-labelledby="friends-can-watch-label"
+          aria-describedby="friends-can-watch-description"
+          className={switchStyles.switch}
+          checked={value}
+          disabled={saving}
+          onChange={(e) => void change(e.target.checked)}
+        />
+      </label>
+    </section>
   );
 }
 

@@ -147,3 +147,45 @@ export function onSpectatorsUpdated(roomId: string, listener: (count: number) =>
     s.off('spectators_updated', handler);
   };
 }
+
+/**
+ * The server reads who a socket is from the session cookie of its handshake, once, as it connects (that is how
+ * friends hear `friends_updated` and `table_invitation`, which go only to their own sockets). After signing in or out
+ * the socket connects again, so its handshake carries the new cookie. Listeners stay attached, and the pages that
+ * announce themselves on `connect` do so again.
+ */
+export function reconnectSocket(): void {
+  if (!socket) return;
+  socket.disconnect();
+  socket.connect();
+}
+
+/** `friends_updated`: a friend request, friendship or invitation of yours changed. Re-fetch the friends list. */
+export function onFriendsUpdated(listener: () => void): () => void {
+  const s = getSocket();
+  const handler = () => listener();
+  s.on('friends_updated', handler);
+  return () => {
+    s.off('friends_updated', handler);
+  };
+}
+
+/** `table_invitation {room_id, room_name, from}`: a friend asked you to their table. */
+export interface TableInvitationEvent {
+  roomId: string;
+  roomName: string;
+  fromName: string;
+}
+
+export function onTableInvitation(listener: (event: TableInvitationEvent) => void): () => void {
+  const s = getSocket();
+  const handler = (data?: { room_id?: unknown; room_name?: unknown; from?: { name?: unknown; handle?: unknown } }) => {
+    if (typeof data?.room_id !== 'string' || !data.room_id) return;
+    const from = typeof data.from?.name === 'string' ? data.from.name : typeof data.from?.handle === 'string' ? data.from.handle : 'A friend';
+    listener({ roomId: data.room_id, roomName: typeof data.room_name === 'string' ? data.room_name : data.room_id, fromName: from });
+  };
+  s.on('table_invitation', handler);
+  return () => {
+    s.off('table_invitation', handler);
+  };
+}

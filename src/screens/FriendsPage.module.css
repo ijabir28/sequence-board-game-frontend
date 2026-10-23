@@ -1,0 +1,177 @@
+.back {
+  width: min(100%, 60rem);
+}
+
+.card {
+  gap: var(--space-5);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.title svg {
+  color: var(--primary);
+}
+
+.searchBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 36rem;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+}
+
+.count {
+  color: var(--on-surface-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+}
+
+.note {
+  margin-left: auto;
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--outline-subtle);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-low);
+}
+
+.row + .row {
+  border-top: 1px solid var(--outline-subtle);
+}
+
+.avatar {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+
+/* Online or not: a dot on the friend's avatar. */
+.presence {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--surface-low);
+  border-radius: 50%;
+  background: var(--outline-strong);
+}
+
+.online {
+  background: var(--primary);
+}
+
+.who {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.handle {
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius);
+  border: 1px solid var(--outline-strong);
+  color: var(--on-surface);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.linkButton:hover {
+  background: var(--surface-high);
+}
+
+.linkButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Phones: the buttons go under the name, so long names stay readable. */
+@media (max-width: 480px) {
+  .row {
+    flex-wrap: wrap;
+  }
+
+  .actions {
+    width: 100%;
+    padding-left: calc(40px + var(--space-3));
+    justify-content: flex-start;
+  }
+}
+
+/* The invite dialog on a table's page. */
+.inviteList {
+  max-height: min(24rem, 60vh);
+  overflow-y: auto;
+}

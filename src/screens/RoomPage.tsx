@@ -22,6 +22,7 @@ import { TEAM_STYLES } from '../game/teams';
 import { useMediaQuery } from '../game/useMediaQuery';
 import styles from './Forms.module.css';
 import own from './RoomPage.module.css';
+import { InviteFriendsDialog } from './InviteFriendsDialog';
 import { useRoom } from './useRoom';
 
 /** The table's messages share one toast, so the latest replaces the one before. */
@@ -253,6 +254,9 @@ function RoomView({
   const optionsId = useId();
   const showSummary = !phone || summaryOpen;
   const showOptions = !phone || optionsOpen;
+  // Anyone at the table (or its host) can ask friends to its open seats, until the game starts.
+  const canInvite = !room.gameStarted && !full && (seated || host);
+  const [inviting, setInviting] = useState(false);
 
   return (
     <div className={own.layout}>
@@ -280,8 +284,17 @@ function RoomView({
             {open === 0 ? 'Every seat is taken.' : `${open} open seat${open === 1 ? '' : 's'}.`}
           </p>
           <ShareCode id={room.id} gameStarted={room.gameStarted} />
+          {canInvite && (
+            <div className={own.invite}>
+              <Button size="sm" variant="primary" onClick={() => setInviting(true)} tip="Send friends a link to one of this table's open seats">
+                <Icon name="users" size={16} />
+                Invite friends
+              </Button>
+            </div>
+          )}
         </div>
       </section>
+      <InviteFriendsDialog open={inviting && canInvite} onClose={() => setInviting(false)} room={room} />
 
       {host && !room.gameStarted && taken >= 2 && (
         <div className={own.teamTools}>
