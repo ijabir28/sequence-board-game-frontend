@@ -1,0 +1,691 @@
+/*
+ * The chat button floats in the bottom-left corner on wide screens and in the bottom-right one on phones (where a
+ * thumb is), over the page, so the lobby and the game go on underneath. The panel opens above the button. Reactions
+ * float in a lane measured to stay clear of the game (safeLane.ts), or pop on the button.
+ */
+.root {
+  --chat-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  --chat-side: max(var(--gutter), env(safe-area-inset-left));
+  position: fixed;
+  left: var(--chat-side);
+  bottom: var(--chat-bottom);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  /* Only the button and the panel take clicks. */
+  pointer-events: none;
+  /* Glass: the chat and the reactions let the game show through, blurred, with text kept readable over it. */
+  --glass: rgba(15, 23, 42, 0.32);
+  --glass-strong: rgba(15, 23, 42, 0.5);
+  --glass-tint: rgba(255, 255, 255, 0.08);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-blur: blur(18px) saturate(150%);
+}
+
+/* No tap highlight (Android's blue square) or focus ring when a control is tapped or held; the keyboard's
+   :focus-visible ring stays. */
+.root button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.root button:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Browsers without backdrop blur get a solid enough surface to read on. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .root {
+    --glass: rgba(15, 23, 42, 0.86);
+    --glass-strong: rgba(15, 23, 42, 0.92);
+  }
+}
+
+@media (max-width: 600px) {
+  .root {
+    --chat-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    --chat-side: max(var(--gutter), env(safe-area-inset-right));
+    left: auto;
+    right: var(--chat-side);
+    align-items: flex-end;
+  }
+}
+
+.launcher {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  /* The browser's button padding is uneven (1px 6px); the icon is centred on the circle alone. */
+  padding: 0;
+  border: 1px solid var(--outline-strong);
+  border-radius: 50%;
+  background: var(--surface-highest);
+  color: var(--on-surface);
+  box-shadow: var(--shadow-raised);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+
+.launcher svg,
+.popEmoji {
+  display: block;
+}
+
+.launcher:hover,
+.launcher[aria-expanded='true'] {
+  background: var(--surface-bright);
+  color: var(--primary);
+}
+
+.launcher:focus-visible,
+.close:focus-visible,
+.tab:focus-visible,
+.phrase:focus-visible,
+.reactionButton:focus-visible,
+.send:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* No room to float a reaction without covering the game: the button shows it for a moment instead. */
+.popping {
+  border-color: var(--primary);
+}
+
+.popEmoji {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  animation: pop 1800ms var(--ease-out) forwards;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.4);
+  }
+  15% {
+    transform: scale(1.25);
+  }
+  30%,
+  85% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: min(22rem, calc(100vw - 2 * var(--gutter)));
+  height: min(28rem, calc(100dvh - var(--chat-bottom) - 48px - var(--space-6)));
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-card);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  animation: panel-in var(--dur) var(--ease-out);
+}
+
+/* Phones: the panel spans the screen, like a game's message overlay, and is only as tall as it needs to be. */
+@media (max-width: 600px) {
+  .panel {
+    width: calc(100vw - 2 * var(--gutter));
+    height: auto;
+    max-height: calc(100dvh - var(--chat-bottom) - 48px - var(--space-6));
+  }
+
+  .panel:has(.list) {
+    height: min(26rem, calc(100dvh - var(--chat-bottom) - 48px - var(--space-6)));
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  /* Even space round the tabs, and the line under them that separates the header from what follows. */
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--glass-edge);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--on-surface-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab[aria-selected='true'] {
+  background: var(--glass-tint);
+  color: var(--on-surface);
+}
+
+.tabCount {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--text-xs);
+  line-height: 18px;
+  text-align: center;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--on-surface-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--surface-high);
+  color: var(--on-surface);
+}
+
+.quick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+
+/* Three columns of phrases, then a row of reactions under them. */
+.phrases {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.phrase {
+  min-height: 40px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-card);
+  background: var(--glass-tint);
+  color: var(--on-surface);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background var(--dur-fast), transform var(--dur-fast);
+}
+
+.phrase:hover,
+.phrase:active {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.phrase:active,
+.reactionButton:active {
+  transform: scale(0.94);
+}
+
+.phrase:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  /* The game screen turns text selection off; messages may be copied. */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.empty {
+  margin: auto 0;
+  color: var(--on-surface-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  max-width: 85%;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-card);
+  background: var(--glass-tint);
+}
+
+.mine {
+  align-self: flex-end;
+  background: rgba(78, 222, 163, 0.18);
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--on-surface-muted);
+}
+
+.meta strong {
+  color: var(--on-surface);
+}
+
+.text {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.compose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-top: 1px solid var(--glass-edge);
+}
+
+.reactions {
+  display: flex;
+  justify-content: space-between;
+  gap: 2px;
+}
+
+.reactionButton {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--on-surface);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-fast), transform var(--dur-fast);
+}
+
+.reactionButton:hover,
+.reactionButton:active {
+  background: var(--glass-tint);
+}
+
+.error {
+  margin: 0;
+  color: var(--error);
+  font-size: var(--text-xs);
+}
+
+.form {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--on-surface);
+  /* 16px, so phones don't zoom into the field. */
+  font: inherit;
+  font-size: var(--text-md);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.send {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--on-primary);
+  cursor: pointer;
+}
+
+.send:disabled {
+  background: var(--glass-tint);
+  color: var(--on-surface-muted);
+  cursor: default;
+}
+
+.signIn {
+  margin: 0;
+  padding: var(--space-3);
+  border-top: 1px solid var(--glass-edge);
+  color: var(--on-surface);
+  font-size: var(--text-sm);
+}
+
+.signIn a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/*
+ * The lane is a strip of the screen nothing important is in (its place comes from safeLane.ts, inline). It never
+ * takes clicks, and what floats in it is a little see-through, so even a lane over a page's text hides nothing.
+ */
+.lane {
+  position: fixed;
+  display: flex;
+  gap: var(--space-2);
+  overflow: hidden;
+  pointer-events: none;
+  /* Over the panel, so a reaction shows in the same place whether or not the panel is open. */
+  z-index: 1;
+}
+
+/* A band across the screen: reactions come in from the button's edge and line up beside each other. */
+.band {
+  flex-direction: row;
+  align-items: center;
+  padding: 0 var(--gutter);
+}
+
+/* A column beside the board: reactions rise from the bottom. */
+.column {
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: var(--space-2) var(--gutter);
+}
+
+@media (max-width: 600px) {
+  .band {
+    flex-direction: row-reverse;
+  }
+
+  .column {
+    align-items: flex-end;
+  }
+}
+
+.burst {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(16rem, 100%);
+  margin: 0;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border: 1px solid var(--glass-edge);
+  border-radius: 999px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: 0 4px 16px -6px rgba(0, 0, 0, 0.4);
+  font-size: var(--text-sm);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.band .burst {
+  /* Slim enough for the gap a phone leaves between the board and the hand. */
+  height: 30px;
+  padding-top: 0;
+  padding-bottom: 0;
+  animation: drift-in 3500ms var(--ease-out) forwards;
+}
+
+.column .burst {
+  animation: rise 3500ms var(--ease-out) forwards;
+}
+
+.burstEmoji {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.burstText {
+  display: flex;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.burstText span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* In from the side, a short rest, then away the way it came. */
+@keyframes drift-in {
+  0% {
+    opacity: 0;
+    transform: translateX(var(--drift, -24px));
+  }
+  10%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(var(--drift, -24px));
+  }
+}
+
+@media (max-width: 600px) {
+  .band .burst {
+    --drift: 24px;
+  }
+}
+
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.9);
+  }
+  10%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+/*
+ * A game: reactions rise off the screen (inline: left, top, the duration and --rise, the distance), on a phone from
+ * the board's top edge, on a wider screen up a channel beside the board, and fade as they leave. The name rides beside
+ * its emoji with the same animation, but inside .nameGap, cut to its name box (on a phone the blank space between the
+ * turn container and the board, beside the board the channel's first stretch), so it shows only there and fades out
+ * at its top.
+ */
+.rising {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.riseEmoji {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  /* Centred on its start point, on the board's edge. */
+  margin: -18px 0 0 -18px;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 36px;
+  text-align: center;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+  animation: rise-off 3200ms linear forwards;
+}
+
+.nameGap {
+  position: fixed;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+  /* The name fades as it reaches the top of the space, rather than being cut off. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 55%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 55%);
+}
+
+.riseName {
+  position: absolute;
+  /* Centred on the emoji's line; across, it is placed inline, beside the emoji and away from the board. */
+  margin-top: -10px;
+  height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--glass-edge);
+  border-radius: 999px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  color: var(--on-surface);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 18px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  animation: rise-off 3200ms linear forwards;
+}
+
+/* Beside the board the rise waves its way up, on keyframes drawn afresh for each reaction (playWave in
+   TableChat.tsx); until they start, it is hidden rather than shown at its start. */
+.wavy {
+  animation: none;
+  opacity: 0;
+}
+
+/* A quick pop on the board's edge, then a steady float up and off the screen, swaying a little, fading at the end. */
+@keyframes rise-off {
+  0% {
+    opacity: 0;
+    transform: translate(0, 6px) scale(0.5);
+  }
+  8% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1.15);
+  }
+  14% {
+    transform: translate(0, calc(var(--rise) * -0.05)) scale(1);
+  }
+  40% {
+    transform: translate(5px, calc(var(--rise) * -0.36));
+  }
+  65% {
+    opacity: 1;
+    transform: translate(-5px, calc(var(--rise) * -0.66));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(3px, calc(var(--rise) * -1));
+  }
+}
+
+@keyframes fade-out {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .burst,
+  .popEmoji {
+    animation: none;
+  }
+
+  /* Without motion the reaction stays on the board's edge and fades, its name in the space above it. */
+  .riseEmoji {
+    animation: fade-out 3200ms linear forwards;
+  }
+
+  .riseName {
+    margin-top: -20px;
+    animation: fade-out 3200ms linear forwards;
+  }
+}

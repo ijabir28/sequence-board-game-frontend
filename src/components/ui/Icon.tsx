@@ -32,6 +32,9 @@ const PATHS = {
   soundOff: 'M11 5L6 9H3v6h3l5 4V5zM16 9l6 6M22 9l-6 6',
   trophy: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3',
   bolt: 'M13 2L4 14h7l-1 8 9-12h-7l1-8z',
+  // Centred on the grid (x 4-20, y 3.5-20.5), with the dots across the bubble's middle.
+  chat: 'M20 11.5a8 8 0 0 1-11.6 7.1L4 20.5l1.3-4A8 8 0 1 1 20 11.5zM8 11.5h.01M12 11.5h.01M16 11.5h.01',
+  send: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

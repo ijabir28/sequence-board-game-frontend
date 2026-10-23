@@ -370,6 +370,39 @@ socket's `game_updated` triggers a re-fetch, with the 15 s poll as a safety net.
 `watch_game` (again after each reconnect) so the server counts it; everyone sees "*n* watching", kept live by
 `spectators_updated`. A spectator doesn't count as being at the table, so their presence never pauses or resumes a turn.
 
+### Table chat
+
+The table page, its game and its watch page have a public chat with quick reactions (`src/chat/TableChat.tsx`,
+`src/api/tableChat.ts`). A round button (bottom-left on wide screens; bottom-right on phones, where the game's hand
+strip ends its last lines before it) opens a panel over the page, so play goes on while it is open. Its **Quick** tab,
+like a mobile game's message overlay, has twelve one-tap phrases and six reactions (😮 👏 🎉 🔥 😂 ❤️). A phrase sends and closes the
+panel, so the board is back in view; reactions leave it open, so several can go in a row. **Messages** has the conversation and a box to type in, and opens by itself when there
+are unread messages. Everyone with the table open sees every message and reaction, players and spectators alike.
+**There are no private or direct messages**, so nobody can pass hints about their hand: nothing in the client or the
+server takes a recipient. Anyone may read along; only signed-in players speak.
+
+Reactions from the table (and, with the panel closed, new messages) float for a few seconds in a lane that never
+covers the game (`src/chat/safeLane.ts`): the board, the hand strip, the turn panel and the header are marked
+`data-chat-avoid`, and the lane is a free band across the screen (on a tall phone, the gap between the board and the
+hand) or a free column on the button's side. Lanes take no clicks and are drawn over the chat panel, which they don't avoid: a reaction lands in the same place
+whoever sent it and whether or not the panel is open. The panel and the reactions are frosted glass (low-alpha fills
+with a backdrop blur), so the game shows through them. Where nothing is free, the reaction pops on the chat
+button instead and messages only add to its unread count. On a game, reactions (yours and everyone else's) rise instead, up and
+off the screen, fading as they go. On a phone each starts on the board's top edge (`data-chat-anchor="board"`),
+spread along it, and the sender's name rides beside it only through the blank space between the board and the turn
+container (`data-chat-anchor="turn"`). On a wider screen they rise up the free channels left and right of the board
+(bounded by the screen's edge or the side rail, starting above the chat button), on a side drawn at random for each
+reaction, along a wavy path whose width, number of waves and starting point are drawn afresh each time (keyframes
+from `wavyKeyframes`, played with the Web Animations API, always inside the channel), and the name shows
+beside the emoji, away from the board, over the first 140 px of the rise, where the channel has room for it. Either
+way the name is drawn in a layer cut to its box, so beyond it only the emoji goes on. Where neither fits, reactions
+use the lanes above. A reaction that doesn't go through (sent faster than the table allows) is dropped silently.
+
+The page sends `open_table_chat` (again after each reconnect), gets the last 50 messages in `table_chat_history`, then
+hears `table_chat` and `table_reaction`; it speaks with `send_table_chat` and `send_table_reaction`, whose
+acknowledgement carries the server's error (too fast, too long, signed out). The server keeps the chat in memory, so it
+starts empty after a restart.
+
 ## Backend limitations
 
 These are workarounds for the current backend. Details are in `../sequence-board-game/docs/known-issues.md`, and the

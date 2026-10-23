@@ -5,6 +5,7 @@ import { GameScreen } from '../components/game/GameScreen';
 import { Button } from '../components/ui/Button';
 import { watchLink } from '../api/rooms';
 import { RoomGameAdapter } from '../game/remote/RoomGameAdapter';
+import { TableChat } from '../chat/TableChat';
 
 /**
  * /watch/:id: a table's game, live and read-only, for anyone with the link (signed in or not). The board, the turns and
@@ -36,21 +37,24 @@ export function WatchGamePage() {
   if (!adapter) return null;
   const signedIn = Boolean(profile);
   return (
-    <GameScreen
-      key={id}
-      adapter={adapter}
-      modeLabel={`Table ${id}`}
-      handOrderKey={`sequence:hand-order:${id}`}
-      watchLink={watchLink(id)}
-      spectatorExtra={
-        signedIn ? undefined : (
-          <Button variant="primary" size="sm" onClick={() => navigate('/signup')} tip="Make an account to open your own tables and play">
-            Sign up to play
-          </Button>
-        )
-      }
-      onExit={() => navigate(signedIn ? `/table/${encodeURIComponent(id)}` : '/')}
-      onDashboard={signedIn ? () => navigate('/lobby') : undefined}
-    />
+    <>
+      <GameScreen
+        key={id}
+        adapter={adapter}
+        modeLabel={`Table ${id}`}
+        handOrderKey={`sequence:hand-order:${id}`}
+        watchLink={watchLink(id)}
+        spectatorExtra={
+          signedIn ? undefined : (
+            <Button variant="primary" size="sm" onClick={() => navigate('/signup')} tip="Make an account to open your own tables and play">
+              Sign up to play
+            </Button>
+          )
+        }
+        onExit={() => navigate(signedIn ? `/table/${encodeURIComponent(id)}` : '/')}
+        onDashboard={signedIn ? () => navigate('/lobby') : undefined}
+      />
+      <TableChat roomId={id} you={profile?.handle ?? null} placement="game" />
+    </>
   );
 }

@@ -520,6 +520,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           <button
             type="button"
             className={styles.drawerHandle}
+            data-chat-avoid
             onClick={() => setMenuOpen(true)}
             aria-label="Game menu"
             {...tipProps('Open the game menu: move log, how to play and leave game', 'bottom', 'end')}
@@ -641,7 +642,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
           </Drawer>
         </>
       ) : (
-        <header className={styles.top}>
+        <header className={styles.top} data-chat-avoid>
+          {/* data-chat-avoid: the table chat floats reactions clear of what is marked so (src/chat/safeLane.ts). */}
           {/* Spans the board's column, so the scoreboard is centred over the board. */}
           <div className={styles.topBoard}>
             <div className={styles.brand}>
@@ -709,7 +711,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         </header>
       )}
 
-      <div className={styles.status} hidden={view.status !== 'ready'}>
+      <div className={styles.status} hidden={view.status !== 'ready'} data-chat-avoid data-chat-anchor="turn">
         {coach}
         {/* Large screens give the turn panel a fixed slot, so the hand under it never moves. */}
         <div className={styles.turnSlot}>
@@ -797,7 +799,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         )}
       </main>
 
-      <aside className={styles.rail}>
+      <aside className={styles.rail} data-chat-avoid>
         {view.status === 'ready' && spectating && !gameOver ? (
           <HandPanel
             title="Watching live"
