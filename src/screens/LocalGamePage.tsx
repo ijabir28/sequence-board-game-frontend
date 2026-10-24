@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { BackToDashboard } from '../components/BackToDashboard';
 import { DevAdapterToggle } from '../components/game/DevAdapterToggle';
 import { GameScreen } from '../components/game/GameScreen';
-import { tipProps } from '../components/ui/TooltipLayer';
 import { LocalGameAdapter } from '../game/local/LocalGameAdapter';
 import { LocalSetup, type LocalConfig } from './LocalSetup';
 import own from './LocalGamePage.module.css';
@@ -45,12 +44,13 @@ export function LocalGamePage() {
       <LocalSetup
         initial={preset ?? undefined}
         onStart={setConfig}
-        // Signed out there is no dashboard, so only the plain Back (to sign-in) is offered.
-        topAction={profile && <BackToDashboard className={own.back} tip="Go back to the dashboard without starting a game" />}
-        backAction={
-          <Link to="/" {...tipProps('Go back without starting a game')}>
-            Back
-          </Link>
+        // Signed out there is no dashboard, so the bar goes back to sign-in. Nothing shows while the session is checked.
+        topAction={
+          profile ? (
+            <BackToDashboard className={own.back} tip="Go back to the dashboard without starting a game" />
+          ) : (
+            profile === null && <BackToDashboard className={own.back} to="/signin" label="Back to sign in" tip="Go back to sign in without starting a game" />
+          )
         }
       />
     );
