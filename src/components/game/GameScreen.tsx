@@ -69,6 +69,8 @@ function spectatorCount(count: number | null | undefined): string | undefined {
 const ROUND_TOAST = 'game-round';
 /** Who made the latest sequence, told to the whole table in its own toast. */
 const SEQUENCE_TOAST = 'game-sequence';
+/** Dead cards the table's auto-draw rule swapped for the viewer, in their own toast. */
+const AUTO_EXCHANGE_TOAST = 'game-auto-exchange';
 
 export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, watchLink, spectatorExtra, handOrderKey, coach }: GameScreenProps) {
   const view = useGame(adapter);
@@ -192,6 +194,25 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (sequenceCount > seenSequences.current) toast.success(latestText, { id: SEQUENCE_TOAST });
     seenSequences.current = sequenceCount;
   }, [sequenceCount]);
+
+  // Moves stay off the toasts, but a dead card swapped without the player asking is: it changes their hand under
+  // them. Only they hear it; the rest of the table has the move log.
+  const seenLog = useRef(view.log.length);
+  useEffect(() => {
+    // A new round starts a fresh, shorter log, and its first turn may already have swapped cards.
+    const fresh = view.log.slice(view.log.length < seenLog.current ? 0 : seenLog.current);
+    seenLog.current = view.log.length;
+    if (!viewer) return;
+    const swapped = fresh.flatMap((entry) =>
+      entry.kind === 'exchange' && entry.auto && entry.player === viewer.name && entry.team === viewer.team ? [cardShort(entry.card, notation)] : [],
+    );
+    if (swapped.length === 0) return;
+    const cards = swapped.length === 1 ? swapped[0] : `${swapped.slice(0, -1).join(', ')} and ${swapped.at(-1)}`;
+    toast.info(
+      swapped.length === 1 ? `Your dead ${cards} was swapped for a new card.` : `Your dead ${cards} were swapped for new cards.`,
+      { id: AUTO_EXCHANGE_TOAST },
+    );
+  }, [view.log]);
   // The last move's ring on the board is part of the move log: tables played without one don't mark it, so players
   // have to keep track of the board themselves.
   const lastMove = useMemo(() => {
