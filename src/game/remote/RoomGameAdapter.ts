@@ -188,7 +188,13 @@ export class RoomGameAdapter implements GameAdapter {
     this.timer = setInterval(() => {
       if (typeof document === 'undefined' || document.visibilityState === 'visible') void this.refresh();
     }, this.options.pollIntervalMs ?? 15_000);
+    // Hidden, the page skips its polls and may have let the socket go (api/socket.ts): catch up at once on coming back.
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.onVisibilityChange);
   }
+
+  private onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') void this.refresh();
+  };
 
   private stop() {
     this.presence?.leave();
@@ -201,6 +207,7 @@ export class RoomGameAdapter implements GameAdapter {
     this.unsubscribeSpectators = null;
     clearInterval(this.timer);
     this.timer = undefined;
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.onVisibilityChange);
   }
 
   private async act(send: () => Promise<RoomGameView>): Promise<ActionResult> {
