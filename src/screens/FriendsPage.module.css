@@ -78,7 +78,7 @@
   display: inline-flex;
 }
 
-/* Online or not: a dot on the friend's avatar. */
+/* Online, away or offline: a dot on the friend's avatar. */
 .presence {
   position: absolute;
   right: -2px;
@@ -92,6 +92,10 @@
 
 .online {
   background: var(--primary);
+}
+
+.away {
+  background: var(--warning);
 }
 
 .who {

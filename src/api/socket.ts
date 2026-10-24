@@ -8,9 +8,10 @@ let socket: SocketIOClient.Socket | null = null;
 /*
  * The socket only stays open while it is any use, to save the battery (a websocket's heartbeat, and the reconnect
  * loop, keep a phone's radio awake):
- * - A page hidden for IDLE_MS (another tab or app, a locked phone) lets it go. Coming back opens it again, and the
- *   pages listening for `connect` catch up and announce themselves again. Hidden that long, the player is away
- *   anyway: friends see them offline, and their game already counts them away (useAwayWhileHidden).
+ * - A hidden page (another tab or app, a locked phone) tells the server at once (`set_away`), so friends see the
+ *   player away, and after IDLE_MS lets the socket go; the server keeps them away a while longer. Coming back opens it
+ *   again, and the pages listening for `connect` catch up and announce themselves again. Their game already counts
+ *   them away while hidden (useAwayWhileHidden).
  * - While the device says it is offline, it stops trying to reconnect; it tries again once the device is back.
  * - A page that must hear the server while hidden (waiting in the Quick Match queue) holds it open (holdSocketOpen).
  * Reconnecting backs off to RECONNECT_DELAY_MAX_MS between tries rather than socket.io's 5 s.
@@ -44,6 +45,11 @@ function wake() {
   socket.connect();
 }
 
+/** Tells the server whether this page is hidden, so friends see the player away (or back). */
+function sayAway() {
+  if (socket?.connected) socket.emit('set_away', { away: hidden() });
+}
+
 function followVisibility() {
   if (!hidden()) {
     if (resting === 'idle') wake();
@@ -71,7 +77,14 @@ export function getSocket(): SocketIOClient.Socket {
   if (!socket) {
     socket = io({ path: '/socket.io', transports: ['websocket', 'polling'], reconnectionDelayMax: RECONNECT_DELAY_MAX_MS });
     if (typeof window !== 'undefined') {
-      document.addEventListener('visibilitychange', followVisibility);
+      // Every new connection starts out in view on the server; a hidden page says otherwise.
+      socket.on('connect', () => {
+        if (hidden()) sayAway();
+      });
+      document.addEventListener('visibilitychange', () => {
+        sayAway();
+        followVisibility();
+      });
       window.addEventListener('online', followNetwork);
       window.addEventListener('offline', followNetwork);
       followVisibility();

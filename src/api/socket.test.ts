@@ -3,13 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // A stand-in for socket.io-client's socket: it only records connects, disconnects and what was emitted.
 interface FakeSocket {
   connected: boolean;
+  handlers: Map<string, (() => void)[]>;
   connects: number;
   disconnects: number;
   emitted: string[];
   connect(): void;
   disconnect(): void;
-  emit(event: string): void;
-  on(): void;
+  emit(event: string, data?: unknown): void;
+  on(event: string, handler: () => void): void;
   off(): void;
 }
 
@@ -59,21 +60,25 @@ beforeEach(() => {
   page.onLine = true;
   fake = {
     connected: true,
+    handlers: new Map(),
     connects: 0,
     disconnects: 0,
     emitted: [],
     connect() {
       this.connects += 1;
       this.connected = true;
+      this.handlers.get('connect')?.forEach((handler) => handler());
     },
     disconnect() {
       this.disconnects += 1;
       this.connected = false;
     },
-    emit(event: string) {
-      this.emitted.push(event);
+    emit(event: string, data?: unknown) {
+      this.emitted.push(event === 'set_away' ? `set_away ${(data as { away: boolean }).away}` : event);
     },
-    on() {},
+    on(event: string, handler: () => void) {
+      this.handlers.set(event, [...(this.handlers.get(event) ?? []), handler]);
+    },
     off() {},
   };
   vi.stubGlobal('window', { addEventListener, removeEventListener });
@@ -169,6 +174,26 @@ describe('the socket while the page is away', () => {
     expect(fake.connects).toBe(0);
     setVisibility('visible');
     expect(fake.connects).toBe(1);
+  });
+});
+
+describe('away', () => {
+  it('tells the server at once when the page is hidden, and when it is back', async () => {
+    const { getSocket } = await load();
+    getSocket();
+    setVisibility('hidden');
+    setVisibility('visible');
+    expect(fake.emitted).toEqual(['set_away true', 'set_away false']);
+  });
+
+  it('a socket opened while hidden says so as it connects', async () => {
+    const { getSocket, holdSocketOpen } = await load();
+    getSocket();
+    setVisibility('hidden');
+    vi.advanceTimersByTime(60_000);
+    fake.emitted = [];
+    holdSocketOpen();
+    expect(fake.emitted).toEqual(['set_away true']);
   });
 });
 
