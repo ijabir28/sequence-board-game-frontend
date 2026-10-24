@@ -161,7 +161,8 @@
   box-shadow: var(--focus-ring);
 }
 
-/* Phones: the buttons go under the name, so long names stay readable. */
+/* Phones: the buttons go on their own line under the name, so long names stay readable, and keep to the right
+   edge of the row like they do on wider screens. */
 @media (max-width: 480px) {
   .row {
     flex-wrap: wrap;
@@ -169,8 +170,7 @@
 
   .actions {
     width: 100%;
-    padding-left: calc(40px + var(--space-3));
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 }
 
