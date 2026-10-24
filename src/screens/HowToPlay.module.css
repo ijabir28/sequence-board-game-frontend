@@ -239,6 +239,11 @@
   overscroll-behavior: contain;
 }
 
+/* Focused on open so the back button isn't; the page itself needs no ring. */
+.dialog:focus {
+  outline: none;
+}
+
 .dialog::backdrop {
   background: var(--surface);
 }

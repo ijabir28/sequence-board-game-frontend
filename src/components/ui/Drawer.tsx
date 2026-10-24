@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { useMediaQuery } from '../../game/useMediaQuery';
+import { NO_ESC_KEY, useMediaQuery } from '../../game/useMediaQuery';
 import { Icon } from './Icon';
 import { tipProps } from './TooltipLayer';
 import styles from './Drawer.module.css';
@@ -19,8 +19,8 @@ interface DrawerProps {
 export function Drawer({ open, title, onClose, children }: DrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  // Touch screens have no Escape key to mention, and the button's icon and label already say what it does.
-  const touch = useMediaQuery('(pointer: coarse)');
+  // Phones and touch screens have no Escape key to mention, and the button's icon and label already say what it does.
+  const touch = useMediaQuery(NO_ESC_KEY);
 
   useEffect(() => {
     const drawer = ref.current;

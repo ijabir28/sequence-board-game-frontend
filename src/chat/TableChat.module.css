@@ -240,9 +240,12 @@
   cursor: pointer;
 }
 
-.close:hover {
-  background: var(--surface-high);
-  color: var(--on-surface);
+/* Real hover only, so a touch browser's sticky :hover doesn't leave the close button looking selected. */
+@media (hover: hover) {
+  .close:hover {
+    background: var(--surface-high);
+    color: var(--on-surface);
+  }
 }
 
 .quick {

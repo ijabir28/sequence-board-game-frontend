@@ -12,7 +12,7 @@ import {
 } from '../api/tableChat';
 import { Icon } from '../components/ui/Icon';
 import { tipProps } from '../components/ui/TooltipLayer';
-import { useMediaQuery } from '../game/useMediaQuery';
+import { NO_ESC_KEY, useMediaQuery } from '../game/useMediaQuery';
 import { appendMessage, countUnseen, mergeHistory } from './chatLog';
 import { currentLane, currentRise, wavyKeyframes, type Lane, type Rise } from './safeLane';
 import styles from './TableChat.module.css';
@@ -101,6 +101,7 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
   const phone = useMediaQuery('(max-width: 600px)');
+  const noEsc = useMediaQuery(NO_ESC_KEY);
   // Without motion a rise just fades where it starts (TableChat.module.css), wave or not.
   const still = useMediaQuery('(prefers-reduced-motion: reduce)');
   // The listeners read these through a ref, so the chat isn't reopened whenever they change.
@@ -318,7 +319,7 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
                 {unread > 0 && <span className={styles.tabCount}>{unread > 9 ? '9+' : unread}</span>}
               </button>
             </div>
-            <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="Close the chat" {...tipProps('Close the chat (Esc)', 'bottom', 'end')}>
+            <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="Close the chat" {...tipProps(noEsc ? null : 'Close the chat (Esc)', 'bottom', 'end')}>
               <Icon name="close" size={18} />
             </button>
           </header>
