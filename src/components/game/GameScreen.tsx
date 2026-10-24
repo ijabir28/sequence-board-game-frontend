@@ -3,7 +3,7 @@ import type { Pos } from '../../engine/board';
 import { cardKind, cardShort, type CardName, type CardNotation } from '../../engine/cards';
 import { useDeck } from '../../decks/decks';
 import { describeHint } from '../../game/describeHint';
-import { describeDraft, draftLostMessage, draftProblem, type Draft } from '../../game/draft';
+import { draftLostMessage, draftProblem, draftQueuedMessage, type Draft } from '../../game/draft';
 import { describeLatest } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter, HandCardView } from '../../game/types';
@@ -69,6 +69,8 @@ function spectatorCount(count: number | null | undefined): string | undefined {
 const ROUND_TOAST = 'game-round';
 /** Who made the latest sequence, told to the whole table in its own toast. */
 const SEQUENCE_TOAST = 'game-sequence';
+/** Dead cards the table's auto-draw rule swapped for the viewer, in their own toast. */
+const AUTO_EXCHANGE_TOAST = 'game-auto-exchange';
 
 export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, watchLink, spectatorExtra, handOrderKey, coach }: GameScreenProps) {
   const view = useGame(adapter);
@@ -192,6 +194,27 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (sequenceCount > seenSequences.current) toast.success(latestText, { id: SEQUENCE_TOAST });
     seenSequences.current = sequenceCount;
   }, [sequenceCount]);
+
+  // Moves stay off the toasts, but a dead card swapped without the player asking is: it changes their hand under
+  // them. Only they hear it; the rest of the table has the move log. Log entries name the player but don't carry
+  // their id, and two players may share a name, so the swap is matched by turn instead: the rule swaps cards as a
+  // turn starts, so an auto swap logged for the current turn was the current player's.
+  const seenLog = useRef(view.log.length);
+  useEffect(() => {
+    // A new round starts a fresh, shorter log, and its first turn may already have swapped cards.
+    const fresh = view.log.slice(view.log.length < seenLog.current ? 0 : seenLog.current);
+    seenLog.current = view.log.length;
+    if (!viewer || view.turn === null || view.currentPlayerId !== viewer.id) return;
+    const swapped = fresh.flatMap((entry) =>
+      entry.kind === 'exchange' && entry.auto && entry.turn === view.turn ? [cardShort(entry.card, notation)] : [],
+    );
+    if (swapped.length === 0) return;
+    const cards = swapped.length === 1 ? swapped[0] : `${swapped.slice(0, -1).join(', ')} and ${swapped.at(-1)}`;
+    toast.info(
+      swapped.length === 1 ? `Your dead ${cards} was swapped for a new card.` : `Your dead ${cards} were swapped for new cards.`,
+      { id: AUTO_EXCHANGE_TOAST },
+    );
+  }, [view.log]);
   // The last move's ring on the board is part of the move log: tables played without one don't mark it, so players
   // have to keep track of the board themselves.
   const lastMove = useMemo(() => {
@@ -248,7 +271,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (index === drafted) {
       setDraft(null);
       setSelected(null);
-      setFeedback({ tone: 'info', text: 'Draft cancelled. Nothing will be played for you when your turn comes.' });
+      setFeedback(null);
       return;
     }
     setFeedback(null);
@@ -302,9 +325,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     }
     if (!yourTurn || view.turnPaused) return;
     setDraft(null);
-    void run(() => adapter.playCard(draft.handIndex, draft.target)).then((played) => {
-      if (played) setFeedback({ tone: 'success', text: `Your drafted move was played: ${describeDraft(draft, notation)}.` });
-    });
+    // Moves aren't toasted: the move log's latest line shows it was played.
+    void run(() => adapter.playCard(draft.handIndex, draft.target));
     // `view` changes with every move, which is when the draft needs checking again.
   }, [adapter, draft, view, hand, yourTurn, gameOver, busy, notation]);
 
@@ -333,7 +355,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       const next = { handIndex: selected, card: selectedCard, target: pos };
       setDraft(next);
       setSelected(null);
-      setFeedback({ tone: 'info', text: `Move drafted: ${describeDraft(next, notation)}. It is played as soon as your turn comes. Tap the queued card again to cancel it.` });
+      // The hint under the hand says what was drafted, so no toast; just clear an older one.
+      setFeedback(null);
       return;
     }
     const played = await run(() => adapter.playCard(selected, pos));
@@ -358,10 +381,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     view.exchangesLeft === null ? 'You may exchange any number this turn.' : `${view.exchangesLeft} exchange${view.exchangesLeft === 1 ? '' : 's'} left this turn.`;
   const onExchange = async () => {
     if (selected === null || !selectedCard) return;
-    const card = selectedCard;
-    if (await run(() => adapter.exchangeDeadCard(selected))) {
-      setFeedback({ tone: 'success', text: `${cardShort(card, notation)} was dead: you drew a new card.` });
-    }
+    await run(() => adapter.exchangeDeadCard(selected));
   };
   const onPass = async () => {
     const passed = await run(() => adapter.pass());
@@ -1052,7 +1072,7 @@ function handHint({
 }): string {
   if (waiting && !selectedCard) {
     return draft
-      ? `Drafted: ${describeDraft(draft, notation)}. It is played as soon as your turn comes. Tap the queued card again to cancel it, or pick another card to change it.`
+      ? draftQueuedMessage(draft, notation)
       : `Not your turn yet. Draft your next move: pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}, and it is played when your turn comes.`;
   }
   if (!selectedCard) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeDraft, draftLostMessage, draftProblem, type Draft } from './draft';
+import { describeDraft, draftLostMessage, draftProblem, draftQueuedMessage, type Draft } from './draft';
 
 // Row 0, column 1 is 6♦ on the board.
 const draft: Draft = { handIndex: 1, card: '6-Diamond', target: { row: 0, column: 1 } };
@@ -23,9 +23,20 @@ describe('draftProblem', () => {
 });
 
 describe('draft messages', () => {
-  it('name the card and the cell', () => {
-    expect(describeDraft(draft)).toBe('6♦ on 6♦');
-    expect(draftLostMessage(draft, 'cell-unavailable')).toBe("Your drafted move (6♦ on 6♦) can't be played: 6♦ has been taken. Draft another move.");
-    expect(draftLostMessage({ ...draft, card: 'J-Spade' }, 'cell-unavailable')).toContain("the chip on 6♦ can't be removed any more");
+  it('name a normal card alone, since its cell has the same name and is on the board twice', () => {
+    expect(describeDraft(draft)).toBe('6♦');
+    expect(describeDraft(draft, 'numbers')).toBe('#29');
+    expect(draftQueuedMessage(draft, 'numbers')).toBe('Next turn: #29 goes on the marked cell. Tap the Queued card to cancel.');
+  });
+
+  it('name the cell for a jack', () => {
+    expect(describeDraft({ ...draft, card: 'J-Club' })).toBe('J♣ on 6♦');
+    expect(draftQueuedMessage({ ...draft, card: 'J-Club' })).toBe('Next turn: J♣ goes on the marked 6♦. Tap the Queued card to cancel.');
+    expect(draftQueuedMessage({ ...draft, card: 'J-Spade' })).toBe('Next turn: J♠ removes the marked 6♦ chip. Tap the Queued card to cancel.');
+  });
+
+  it('say why a draft was lost', () => {
+    expect(draftLostMessage(draft, 'cell-unavailable')).toBe("Your drafted move (6♦) can't be played: that cell has been taken. Draft another move.");
+    expect(draftLostMessage({ ...draft, card: 'J-Spade' }, 'cell-unavailable')).toContain("that chip can't be removed any more");
   });
 });
