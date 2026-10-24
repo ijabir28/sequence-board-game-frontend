@@ -117,7 +117,8 @@ export function openTableChat(roomId: string, listeners: TableChatListeners): ()
     s.off('table_chat_history', onHistory);
     s.off('table_chat', onMessage);
     s.off('table_reaction', onReaction);
-    s.emit('close_table_chat', { room_id: roomId });
+    // Only while connected: queued, it would close a chat reopened on reconnecting.
+    if (s.connected) s.emit('close_table_chat', { room_id: roomId });
   };
 }
 
