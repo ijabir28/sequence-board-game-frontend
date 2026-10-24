@@ -333,7 +333,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       const next = { handIndex: selected, card: selectedCard, target: pos };
       setDraft(next);
       setSelected(null);
-      setFeedback({ tone: 'info', text: draftQueuedMessage(next, notation) });
+      // The hint under the hand says what was drafted, so no toast; just clear an older one.
+      setFeedback(null);
       return;
     }
     const played = await run(() => adapter.playCard(selected, pos));
