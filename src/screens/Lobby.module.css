@@ -50,13 +50,29 @@
   font-size: var(--text-md);
 }
 
+/* Pass and play: a hot-seat game on this device, set apart from the online links by its colour. */
 .local {
-  color: var(--on-surface-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius);
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-weight: 600;
   font-size: var(--text-sm);
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
-.local a {
-  color: var(--primary);
+.local:hover {
+  background: var(--surface-high);
+}
+
+.local:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .dev {

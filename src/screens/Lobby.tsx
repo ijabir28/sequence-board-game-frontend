@@ -67,11 +67,10 @@ export function Lobby() {
                   How to play
                 </Link>
               </div>
-              <p className={own.local}>
-                No server, one screen? <Link to="/local" {...tipProps('Hot-seat game: everyone shares this screen and passes it round')}>
-                  Play on this device
-                </Link>
-              </p>
+              <Link to="/local" className={own.local} {...tipProps('Hot-seat game: no server, everyone shares this screen and passes it round')}>
+                <Icon name="swap" size={18} />
+                Pass and play
+              </Link>
             </div>
           </section>
 
