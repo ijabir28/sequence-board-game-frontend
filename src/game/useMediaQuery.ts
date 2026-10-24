@@ -14,3 +14,6 @@ export function useMediaQuery(query: string): boolean {
   }, [query]);
   return matches;
 }
+
+/** Phones and touch screens: no Escape key to mention in a close button's tip. */
+export const NO_ESC_KEY = '(pointer: coarse), (max-width: 600px)';

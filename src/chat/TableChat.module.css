@@ -240,9 +240,12 @@
   cursor: pointer;
 }
 
-.close:hover {
-  background: var(--surface-high);
-  color: var(--on-surface);
+/* Real hover only, so a touch browser's sticky :hover doesn't leave the close button looking selected. */
+@media (hover: hover) {
+  .close:hover {
+    background: var(--surface-high);
+    color: var(--on-surface);
+  }
 }
 
 .quick {
@@ -253,7 +256,7 @@
   overflow-y: auto;
 }
 
-/* Three columns of phrases, then a row of reactions under them. */
+/* Three columns of phrases, then two rows of reactions under them. */
 .phrases {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -353,14 +356,14 @@
   border-top: 1px solid var(--glass-edge);
 }
 
+/* Two rows of six, the second directly under the first. */
 .reactions {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 2px;
 }
 
 .reactionButton {
-  flex: 1;
   min-width: 0;
   height: 40px;
   border: 0;

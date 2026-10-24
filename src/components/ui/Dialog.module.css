@@ -11,6 +11,11 @@
   overflow: hidden;
 }
 
+/* Focused on open when no field asks for it; the panel itself needs no ring. */
+.dialog:focus {
+  outline: none;
+}
+
 /* Blur what's behind every modal, so the dialog is the only thing in focus. */
 .dialog::backdrop {
   background: rgba(2, 6, 23, 0.55);
@@ -65,9 +70,13 @@
   color: var(--on-surface-muted);
 }
 
-.close:hover {
-  background: var(--surface-high);
-  color: var(--on-surface);
+/* Real hover only: a touch browser's sticky :hover would leave the close button looking selected after the tap
+   that opened the dialog. */
+@media (hover: hover) {
+  .close:hover {
+    background: var(--surface-high);
+    color: var(--on-surface);
+  }
 }
 
 .body {

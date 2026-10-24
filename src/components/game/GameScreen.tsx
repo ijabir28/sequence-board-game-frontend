@@ -4,7 +4,7 @@ import { cardKind, cardShort, type CardName, type CardNotation } from '../../eng
 import { useDeck } from '../../decks/decks';
 import { describeHint } from '../../game/describeHint';
 import { describeDraft, draftLostMessage, draftProblem, type Draft } from '../../game/draft';
-import { describeLog } from '../../game/describeLog';
+import { describeLatest } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter, HandCardView } from '../../game/types';
 import { copyText } from '../../copyText';
@@ -67,6 +67,8 @@ function spectatorCount(count: number | null | undefined): string | undefined {
 
 /** A new round's notice has its own toast, so the host's next action (which clears feedback) doesn't hide it. */
 const ROUND_TOAST = 'game-round';
+/** Who made the latest sequence, told to the whole table in its own toast. */
+const SEQUENCE_TOAST = 'game-sequence';
 
 export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame, headerExtra, watchLink, spectatorExtra, handOrderKey, coach }: GameScreenProps) {
   const view = useGame(adapter);
@@ -179,7 +181,17 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     [adapter, selected, handVisible, gameOver, view],
   );
 
-  const lastEntry = view.log.at(-1);
+  // The latest turn in one short line: a move that made a sequence says who made it and with what.
+  const latestText = describeLatest(view.log, notation);
+
+  // Everyone at the table hears who made a new sequence and with which card. Sequences already made when the screen
+  // opened (or a new round's empty log) aren't news.
+  const sequenceCount = view.log.filter((entry) => entry.kind === 'sequence').length;
+  const seenSequences = useRef(sequenceCount);
+  useEffect(() => {
+    if (sequenceCount > seenSequences.current) toast.success(latestText, { id: SEQUENCE_TOAST });
+    seenSequences.current = sequenceCount;
+  }, [sequenceCount]);
   // The last move's ring on the board is part of the move log: tables played without one don't mark it, so players
   // have to keep track of the board themselves.
   const lastMove = useMemo(() => {
@@ -745,7 +757,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         </div>
         {/* Messages float as toasts, so this line only ever shows the latest move. */}
         <p className={[styles.line, styles.ticker].join(' ')} aria-hidden="true">
-          {lastEntry ? describeLog(lastEntry, notation) : 'No moves yet.'}
+          {latestText || 'No moves yet.'}
         </p>
         {!spectating && view.spectators ? (
           <p className={styles.watchers}>
@@ -855,7 +867,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       </aside>
 
       <div className="visually-hidden" aria-live="polite">
-        {lastEntry ? describeLog(lastEntry, notation) : ''}
+        {latestText}
         {!gameOver && currentPlayer
           ? !adapter.hotSeat && currentPlayer.id === viewer?.id
             ? '. Your turn.'

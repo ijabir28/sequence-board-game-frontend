@@ -6,7 +6,7 @@ import { getSocket } from './socket';
 
 export const MAX_MESSAGE_LENGTH = 200;
 
-/** The quick reactions the server accepts, in the order the picker shows them. */
+/** The quick reactions the server accepts, in the order the picker shows them: two rows of six. */
 export const REACTIONS = [
   { id: 'wow', emoji: '😮', label: 'Wow' },
   { id: 'clap', emoji: '👏', label: 'Clap' },
@@ -14,6 +14,12 @@ export const REACTIONS = [
   { id: 'fire', emoji: '🔥', label: 'Fire' },
   { id: 'laugh', emoji: '😂', label: 'Ha ha' },
   { id: 'heart', emoji: '❤️', label: 'Heart' },
+  { id: 'love', emoji: '😍', label: 'Heart eyes' },
+  { id: 'cry', emoji: '😭', label: 'Cry' },
+  { id: 'angry', emoji: '😡', label: 'Angry' },
+  { id: 'high_five', emoji: '🙌', label: 'High five' },
+  { id: 'fist', emoji: '👊', label: 'Fist bump' },
+  { id: 'cool', emoji: '😎', label: 'Cool' },
 ] as const;
 
 export type ReactionId = (typeof REACTIONS)[number]['id'];

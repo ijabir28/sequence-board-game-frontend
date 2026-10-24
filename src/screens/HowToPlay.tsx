@@ -10,6 +10,7 @@ import { SuitIcon } from '../components/cards/SuitIcon';
 import { Icon } from '../components/ui/Icon';
 import { tipProps } from '../components/ui/TooltipLayer';
 import { useBoardStyle, useDeck } from '../decks/decks';
+import { NO_ESC_KEY, useMediaQuery } from '../game/useMediaQuery';
 import { BLANK, parseCard, type BoardCardName, type CardName } from '../engine/cards';
 import { HAND_SIZE_BY_PLAYER_COUNT, type TeamIndex } from '../engine/setup';
 import styles from './Forms.module.css';
@@ -322,23 +323,26 @@ export function HowToPlay() {
  */
 export function HowToPlayDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const noEsc = useMediaQuery(NO_ESC_KEY);
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
     if (open && !dialog.open) {
       dialog.showModal();
+      // The page itself takes focus, not the back button, so it doesn't open focused with its tip showing.
+      dialog.focus();
       dialog.scrollTop = 0;
     }
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
   return (
-    <dialog ref={ref} className={own.dialog} aria-label="How to play" onClose={onClose}>
+    <dialog ref={ref} className={own.dialog} aria-label="How to play" tabIndex={-1} onClose={onClose}>
       {open && (
         <div className={styles.page}>
           <nav className={[backStyles.back, own.back].join(' ')} aria-label="Back">
-            <button type="button" className={backStyles.link} onClick={onClose} {...tipProps('Close the guide and go back to the board (Esc)', 'bottom', 'start')}>
+            <button type="button" className={backStyles.link} onClick={onClose} {...tipProps(noEsc ? 'Close the guide and go back to the board' : 'Close the guide and go back to the board (Esc)', 'bottom', 'start')}>
               <Icon name="chevronLeft" size={18} />
               Back to the game
             </button>
