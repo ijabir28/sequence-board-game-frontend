@@ -196,15 +196,17 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
   }, [sequenceCount]);
 
   // Moves stay off the toasts, but a dead card swapped without the player asking is: it changes their hand under
-  // them. Only they hear it; the rest of the table has the move log.
+  // them. Only they hear it; the rest of the table has the move log. Log entries name the player but don't carry
+  // their id, and two players may share a name, so the swap is matched by turn instead: the rule swaps cards as a
+  // turn starts, so an auto swap logged for the current turn was the current player's.
   const seenLog = useRef(view.log.length);
   useEffect(() => {
     // A new round starts a fresh, shorter log, and its first turn may already have swapped cards.
     const fresh = view.log.slice(view.log.length < seenLog.current ? 0 : seenLog.current);
     seenLog.current = view.log.length;
-    if (!viewer) return;
+    if (!viewer || view.turn === null || view.currentPlayerId !== viewer.id) return;
     const swapped = fresh.flatMap((entry) =>
-      entry.kind === 'exchange' && entry.auto && entry.player === viewer.name && entry.team === viewer.team ? [cardShort(entry.card, notation)] : [],
+      entry.kind === 'exchange' && entry.auto && entry.turn === view.turn ? [cardShort(entry.card, notation)] : [],
     );
     if (swapped.length === 0) return;
     const cards = swapped.length === 1 ? swapped[0] : `${swapped.slice(0, -1).join(', ')} and ${swapped.at(-1)}`;
