@@ -111,7 +111,7 @@ export function SignIn() {
 
         <p className={styles.divider}>or</p>
         <Link to="/local" className={own.altLink} {...tipProps('Hot-seat game: everyone shares this screen. No account needed.')}>
-          Play on this device without signing in
+          Pass and play without signing in
         </Link>
       </form>
       <PoweredBy />

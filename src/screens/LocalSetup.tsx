@@ -48,7 +48,7 @@ export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
     <div className={styles.page}>
       <form className={styles.card} onSubmit={submit}>
         <header className={styles.header}>
-          <h1>Play on this device</h1>
+          <h1>Pass and play</h1>
           <p>Everyone shares one screen and passes it round. Each hand stays hidden until its owner reveals it.</p>
         </header>
 
