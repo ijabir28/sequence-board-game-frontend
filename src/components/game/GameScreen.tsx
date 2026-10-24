@@ -333,7 +333,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       const next = { handIndex: selected, card: selectedCard, target: pos };
       setDraft(next);
       setSelected(null);
-      setFeedback({ tone: 'info', text: `Move drafted: ${describeDraft(next, notation)}. It is played as soon as your turn comes. Tap the queued card again to cancel it.` });
+      setFeedback({ tone: 'info', text: `Drafted ${describeDraft(next, notation)} for your turn. Tap the card again to cancel.` });
       return;
     }
     const played = await run(() => adapter.playCard(selected, pos));
@@ -1052,7 +1052,7 @@ function handHint({
 }): string {
   if (waiting && !selectedCard) {
     return draft
-      ? `Drafted: ${describeDraft(draft, notation)}. It is played as soon as your turn comes. Tap the queued card again to cancel it, or pick another card to change it.`
+      ? `Drafted ${describeDraft(draft, notation)} for your turn. Tap it again to cancel, or pick another.`
       : `Not your turn yet. Draft your next move: pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}, and it is played when your turn comes.`;
   }
   if (!selectedCard) {
