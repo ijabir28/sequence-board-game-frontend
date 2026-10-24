@@ -64,6 +64,12 @@ export function TrainingPage() {
       <AppHeader />
       <div className={forms.page}>
         <nav className={[backStyles.back, styles.back].join(' ')} aria-label="Back">
+          {profile && (
+            <Link to="/lobby" className={backStyles.link} {...tipProps('Go back to the dashboard: your tables and games', 'bottom', 'start')}>
+              <Icon name="chevronLeft" size={18} />
+              Back to dashboard
+            </Link>
+          )}
           <Link to="/how-to-play" className={backStyles.link} {...tipProps('Go back to the rules, step by step', 'bottom', 'start')}>
             <Icon name="chevronLeft" size={18} />
             How to play
