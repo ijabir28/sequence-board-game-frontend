@@ -102,12 +102,12 @@ export function CurrentGame() {
 export function YourTablesDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state, setPage, reload } = useMyRooms(open);
   return (
-    <Dialog open={open} title="Your tables" onClose={onClose} size="wide">
+    <Dialog open={open} title="Your rooms" onClose={onClose} size="wide">
       <div className={own.dialogBody}>
-        <p className={styles.help}>Tables you opened or sat at. Games in progress are saved, so you can come back to them any time.</p>
+        <p className={styles.help}>Rooms you opened or sat in. Games in progress are saved, so you can come back to them any time.</p>
         {state.status === 'loading' && (
           <p className={styles.help} role="status">
-            Loading your tables…
+            Loading your rooms…
           </p>
         )}
 
@@ -117,14 +117,14 @@ export function YourTablesDialog({ open, onClose }: { open: boolean; onClose: ()
               <Icon name="alert" size={18} />
               <span>{state.message}</span>
             </p>
-            <Button size="sm" onClick={() => void reload()} tip="Load your tables again">
+            <Button size="sm" onClick={() => void reload()} tip="Load your rooms again">
               Try again
             </Button>
           </div>
         )}
 
         {state.status === 'ready' && state.rooms.length === 0 && (
-          <p className={styles.help}>No tables yet. Tables you open or join will show up here.</p>
+          <p className={styles.help}>No rooms yet. Rooms you open or join will show up here.</p>
         )}
 
         {state.status === 'ready' && state.rooms.length > 0 && (
@@ -154,7 +154,7 @@ export function YourTablesDialog({ open, onClose }: { open: boolean; onClose: ()
                       ? 'Go back to this game where it left off'
                       : room.status === 'finished'
                         ? 'See how this game ended'
-                        : 'Open the table to take a seat or change its options',
+                        : 'Open the room to take a seat or change its options',
                     'bottom',
                     'end',
                   )}
@@ -166,7 +166,7 @@ export function YourTablesDialog({ open, onClose }: { open: boolean; onClose: ()
           </ul>
         )}
 
-        {state.status === 'ready' && <Pager page={state.page} pages={state.pages} label="your tables" onPage={setPage} />}
+        {state.status === 'ready' && <Pager page={state.page} pages={state.pages} label="your rooms" onPage={setPage} />}
       </div>
     </Dialog>
   );

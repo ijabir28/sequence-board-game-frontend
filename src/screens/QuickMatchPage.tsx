@@ -218,7 +218,7 @@ export function QuickMatchPage() {
 
           <p className={own.footer}>
             Quick matches have <Link to="/leaderboard?ladder=matchmaking">a leaderboard of their own</Link>, apart from your
-            private tables.
+            private rooms.
           </p>
         </section>
         <PoweredBy />
@@ -246,7 +246,7 @@ function Waiting({
     <div className={own.waiting} role="status" aria-live="polite">
       <span className={own.pulse} aria-hidden="true" />
       <div className={own.waitingText}>
-        <strong>{queue === null ? 'Setting up your table…' : `Looking for ${teams === 2 ? 'an opponent' : 'opponents'}…`}</strong>
+        <strong>{queue === null ? 'Setting up your game…' : `Looking for ${teams === 2 ? 'an opponent' : 'opponents'}…`}</strong>
         <span>
           {teams} teams · {timerLabel}
           {queue && ` · waiting ${clock(now - queue.joinedAt)}`}

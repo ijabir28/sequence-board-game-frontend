@@ -307,10 +307,10 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
         <section
           id={panelId}
           className={styles.panel}
-          aria-label="Table chat"
+          aria-label="Room chat"
         >
           <header className={styles.header}>
-            <div className={styles.tabs} role="tablist" aria-label="Table chat">
+            <div className={styles.tabs} role="tablist" aria-label="Room chat">
               <button type="button" role="tab" aria-selected={tab === 'quick'} className={styles.tab} onClick={() => setTab('quick')}>
                 Quick
               </button>
@@ -361,7 +361,7 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
           ) : (
             <>
               <ol className={styles.list} ref={listRef}>
-                {messages.length === 0 && <li className={styles.empty}>No messages yet. Say hello to the table!</li>}
+                {messages.length === 0 && <li className={styles.empty}>No messages yet. Say hello to the room!</li>}
                 {messages.map((message) => {
                   const mine = message.author.handle === you;
                   return (
@@ -391,12 +391,12 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
                       value={draft}
                       onChange={(event) => setDraft(event.target.value)}
                       maxLength={MAX_MESSAGE_LENGTH}
-                      placeholder="Message everyone at the table"
-                      aria-label="Message everyone at the table"
+                      placeholder="Message everyone in the room"
+                      aria-label="Message everyone in the room"
                       autoComplete="off"
                       enterKeyHint="send"
                     />
-                    <button type="submit" className={styles.send} disabled={!draft.trim() || sending} aria-label="Send to everyone" {...tipProps('Send to everyone at the table', 'top', 'end')}>
+                    <button type="submit" className={styles.send} disabled={!draft.trim() || sending} aria-label="Send to everyone" {...tipProps('Send to everyone in the room', 'top', 'end')}>
                       <Icon name="send" size={18} />
                     </button>
                   </form>
@@ -416,8 +416,8 @@ export function TableChat({ roomId, you, placement = 'page' }: TableChatProps) {
         onClick={toggle}
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        aria-label={unread > 0 ? `Table chat, ${unread} unread` : 'Table chat'}
-        {...tipProps(open ? 'Close the table chat' : 'Chat and react: everyone at the table sees it', 'top', phone ? 'end' : 'start')}
+        aria-label={unread > 0 ? `Room chat, ${unread} unread` : 'Room chat'}
+        {...tipProps(open ? 'Close the room chat' : 'Chat and react: everyone in the room sees it', 'top', phone ? 'end' : 'start')}
       >
         {pop ? (
           <span key={pop.id} className={styles.popEmoji} aria-hidden="true">

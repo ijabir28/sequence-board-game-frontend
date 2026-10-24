@@ -81,7 +81,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     s.on('connect', refreshSoon);
     const stopUpdates = onFriendsUpdated(refreshSoon);
     const stopInvitations = onTableInvitation((event) => {
-      toast.info(`${event.fromName} invited you to their table “${event.roomName}”.`, {
+      toast.info(`${event.fromName} invited you to their room “${event.roomName}”.`, {
         id: `invitation-${event.roomId}`,
         durationMs: 12000,
         action: { label: 'Join', onClick: () => navigate(`/table/${event.roomId}`) },
