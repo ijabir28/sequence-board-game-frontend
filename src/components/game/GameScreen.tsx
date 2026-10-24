@@ -3,7 +3,7 @@ import type { Pos } from '../../engine/board';
 import { cardKind, cardShort, type CardName, type CardNotation } from '../../engine/cards';
 import { useDeck } from '../../decks/decks';
 import { describeHint } from '../../game/describeHint';
-import { describeDraft, draftLostMessage, draftProblem, draftQueuedMessage, type Draft } from '../../game/draft';
+import { draftLostMessage, draftProblem, draftQueuedMessage, type Draft } from '../../game/draft';
 import { describeLatest } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter, HandCardView } from '../../game/types';
@@ -248,7 +248,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     if (index === drafted) {
       setDraft(null);
       setSelected(null);
-      setFeedback({ tone: 'info', text: 'Draft cancelled. Nothing will be played for you when your turn comes.' });
+      setFeedback(null);
       return;
     }
     setFeedback(null);
@@ -302,9 +302,8 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     }
     if (!yourTurn || view.turnPaused) return;
     setDraft(null);
-    void run(() => adapter.playCard(draft.handIndex, draft.target)).then((played) => {
-      if (played) setFeedback({ tone: 'success', text: `Your drafted move was played: ${describeDraft(draft, notation)}.` });
-    });
+    // Moves aren't toasted: the move log's latest line shows it was played.
+    void run(() => adapter.playCard(draft.handIndex, draft.target));
     // `view` changes with every move, which is when the draft needs checking again.
   }, [adapter, draft, view, hand, yourTurn, gameOver, busy, notation]);
 
@@ -359,10 +358,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
     view.exchangesLeft === null ? 'You may exchange any number this turn.' : `${view.exchangesLeft} exchange${view.exchangesLeft === 1 ? '' : 's'} left this turn.`;
   const onExchange = async () => {
     if (selected === null || !selectedCard) return;
-    const card = selectedCard;
-    if (await run(() => adapter.exchangeDeadCard(selected))) {
-      setFeedback({ tone: 'success', text: `${cardShort(card, notation)} was dead: you drew a new card.` });
-    }
+    await run(() => adapter.exchangeDeadCard(selected));
   };
   const onPass = async () => {
     const passed = await run(() => adapter.pass());
