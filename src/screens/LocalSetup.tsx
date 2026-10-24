@@ -21,10 +21,12 @@ interface LocalSetupProps {
   onStart: (config: LocalConfig) => void;
   /** Optional link back (for example to the lobby). */
   backAction?: React.ReactNode;
+  /** Optional navigation above the form, such as "Back to dashboard". */
+  topAction?: React.ReactNode;
 }
 
 /** Choose teams and names for a hot-seat game on this device. */
-export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
+export function LocalSetup({ initial, onStart, backAction, topAction }: LocalSetupProps) {
   const [teamCount, setTeamCount] = useState<TeamCount>(initial?.teamCount ?? 2);
   const [playersPerTeam, setPlayersPerTeam] = useState(initial?.playersPerTeam ?? 1);
   const [names, setNames] = useState<string[]>(initial?.playerNames ?? []);
@@ -46,6 +48,7 @@ export function LocalSetup({ initial, onStart, backAction }: LocalSetupProps) {
 
   return (
     <div className={styles.page}>
+      {topAction}
       <form className={styles.card} onSubmit={submit}>
         <header className={styles.header}>
           <h1>Pass and play</h1>

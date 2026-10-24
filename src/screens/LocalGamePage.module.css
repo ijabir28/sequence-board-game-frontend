@@ -1,0 +1,4 @@
+/* Back to dashboard lines up with the setup card below it. */
+.back {
+  width: min(100%, 34rem);
+}
