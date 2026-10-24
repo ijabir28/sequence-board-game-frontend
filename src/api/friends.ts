@@ -13,12 +13,21 @@ export interface Player {
 export interface Friend extends Player {
   /** When they became friends (ms), or null. */
   since: number | null;
-  /** Has the app open right now. */
+  /** Has the app open and in view right now. */
   online: boolean;
-  /** Has a seat at a table game in progress. */
+  /** Has the app open but hidden (another tab or app, a locked phone), or did until a few minutes ago. */
+  away: boolean;
+  /** Is at a table game in progress right now. */
   playing: boolean;
   /** That game's table code, only when the friend lets friends watch their games (their profile setting); else null. */
   watch: string | null;
+}
+
+/** How the friends list words a friend's status. */
+export function friendStatus(friend: Pick<Friend, 'online' | 'away' | 'playing'>): string {
+  if (friend.playing) return 'Playing a game';
+  if (friend.online) return 'Online';
+  return friend.away ? 'Away' : 'Offline';
 }
 
 export interface FriendRequest extends Player {
@@ -82,6 +91,7 @@ export function sanitizeOverview(raw: Raw): FriendsOverview {
       ...sanitizePlayer(friend),
       since: time(friend.since),
       online: friend.online === true,
+      away: friend.away === true,
       playing: friend.playing === true,
       watch: typeof friend.watch === 'string' && friend.watch ? friend.watch : null,
     })),

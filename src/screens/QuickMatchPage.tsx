@@ -10,7 +10,7 @@ import {
   type MatchTimer,
   type QueueStatus,
 } from '../api/matchmaking';
-import { onMatchFound } from '../api/socket';
+import { holdSocketOpen, onMatchFound } from '../api/socket';
 import { useAuth } from '../auth/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 import { BackToDashboard } from '../components/BackToDashboard';
@@ -92,12 +92,18 @@ export function QuickMatchPage() {
         .then(follow)
         .catch(() => undefined);
     }, POLL_MS);
-    const tick = setInterval(() => setNow(Date.now()), 1000);
+    // The waiting clock needn't move while nobody sees it.
+    const tick = setInterval(() => {
+      if (document.visibilityState === 'visible') setNow(Date.now());
+    }, 1000);
     const unsubscribe = profile ? onMatchFound(profile.handle, openGame) : () => undefined;
+    // From another tab too: the player is waiting for this, so the socket stays open while hidden.
+    const release = holdSocketOpen();
     return () => {
       clearInterval(poll);
       clearInterval(tick);
       unsubscribe();
+      release();
     };
   }, [queued, follow, openGame, profile]);
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { inviteToTable } from '../api/friends';
+import { friendStatus, inviteToTable } from '../api/friends';
 import { errorMessage } from '../api/http';
 import { isSeated, type Room } from '../api/rooms';
 import { Avatar } from '../components/Avatar';
@@ -80,12 +80,12 @@ export function InviteFriendsDialog({ open, onClose, room }: { open: boolean; on
               <li key={friend.handle} className={own.row}>
                 <span className={own.avatar}>
                   <Avatar name={friend.name} handle={friend.handle} image={friend.image} size={36} />
-                  <span className={[own.presence, friend.online && own.online].filter(Boolean).join(' ')} aria-hidden="true" />
+                  <span className={[own.presence, friend.online && own.online, friend.away && own.away].filter(Boolean).join(' ')} aria-hidden="true" />
                 </span>
                 <span className={own.who}>
                   <span className={own.name}>{friend.name}</span>
                   <span className={own.handle}>
-                    @{friend.handle} · {friend.playing ? 'Playing a game' : friend.online ? 'Online' : 'Offline'}
+                    @{friend.handle} · {friendStatus(friend)}
                   </span>
                 </span>
                 <span className={own.actions}>

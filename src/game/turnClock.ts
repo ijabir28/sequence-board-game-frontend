@@ -9,14 +9,31 @@ export function formatElapsed(ms: number): string {
   return hours > 0 ? `${hours}:${String(minutes).padStart(2, '0')}:${seconds}` : `${minutes}:${seconds}`;
 }
 
-/** The current time, updated every `intervalMs` while `active`. */
+/**
+ * The current time, updated every `intervalMs` while `active` and the page is visible. A hidden page shows nothing,
+ * so its clock stops rather than re-render the table several times a second for no one; it catches up on coming back.
+ */
 export function useNow(active: boolean, intervalMs = 1000): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!active) return;
     setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(timer);
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const follow = () => {
+      if (document.visibilityState === 'hidden') {
+        clearInterval(timer);
+        timer = undefined;
+      } else if (timer === undefined) {
+        setNow(Date.now());
+        timer = setInterval(() => setNow(Date.now()), intervalMs);
+      }
+    };
+    follow();
+    document.addEventListener('visibilitychange', follow);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', follow);
+    };
   }, [active, intervalMs]);
   return now;
 }

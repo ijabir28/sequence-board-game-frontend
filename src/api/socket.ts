@@ -5,9 +5,121 @@ import io from 'socket.io-client';
 
 let socket: SocketIOClient.Socket | null = null;
 
+/*
+ * The socket only stays open while it is any use, to save the battery (a websocket's heartbeat, and the reconnect
+ * loop, keep a phone's radio awake):
+ * - A hidden page (another tab or app, a locked phone) tells the server at once (`set_away`), so friends see the
+ *   player away, and after IDLE_MS lets the socket go; the server keeps them away a while longer. Coming back opens it
+ *   again, and the pages listening for `connect` catch up and announce themselves again. Their game already counts
+ *   them away while hidden (useAwayWhileHidden).
+ * - While the device says it is offline, it stops trying to reconnect; it tries again once the device is back.
+ * - A page that must hear the server while hidden (waiting in the Quick Match queue) holds it open (holdSocketOpen).
+ * Reconnecting backs off to RECONNECT_DELAY_MAX_MS between tries rather than socket.io's 5 s.
+ */
+const IDLE_MS = 60_000;
+const RECONNECT_DELAY_MAX_MS = 30_000;
+
+/** Why the socket was let go on purpose, if it was: then it stays closed until that is over. */
+let resting: 'idle' | 'offline' | null = null;
+let idleTimer: ReturnType<typeof setTimeout> | undefined;
+let holds = 0;
+
+function hidden(): boolean {
+  return typeof document !== 'undefined' && document.visibilityState === 'hidden';
+}
+
+function rest(reason: 'idle' | 'offline') {
+  clearTimeout(idleTimer);
+  idleTimer = undefined;
+  if (!socket || resting === 'offline') return;
+  resting = reason;
+  // disconnect() also stops a reconnect loop in progress.
+  socket.disconnect();
+}
+
+function wake() {
+  clearTimeout(idleTimer);
+  idleTimer = undefined;
+  if (!socket || resting === null) return;
+  resting = null;
+  socket.connect();
+}
+
+/** Tells the server whether this page is hidden, so friends see the player away (or back). */
+function sayAway() {
+  if (socket?.connected) socket.emit('set_away', { away: hidden() });
+}
+
+function followVisibility() {
+  if (!hidden()) {
+    if (resting === 'idle') wake();
+    else clearTimeout(idleTimer);
+    return;
+  }
+  if (holds > 0 || resting !== null || idleTimer !== undefined) return;
+  idleTimer = setTimeout(() => {
+    idleTimer = undefined;
+    if (hidden() && holds === 0) rest('idle');
+  }, IDLE_MS);
+}
+
+function followNetwork() {
+  if (typeof navigator === 'undefined') return;
+  if (!navigator.onLine) rest('offline');
+  else if (resting === 'offline') {
+    resting = 'idle';
+    if (hidden() && holds === 0) followVisibility();
+    else wake();
+  }
+}
+
 export function getSocket(): SocketIOClient.Socket {
-  socket ??= io({ path: '/socket.io', transports: ['websocket', 'polling'] });
+  if (!socket) {
+    socket = io({ path: '/socket.io', transports: ['websocket', 'polling'], reconnectionDelayMax: RECONNECT_DELAY_MAX_MS });
+    if (typeof window !== 'undefined') {
+      // Every new connection starts out in view on the server; a hidden page says otherwise.
+      socket.on('connect', () => {
+        if (hidden()) sayAway();
+      });
+      document.addEventListener('visibilitychange', () => {
+        sayAway();
+        followVisibility();
+      });
+      window.addEventListener('online', followNetwork);
+      window.addEventListener('offline', followNetwork);
+      followVisibility();
+      followNetwork();
+    }
+  }
   return socket;
+}
+
+/**
+ * Keeps the socket open while the page is hidden, until the returned function is called; it reopens at once if it
+ * had been let go. For a page waiting on a server message the player wants even from another tab.
+ */
+export function holdSocketOpen(): () => void {
+  getSocket();
+  holds += 1;
+  if (resting === 'idle') wake();
+  clearTimeout(idleTimer);
+  idleTimer = undefined;
+  let held = true;
+  return () => {
+    if (!held) return;
+    held = false;
+    holds -= 1;
+    followVisibility();
+  };
+}
+
+/**
+ * Sends `event` only if the socket is open now. socket.io queues what is sent while disconnected and sends it after
+ * the next `connect`, after the pages have announced themselves again, so a queued `leave_game` would undo a fresh
+ * `join_game`. Leaving needs no message once disconnected: the server forgets a closed socket by itself.
+ */
+function emitNow(s: SocketIOClient.Socket, event: string, data: unknown) {
+  if (s.connected) s.emit(event, data);
 }
 
 /**
@@ -116,7 +228,7 @@ export function announcePresence(roomId: string, handle: string, token: string):
   s.on('connect', join);
   return () => {
     s.off('connect', join);
-    s.emit('leave_game', { room_id: roomId });
+    emitNow(s, 'leave_game', { room_id: roomId });
   };
 }
 
@@ -132,7 +244,7 @@ export function watchGame(roomId: string): () => void {
   s.on('connect', watch);
   return () => {
     s.off('connect', watch);
-    s.emit('unwatch_game', { room_id: roomId });
+    emitNow(s, 'unwatch_game', { room_id: roomId });
   };
 }
 
@@ -157,7 +269,8 @@ export function onSpectatorsUpdated(roomId: string, listener: (count: number) =>
 export function reconnectSocket(): void {
   if (!socket) return;
   socket.disconnect();
-  socket.connect();
+  // A socket let go on purpose reconnects, with the new cookie, when it wakes.
+  if (resting === null) socket.connect();
 }
 
 /** `friends_updated`: a friend request, friendship or invitation of yours changed. Re-fetch the friends list. */

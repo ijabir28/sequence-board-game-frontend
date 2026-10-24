@@ -4,6 +4,7 @@ import {
   acceptFriendRequest,
   deleteFriendRequest,
   dismissInvitation,
+  friendStatus,
   removeFriend,
   searchPlayers,
   sendFriendRequest,
@@ -331,13 +332,13 @@ function PlayerRow({
     <li className={own.row}>
       <span className={own.avatar}>
         <Avatar name={player.name} handle={player.handle} image={player.image} size={40} />
-        {status && <span className={[own.presence, status.online && own.online].filter(Boolean).join(' ')} aria-hidden="true" />}
+        {status && <span className={[own.presence, status.online && own.online, status.away && own.away].filter(Boolean).join(' ')} aria-hidden="true" />}
       </span>
       <span className={own.who}>
         <span className={own.name}>{player.name}</span>
         <span className={own.handle}>
           @{player.handle}
-          {status && <> · {status.playing ? 'Playing a game' : status.online ? 'Online' : 'Offline'}</>}
+          {status && <> · {friendStatus(status)}</>}
           {detail && <> · {detail}</>}
         </span>
       </span>

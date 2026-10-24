@@ -131,11 +131,18 @@ export class RemoteGameAdapter implements GameAdapter {
     this.timer = setInterval(() => {
       if (typeof document === 'undefined' || document.visibilityState === 'visible') void this.refresh();
     }, this.options.pollIntervalMs ?? POLL_INTERVAL_MS);
+    // Hidden, the page skips its polls: catch up at once on coming back.
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.onVisibilityChange);
   }
+
+  private onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') void this.refresh();
+  };
 
   private stop() {
     clearInterval(this.timer);
     this.timer = undefined;
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.onVisibilityChange);
   }
 
   private async load() {

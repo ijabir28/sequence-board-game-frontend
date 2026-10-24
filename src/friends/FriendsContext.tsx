@@ -7,8 +7,9 @@ import { useToast } from '../components/toast/Toaster';
 
 // The signed-in player's friends, requests and table invitations, kept for every page: the friends page lists them,
 // the account menu counts what's waiting, and a table page offers its friends an invitation. The server says when
-// something changed (`friends_updated`, on this player's own sockets), and the list is read again; also on
-// reconnecting and on coming back to the tab, in case a message was missed while offline.
+// something changed (`friends_updated`, on this player's own sockets, including when a friend comes online, goes
+// offline, or sits down at or leaves their game), and the list is read again; also on reconnecting and on coming back
+// to the tab, in case a message was missed while offline or hidden.
 
 interface FriendsValue {
   /** null until loaded (or when signed out). */
@@ -68,10 +69,17 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     seenRequests.current = null;
     if (!handle) return;
     void refresh();
+    // Friends coming and going each say so (`friends_updated`), so updates are gathered for a moment and read once.
+    // A hidden page reads nothing: it reads the list on coming back instead.
+    let soon: ReturnType<typeof setTimeout> | undefined;
+    const refreshSoon = () => {
+      if (document.visibilityState === 'hidden') return;
+      clearTimeout(soon);
+      soon = setTimeout(() => void refresh(), 300);
+    };
     const s = getSocket();
-    const onConnect = () => void refresh();
-    s.on('connect', onConnect);
-    const stopUpdates = onFriendsUpdated(() => void refresh());
+    s.on('connect', refreshSoon);
+    const stopUpdates = onFriendsUpdated(refreshSoon);
     const stopInvitations = onTableInvitation((event) => {
       toast.info(`${event.fromName} invited you to their table “${event.roomName}”.`, {
         id: `invitation-${event.roomId}`,
@@ -84,7 +92,8 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
-      s.off('connect', onConnect);
+      clearTimeout(soon);
+      s.off('connect', refreshSoon);
       stopUpdates();
       stopInvitations();
       document.removeEventListener('visibilitychange', onVisible);

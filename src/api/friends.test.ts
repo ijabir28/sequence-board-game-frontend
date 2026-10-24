@@ -26,9 +26,9 @@ describe('sanitizeOverview', () => {
       ],
     });
     expect(overview.friends).toEqual([
-      { handle: 'sakib', name: 'Sakib', image: null, since: Date.parse('2026-10-20T10:00:00.000Z'), online: true, playing: true, watch: 'otter-k3m9' },
+      { handle: 'sakib', name: 'Sakib', image: null, since: Date.parse('2026-10-20T10:00:00.000Z'), online: true, away: false, playing: true, watch: 'otter-k3m9' },
       // Playing, but hasn't let friends watch: no table to link to.
-      { handle: 'tanvir', name: 'Tanvir', image: null, since: null, online: false, playing: true, watch: null },
+      { handle: 'tanvir', name: 'Tanvir', image: null, since: null, online: false, away: false, playing: true, watch: null },
     ]);
     expect(overview.incoming).toEqual([{ handle: 'rafi', name: 'rafi', image: null, sentAt: Date.parse('2026-10-21T10:00:00.000Z') }]);
     expect(overview.invitations).toEqual([
