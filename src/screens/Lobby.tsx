@@ -31,29 +31,29 @@ export function Lobby() {
           <section className={[styles.card, own.hero].join(' ')} aria-labelledby="lobby-title">
             <header className={styles.header}>
               <h1 id="lobby-title">{profile ? `Ready to play, ${profile.name}?` : 'Ready to play?'}</h1>
-              <p>Find an opponent with Quick Match, start a new game and invite your friends to it, or join a table someone shared with you.</p>
+              <p>Find an opponent with Quick Match, open a new room and invite your friends to it, or join a room someone shared with you.</p>
             </header>
             <div className={own.primaryActions}>
               <Button variant="primary" onClick={() => navigate('/quick-match')} tip="Play someone new now: no code to share">
                 <Icon name="bolt" size={18} />
                 Quick Match
               </Button>
-              <Button onClick={() => setDialog('new')} tip="Open a new table, pick its teams and settings, then share its code">
+              <Button onClick={() => setDialog('new')} tip="Open a new private room, pick its teams and settings, then share its code">
                 <Icon name="plus" size={18} />
-                New Game
+                New room
               </Button>
-              <Button onClick={() => setDialog('join')} tip="Enter the code or link a friend shared to take a seat at their table">
+              <Button onClick={() => setDialog('join')} tip="Enter the code or link a friend shared to take a seat in their room">
                 <Icon name="users" size={18} />
-                Join a table
+                Join a room
               </Button>
             </div>
             <div className={own.secondaryActions}>
               <div className={own.secondaryButtons}>
-                <Button variant="ghost" onClick={() => setDialog('tables')} tip="Tables you opened or sat at, to go back to any game">
+                <Button variant="ghost" onClick={() => setDialog('tables')} tip="Rooms you opened or sat in, to go back to any game">
                   <Icon name="log" size={18} />
-                  Your tables
+                  Your rooms
                 </Button>
-                <Link to="/friends" className={own.leaderboardLink} {...tipProps('Add friends, answer requests and invitations to their tables')}>
+                <Link to="/friends" className={own.leaderboardLink} {...tipProps('Add friends, answer requests and invitations to their rooms')}>
                   <Icon name="users" size={18} />
                   Friends
                   {waiting > 0 && <span className={own.count}>{waiting}</span>}

@@ -42,25 +42,25 @@ export function NewGameDialog({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <Dialog
       open={open}
-      title="Start a new game"
+      title="Open a new room"
       onClose={onClose}
       size="wide"
       actions={
         <>
-          <Button onClick={onClose} tip="Close without opening a table">
+          <Button onClick={onClose} tip="Close without opening a room">
             Cancel
           </Button>
-          <Button type="submit" form={formId} variant="primary" busy={creating} tip="Open the table and take you to it, ready to share its code">
+          <Button type="submit" form={formId} variant="primary" busy={creating} tip="Open the room and take you to it, ready to share its code">
             <Icon name="plus" size={18} />
-            Create table
+            Create room
           </Button>
         </>
       }
     >
       <form id={formId} className={styles.dialogForm} onSubmit={create}>
-        <p className={styles.help}>Name the table and pick the teams and settings. Then share its code so friends can take a seat.</p>
+        <p className={styles.help}>Name the room and pick the teams and settings. Then share its code so friends can take a seat.</p>
         <label className={styles.field}>
-          <span className={styles.label}>Table name</span>
+          <span className={styles.label}>Room name</span>
           <input
             className={styles.input}
             value={name}
@@ -72,7 +72,7 @@ export function NewGameDialog({ open, onClose }: { open: boolean; onClose: () =>
             aria-describedby={`${formId}-name-help`}
           />
           <span className={styles.help} id={`${formId}-name-help`}>
-            Optional. The table's code is made from its name. Leave it blank for a random one.
+            Optional. The room's code is made from its name. Leave it blank for a random one.
           </span>
         </label>
         <fieldset className={styles.fieldset}>
