@@ -275,7 +275,7 @@ const STEPS: Step[] = [
           lessons against a bot, then a practice match.
         </li>
         <li>
-          No account or network? <strong>Play on this device</strong> passes one screen round the table.
+          No account or network? <strong>Pass and play</strong> passes one screen round the table.
         </li>
         <li>
           Pick your card deck and board look under <strong>Profile settings</strong>; this guide's pictures follow them.
