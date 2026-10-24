@@ -3,7 +3,7 @@ import type { Pos } from '../../engine/board';
 import { cardKind, cardShort, type CardName, type CardNotation } from '../../engine/cards';
 import { useDeck } from '../../decks/decks';
 import { describeHint } from '../../game/describeHint';
-import { describeDraft, draftLostMessage, draftProblem, type Draft } from '../../game/draft';
+import { describeDraft, draftLostMessage, draftProblem, draftQueuedMessage, type Draft } from '../../game/draft';
 import { describeLatest } from '../../game/describeLog';
 import { TEAM_STYLES, teamName } from '../../game/teams';
 import type { GameAdapter, HandCardView } from '../../game/types';
@@ -333,7 +333,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
       const next = { handIndex: selected, card: selectedCard, target: pos };
       setDraft(next);
       setSelected(null);
-      setFeedback({ tone: 'info', text: `Drafted ${describeDraft(next, notation)} for your turn. Tap the card again to cancel.` });
+      setFeedback({ tone: 'info', text: draftQueuedMessage(next, notation) });
       return;
     }
     const played = await run(() => adapter.playCard(selected, pos));
@@ -1052,7 +1052,7 @@ function handHint({
 }): string {
   if (waiting && !selectedCard) {
     return draft
-      ? `Drafted ${describeDraft(draft, notation)} for your turn. Tap it again to cancel, or pick another.`
+      ? draftQueuedMessage(draft, notation)
       : `Not your turn yet. Draft your next move: pick a card, then ${highlights ? 'a highlighted cell' : 'a cell for it'}, and it is played when your turn comes.`;
   }
   if (!selectedCard) {

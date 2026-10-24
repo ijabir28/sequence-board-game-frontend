@@ -24,19 +24,42 @@ export function draftProblem(draft: Draft, hand: readonly HandCardView[], target
   return targets.some((t) => t.row === draft.target.row && t.column === draft.target.column) ? null : 'cell-unavailable';
 }
 
-/** "9♥ on 9♥", "J♣ on 7♦": the card, and the cell (by the card printed on it). */
+function draftCell(draft: Draft, notation: CardNotation): string {
+  return cardShort(BOARD_LAYOUT[draft.target.row][draft.target.column], notation);
+}
+
+/**
+ * "6♦", "J♣ on 7♦": the drafted card, and its cell only for a jack. A normal card's cell carries the same name, and
+ * every card is on the board twice, so naming it would say nothing.
+ */
 export function describeDraft(draft: Draft, notation: CardNotation = 'suits'): string {
-  return `${cardShort(draft.card, notation)} on ${cardShort(BOARD_LAYOUT[draft.target.row][draft.target.column], notation)}`;
+  const card = cardShort(draft.card, notation);
+  return cardKind(draft.card) === 'normal' ? card : `${card} on ${draftCell(draft, notation)}`;
+}
+
+/**
+ * The prompt while a draft waits, kept to two lines on a phone. It points at the cell the board rings rather than
+ * naming it, and at the hand card tagged "Queued".
+ */
+export function draftQueuedMessage(draft: Draft, notation: CardNotation = 'suits'): string {
+  const card = cardShort(draft.card, notation);
+  const kind = cardKind(draft.card);
+  const move =
+    kind === 'normal'
+      ? `${card} goes on the marked cell`
+      : kind === 'two-eyed-jack'
+        ? `${card} goes on the marked ${draftCell(draft, notation)}`
+        : `${card} removes the marked ${draftCell(draft, notation)} chip`;
+  return `Next turn: ${move}. Tap the Queued card to cancel.`;
 }
 
 /** What to tell the player when another move rules their draft out. */
 export function draftLostMessage(draft: Draft, problem: DraftProblem, notation: CardNotation = 'suits'): string {
-  const cell = cardShort(BOARD_LAYOUT[draft.target.row][draft.target.column], notation);
   const why =
     problem === 'card-gone'
       ? `${cardShort(draft.card, notation)} is no longer in your hand`
       : cardKind(draft.card) === 'one-eyed-jack'
-        ? `the chip on ${cell} can't be removed any more`
-        : `${cell} has been taken`;
+        ? "that chip can't be removed any more"
+        : 'that cell has been taken';
   return `Your drafted move (${describeDraft(draft, notation)}) can't be played: ${why}. Draft another move.`;
 }
