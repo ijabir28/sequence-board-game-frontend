@@ -19,14 +19,12 @@ export interface LocalConfig {
 interface LocalSetupProps {
   initial?: Partial<LocalConfig>;
   onStart: (config: LocalConfig) => void;
-  /** Optional link back (for example to the lobby). */
-  backAction?: React.ReactNode;
   /** Optional navigation above the form, such as "Back to dashboard". */
   topAction?: React.ReactNode;
 }
 
 /** Choose teams and names for a hot-seat game on this device. */
-export function LocalSetup({ initial, onStart, backAction, topAction }: LocalSetupProps) {
+export function LocalSetup({ initial, onStart, topAction }: LocalSetupProps) {
   const [teamCount, setTeamCount] = useState<TeamCount>(initial?.teamCount ?? 2);
   const [playersPerTeam, setPlayersPerTeam] = useState(initial?.playersPerTeam ?? 1);
   const [names, setNames] = useState<string[]>(initial?.playerNames ?? []);
@@ -118,7 +116,6 @@ export function LocalSetup({ initial, onStart, backAction, topAction }: LocalSet
         </fieldset>
 
         <div className={styles.footer}>
-          {backAction}
           <Button type="submit" variant="primary" tip="Deal the cards and start playing on this device">
             Start game
           </Button>
