@@ -1005,7 +1005,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
             <Button
               variant="danger"
               onClick={onExit}
-              tip={adapter.mode === 'local' ? 'Leave and end this game. It is not saved.' : 'Leave the game for the table page. It stays saved.'}
+              tip={adapter.mode === 'local' ? 'Leave and end this game. It is not saved.' : 'Leave the game for the room page. It stays saved.'}
             >
               Leave game
             </Button>
@@ -1013,7 +1013,7 @@ export function GameScreen({ adapter, modeLabel, onExit, onDashboard, onNewGame,
         }
       >
         <p>{adapter.mode === 'local' ? 'This game is only stored on this device, so leaving ends it.' : onDashboard
-              ? 'The game is saved, so you can come back to it from the dashboard. Leave game opens the table page.'
+              ? 'The game is saved, so you can come back to it from the dashboard. Leave game opens the room page.'
               : 'You can come back to the server game later.'}</p>
         {canForfeit && (
           <p>

@@ -50,7 +50,7 @@ export function ProfilePage() {
     <>
       <AppHeader />
       <div className={styles.page}>
-        <BackToDashboard className={own.back} tip="Go back to the dashboard: your tables and games" />
+        <BackToDashboard className={own.back} tip="Go back to the dashboard: your rooms and games" />
         <div className={own.grid}>
           <div className={own.column}>
             <IdentityCard profile={profile} refresh={refresh} />

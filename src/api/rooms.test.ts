@@ -46,7 +46,7 @@ describe('sanitizeRoom', () => {
       exchangesPerTurn: 1,
     });
     const old = sanitizeRoom('42', raw);
-    expect(old.name).toBe('Table 42');
+    expect(old.name).toBe('Room 42');
     expect(old.settings).toMatchObject({ history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 });
     const current = sanitizeRoom('x', { ...raw, settings: { dead_cards: 'manual', exchanges_per_turn: null } }).settings;
     expect(current).toMatchObject({ deadCards: 'manual', exchangesPerTurn: null });
@@ -74,7 +74,7 @@ describe('sanitizeMyRoom', () => {
   it('maps the history fields', () => {
     expect(sanitizeMyRoom(raw)).toEqual({
       id: '42',
-      name: 'Table 42',
+      name: 'Room 42',
       createdAt: '2026-10-15T05:48:22.696Z',
       administrator: 'jabir',
       teamCount: 2,

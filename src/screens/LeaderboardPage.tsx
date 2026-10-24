@@ -56,16 +56,16 @@ const SCOPES: Record<LeaderboardScope, { label: string; tip: string }> = {
 
 const LADDERS: Record<LeaderboardLadder, { label: string; tip: string; intro: string }> = {
   custom: {
-    label: 'Private tables',
-    tip: 'Rounds played at tables shared with a code',
+    label: 'Private rooms',
+    tip: 'Rounds played in rooms shared with a code',
     intro:
-      'Every round won or lost at a private table moves your rating, which starts at 1200. Beating a stronger team earns more than beating a weaker one.',
+      'Every round won or lost in a private room moves your rating, which starts at 1200. Beating a stronger team earns more than beating a weaker one.',
   },
   matchmaking: {
     label: 'Quick Match',
     tip: 'Quick matches, rated on their own',
     intro:
-      'Quick matches have a rating of their own, from 1200, apart from private tables. Forfeiting a match counts as a loss.',
+      'Quick matches have a rating of their own, from 1200, apart from private rooms. Forfeiting a match counts as a loss.',
   },
 };
 
@@ -167,7 +167,7 @@ export function LeaderboardPage() {
     <>
       <AppHeader />
       <div className={styles.page}>
-        <BackToDashboard className={own.back} tip="Go back to the dashboard: your tables and games" />
+        <BackToDashboard className={own.back} tip="Go back to the dashboard: your rooms and games" />
         <section className={[styles.card, styles.wide, own.card].join(' ')} aria-labelledby="leaderboard-title">
           <header className={own.top}>
             <div className={styles.header}>
