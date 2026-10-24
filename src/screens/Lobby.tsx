@@ -62,6 +62,10 @@ export function Lobby() {
                   <Icon name="trophy" size={18} />
                   Leaderboard
                 </Link>
+                <Link to="/how-to-play" className={own.leaderboardLink} {...tipProps('Learn the rules, or try a guided training game')}>
+                  <Icon name="book" size={18} />
+                  How to play
+                </Link>
               </div>
               <p className={own.local}>
                 No server, one screen? <Link to="/local" {...tipProps('Hot-seat game: everyone shares this screen and passes it round')}>
