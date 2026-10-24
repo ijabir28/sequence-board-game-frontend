@@ -68,7 +68,7 @@ export function InviteFriendsDialog({ open, onClose, room }: { open: boolean; on
       )}
       {overview !== null && friends.length === 0 && (
         <p className={styles.help}>
-          You haven't added any friends yet. <Link to="/friends">Find players to add</Link>, or share the table's code.
+          You haven't added any friends yet. <Link to="/friends">Find players to add</Link>, or share the room's code.
         </p>
       )}
       {friends.length > 0 && (
@@ -90,7 +90,7 @@ export function InviteFriendsDialog({ open, onClose, room }: { open: boolean; on
                 </span>
                 <span className={own.actions}>
                   {seated ? (
-                    <span className={own.tag}>At this table</span>
+                    <span className={own.tag}>In this room</span>
                   ) : done ? (
                     <span className={own.tag}>
                       <Icon name="check" size={16} />
@@ -103,7 +103,7 @@ export function InviteFriendsDialog({ open, onClose, room }: { open: boolean; on
                       busy={busy === friend.handle}
                       disabled={busy !== null}
                       onClick={() => void invite(friend.handle)}
-                      tip={`Send ${friend.name} a link to this table`}
+                      tip={`Send ${friend.name} a link to this room`}
                     >
                       Invite
                     </Button>
