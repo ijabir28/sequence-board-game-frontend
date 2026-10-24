@@ -161,16 +161,15 @@
   box-shadow: var(--focus-ring);
 }
 
-/* Phones: the buttons go on their own line under the name, so long names stay readable, and keep to the right
-   edge of the row like they do on wider screens. */
+/* Phones: buttons that don't fit beside the name wrap under it, so long names stay readable. Either way they keep
+   to the right edge of the row, as on wider screens. */
 @media (max-width: 480px) {
   .row {
     flex-wrap: wrap;
   }
 
   .actions {
-    width: 100%;
-    justify-content: flex-end;
+    margin-left: auto;
   }
 }
 
