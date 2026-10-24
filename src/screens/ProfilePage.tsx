@@ -341,7 +341,7 @@ function FriendsCard({ profile, refresh }: CardProps) {
           </span>
           <span className={switchStyles.description} id="friends-can-watch-description">
             {value
-              ? 'While you play at a table, your friends get a Watch link to follow the game live. They never see your hand.'
+              ? 'While you play in a room, your friends get a Watch link to follow the game live. They never see your hand.'
               : 'Your friends see that you are playing, but get no link to watch.'}
           </span>
         </span>
