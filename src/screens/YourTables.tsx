@@ -104,7 +104,7 @@ export function YourTablesDialog({ open, onClose }: { open: boolean; onClose: ()
   return (
     <Dialog open={open} title="Your tables" onClose={onClose} size="wide">
       <div className={own.dialogBody}>
-        <p className={styles.help}>Tables you opened or sat at. Games in progress are saved, so you can come back to them any time.</p>
+        <p className={styles.help}>Tables you opened or joined, seated or not. Games in progress are saved, so you can come back to them any time.</p>
         {state.status === 'loading' && (
           <p className={styles.help} role="status">
             Loading your tables…
