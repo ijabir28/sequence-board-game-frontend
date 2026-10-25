@@ -165,7 +165,7 @@ const STEPS: Step[] = [
           you play, you can exchange it for a new card.
         </p>
         <p>
-          Each room decides how dead cards work: whether they are marked in your hand or you spot them yourself, whether
+          Each table decides how dead cards work: whether they are marked in your hand or you spot them yourself, whether
           they are swapped for you when your turn starts, and how many you may exchange in one turn.
         </p>
       </>
@@ -260,8 +260,8 @@ const STEPS: Step[] = [
     body: (
       <ul className={own.list}>
         <li>
-          <strong>New room</strong> opens a private room; share its code or link, and friends take a seat with{' '}
-          <strong>Join a room</strong>. The host starts the game.
+          <strong>New table</strong> opens a table; share its code or link, and friends take a seat with{' '}
+          <strong>Join a table</strong>. The host starts the game.
         </li>
         <li>
           With a <strong>turn timer</strong>, a bar round the board empties as your time runs out, turning red at the end.
@@ -292,7 +292,7 @@ export function HowToPlay() {
     <>
       <AppHeader />
       <div className={styles.page}>
-        {profile && <BackToDashboard className={own.back} tip="Go back to the dashboard: your rooms and games" />}
+        {profile && <BackToDashboard className={own.back} tip="Go back to the dashboard: your tables and games" />}
         <Link to="/how-to-play/training" className={own.training} {...tipProps('Short lessons against a bot, on the real board, then a practice match')}>
           <span className={own.trainingIcon} aria-hidden="true">
             <Icon name="bulb" size={22} />

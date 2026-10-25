@@ -51,7 +51,7 @@ function useItems(): Item[] {
       key: 'friends',
       icon: 'users',
       label: 'Friends',
-      tip: waiting > 0 ? `Friends: ${waiting} request${waiting === 1 ? '' : 's'} or invitation${waiting === 1 ? '' : 's'} waiting` : 'Find players, add friends and invite them to your rooms',
+      tip: waiting > 0 ? `Friends: ${waiting} request${waiting === 1 ? '' : 's'} or invitation${waiting === 1 ? '' : 's'} waiting` : 'Find players, add friends and invite them to your tables',
       to: '/friends',
       badge: waiting,
     },
@@ -74,7 +74,7 @@ function useItems(): Item[] {
       key: 'signout',
       icon: 'exit',
       label: 'Sign out',
-      tip: 'Sign out on this device. Your rooms and games stay saved.',
+      tip: 'Sign out on this device. Your tables and games stay saved.',
       onSelect: () => void signOut().finally(() => navigate('/signin')),
     },
   ];

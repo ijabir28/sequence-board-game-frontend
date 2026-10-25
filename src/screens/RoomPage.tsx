@@ -129,9 +129,9 @@ export function RoomPage() {
       if (result === 'seat-taken') {
         showError(`Team ${name} is full. Pick a team with an open seat.`);
       } else if (result === 'already-seated') {
-        showError('You already have a seat in this room. Each player takes one seat.');
+        showError('You already have a seat at this table. Each player takes one seat.');
       } else if (result === 'game-started') {
-        showError("This room's game has already started, so its seats are fixed.");
+        showError("This table's game has already started, so its seats are fixed.");
         void reload();
       } else if (result === 'signed-out') {
         showError('Your session has ended (sessions expire after a week without play, or when you sign out elsewhere). Sign in again, then join.', {
@@ -139,7 +139,7 @@ export function RoomPage() {
           action: { label: 'Sign in again', onClick: signInAgain },
         });
       } else if (result === 'not-found') {
-        showError("We couldn't find a room with this code. Go back to the dashboard and open a new one.");
+        showError("We couldn't find a table with this code. Go back to the lobby and open a new one.");
       } else {
         await reload();
         showSuccess(`You joined Team ${name}.`);
@@ -155,17 +155,17 @@ export function RoomPage() {
     <>
       <AppHeader />
       <div className={styles.page}>
-        <BackToDashboard tip="Go back to the dashboard. Your seat in this room is kept." />
+        <BackToDashboard tip="Go back to the dashboard. Your seat here is kept." />
         {state.status === 'loading' && (
           <div className={own.state} role="status">
             <span className={own.spinner} aria-hidden="true" />
-            Loading room {id}…
+            Loading table {id}…
           </div>
         )}
         {state.status === 'not-found' && (
           <div className={[styles.card, own.state].join(' ')}>
-            <h1>Room not found</h1>
-            <p>There is no room with code {id}. Check that the code is typed correctly.</p>
+            <h1>Table not found</h1>
+            <p>There is no table with code {id}. Check that the code is typed correctly.</p>
             <Link to="/lobby" className={own.linkButton} {...tipProps('Go back to the dashboard to try another code')}>
               Back to the lobby
             </Link>
@@ -174,9 +174,9 @@ export function RoomPage() {
         {state.status === 'error' && (
           <div className={[styles.card, own.state].join(' ')} role="alert">
             <Icon name="wifiOff" size={28} />
-            <h1>Can't load this room</h1>
+            <h1>Can't load this table</h1>
             <p>{state.message}</p>
-            <Button variant="primary" onClick={() => reload()} tip="Load this room again">
+            <Button variant="primary" onClick={() => reload()} tip="Load this table again">
               <Icon name="refresh" size={16} />
               Try again
             </Button>
@@ -288,7 +288,7 @@ function RoomView({
           <ShareCode id={room.id} gameStarted={room.gameStarted} />
           {canInvite && (
             <div className={own.invite}>
-              <Button size="sm" variant="primary" onClick={() => setInviting(true)} tip="Send friends a link to one of this room's open seats">
+              <Button size="sm" variant="primary" onClick={() => setInviting(true)} tip="Send friends a link to one of this table's open seats">
                 <Icon name="users" size={16} />
                 Invite friends
               </Button>
@@ -381,8 +381,8 @@ function RoomView({
       {seated && (
         <p className={styles.help}>
           {room.gameStarted
-            ? 'You have a seat in this room.'
-            : 'You have a seat in this room. Stand up to change teams; each player takes one seat.'}
+            ? 'You have a seat at this table.'
+            : 'You have a seat at this table. Stand up to change teams; each player takes one seat.'}
         </p>
       )}
 
@@ -399,11 +399,11 @@ function RoomView({
           <>
             <p className={styles.help}>
               {!supported
-                ? "This room's size isn't one the rules can deal for, so it can't be played."
+                ? "This table's size isn't one the rules can deal for, so it can't be played."
                 : !full
                   ? 'The game can start once every seat is taken.'
                   : canStart
-                    ? 'Every seat is taken. You opened this room, so start the game when everyone is ready.'
+                    ? 'Every seat is taken. You opened this table, so start the game when everyone is ready.'
                     : `Every seat is taken. Waiting for ${hostName ?? 'the host'} to start the game.`}
             </p>
             {host ? (
@@ -414,7 +414,7 @@ function RoomView({
                 onClick={onStart}
                 tip={
                   !supported
-                    ? "This room's size can't be dealt for, so it can't start"
+                    ? "This table's size can't be dealt for, so it can't start"
                     : !full
                       ? 'Every seat must be taken before the game can start'
                       : 'Deal the cards and take everyone to the board'
@@ -436,10 +436,10 @@ function RoomView({
         <h2 id="table-options">
           {phone ? (
             <FoldToggle open={optionsOpen} controls={optionsId} onToggle={() => setOptionsOpen((o) => !o)}>
-              Room options
+              Table options
             </FoldToggle>
           ) : (
-            'Room options'
+            'Table options'
           )}
         </h2>
         {/* Folded with `hidden`, not unmounted, so a half-typed new name survives folding. */}
@@ -450,7 +450,7 @@ function RoomView({
             {room.gameStarted
               ? 'The game has started, so these are fixed.'
               : editable
-                ? 'You opened this room, so you can change these until the game starts.'
+                ? 'You opened this table, so you can change these until the game starts.'
                 : `Only ${hostName ?? 'the host'} can change these, until the game starts.`}
           </p>
         </div>
@@ -482,10 +482,10 @@ function RenameTable({ name, saving, onSave }: { name: string; saving: boolean; 
   return (
     <form className={own.rename} onSubmit={submit}>
       <label className={own.renameField}>
-        <span className={styles.label}>Room name</span>
+        <span className={styles.label}>Table name</span>
         <input className={styles.input} value={draft} maxLength={40} autoComplete="off" onChange={(e) => setDraft(e.target.value)} />
       </label>
-      <Button type="submit" size="sm" disabled={!changed} busy={saving && changed} tip={changed ? 'Save the new room name' : 'Type a new name first'}>
+      <Button type="submit" size="sm" disabled={!changed} busy={saving && changed} tip={changed ? 'Save the new table name' : 'Type a new name first'}>
         Rename
       </Button>
     </form>
@@ -511,16 +511,16 @@ function ShareCode({ id, gameStarted }: { id: string; gameStarted: boolean }) {
   return (
     <div className={own.share}>
       <label className={own.codeField}>
-        <span className="visually-hidden">Room code</span>
+        <span className="visually-hidden">Table code</span>
         <input className={styles.input} value={id} readOnly />
       </label>
-      <Tooltip text="Copy the code. Friends enter it under Join a room." align="end">
+      <Tooltip text="Copy the code. Friends enter it under Join a table." align="end">
         <Button size="sm" onClick={() => copy('code')}>
           <Icon name={copied === 'code' ? 'check' : 'copy'} size={16} />
           {copied === 'code' ? 'Copied' : 'Copy code'}
         </Button>
       </Tooltip>
-      <Tooltip text="Copy a link that opens this room" align="end">
+      <Tooltip text="Copy a link that opens this table" align="end">
         <Button size="sm" onClick={() => copy('link')}>
           <Icon name={copied === 'link' ? 'check' : 'copy'} size={16} />
           {copied === 'link' ? 'Copied' : 'Copy link'}

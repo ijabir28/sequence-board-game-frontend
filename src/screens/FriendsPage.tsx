@@ -121,7 +121,7 @@ export function FriendsPage() {
     <>
       <AppHeader />
       <div className={styles.page}>
-        <BackToDashboard className={own.back} tip="Go back to the dashboard: your rooms and games" />
+        <BackToDashboard className={own.back} tip="Go back to the dashboard: your tables and games" />
         <section className={[styles.card, styles.wide, own.card].join(' ')} aria-labelledby="friends-title">
           <header className={styles.header}>
             <h1 id="friends-title" className={own.title}>
@@ -129,7 +129,7 @@ export function FriendsPage() {
               Friends
             </h1>
             <p>
-              Add the people you play with. You can invite friends straight to your room, and the{' '}
+              Add the people you play with. You can invite friends straight to your table, and the{' '}
               <Link to="/leaderboard">leaderboard</Link> ranks you among them.
             </p>
           </header>
@@ -182,7 +182,7 @@ export function FriendsPage() {
           </div>
 
           {invitations.length > 0 && (
-            <Section title="Room invitations" count={invitations.length}>
+            <Section title="Table invitations" count={invitations.length}>
               <ul className={own.list}>
                 {invitations.map((invitation) => (
                   <PlayerRow
@@ -190,7 +190,7 @@ export function FriendsPage() {
                     player={invitation.from}
                     detail={`Invited you to “${invitation.roomName}” · ${invitation.seatsTaken}/${invitation.seats} seats taken`}
                   >
-                    <Button size="sm" variant="primary" onClick={() => navigate(`/table/${invitation.roomId}`)} tip="Open the room and take a seat">
+                    <Button size="sm" variant="primary" onClick={() => navigate(`/table/${invitation.roomId}`)} tip="Open the table and take a seat">
                       Join
                     </Button>
                     <Button

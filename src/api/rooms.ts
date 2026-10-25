@@ -123,7 +123,7 @@ interface RawRoom {
 export function sanitizeRoom(id: string, raw: RawRoom): Room {
   return {
     id,
-    name: raw.name ?? `Room ${id}`,
+    name: raw.name ?? `Table ${id}`,
     settings: sanitizeSettings(raw.settings),
     administrator: raw.administrator ?? null,
     // Older backends send only the handle; it is better than nothing.
@@ -160,7 +160,7 @@ export async function createRoom(teamCount: number, playersPerTeam: number, opti
     name: options.name?.trim() || undefined,
     ...rawSettings(options.settings ?? {}),
   });
-  await refusal(response, "We couldn't open the room. Please try again.");
+  await refusal(response, "We couldn't open the table. Please try again.");
   const body = await readJson<{ id: string }>(response);
   if (!body?.id) throw new ApiError('unexpected', UNREADABLE_RESPONSE);
   return String(body.id);
@@ -173,9 +173,9 @@ export async function updateRoom(id: string, changes: { name?: string; settings?
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: changes.name, ...rawSettings(changes.settings ?? {}) }),
   });
-  await refusal(response, "We couldn't change the room's settings. Please try again.");
+  await refusal(response, "We couldn't change the table's settings. Please try again.");
   const raw = await readJson<RawRoom>(response);
-  if (!raw) throw new ApiError('unexpected', "We couldn't load the room. Please refresh the page.");
+  if (!raw) throw new ApiError('unexpected', "We couldn't load the table. Please refresh the page.");
   return sanitizeRoom(id, raw);
 }
 
@@ -184,7 +184,7 @@ async function roomAction(id: string, action: 'leave' | 'shuffle', fallback: str
   const response = await postJson(`/room/${encodeURIComponent(id)}/${action}`, {});
   await refusal(response, fallback);
   const raw = await readJson<RawRoom>(response);
-  if (!raw) throw new ApiError('unexpected', "We couldn't load the room. Please refresh the page.");
+  if (!raw) throw new ApiError('unexpected', "We couldn't load the table. Please refresh the page.");
   return sanitizeRoom(id, raw);
 }
 
@@ -307,7 +307,7 @@ export function sanitizeMyRoom(raw: RawMyRoom): MyRoom {
   const status: RoomStatus = raw.status === 'playing' || raw.status === 'finished' ? raw.status : 'open';
   return {
     id: String(raw.id),
-    name: raw.name ?? `Room ${raw.id}`,
+    name: raw.name ?? `Table ${raw.id}`,
     createdAt: String(raw.created_at),
     administrator: String(raw.administrator),
     teamCount: Number(raw.team_count),
