@@ -190,7 +190,7 @@ export function FriendsPage() {
                     player={invitation.from}
                     detail={`Invited you to “${invitation.roomName}” · ${invitation.seatsTaken}/${invitation.seats} seats taken`}
                   >
-                    <Button size="sm" variant="primary" onClick={() => navigate(`/table/${invitation.roomId}`)} tip="Open the room and take a seat">
+                    <Button size="sm" variant="primary" onClick={() => navigate(`/table/${invitation.roomId}`)} tip="Open the table and take a seat">
                       Join
                     </Button>
                     <Button

@@ -51,7 +51,7 @@ function useItems(): Item[] {
       key: 'friends',
       icon: 'users',
       label: 'Friends',
-      tip: waiting > 0 ? `Friends: ${waiting} request${waiting === 1 ? '' : 's'} or invitation${waiting === 1 ? '' : 's'} waiting` : 'Find players, add friends and invite them to your rooms',
+      tip: waiting > 0 ? `Friends: ${waiting} request${waiting === 1 ? '' : 's'} or invitation${waiting === 1 ? '' : 's'} waiting` : 'Find players, add friends and invite them to your tables',
       to: '/friends',
       badge: waiting,
     },
