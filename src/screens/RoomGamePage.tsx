@@ -26,7 +26,7 @@ export function RoomGamePage() {
       <GameScreen
         key={id}
         adapter={adapter}
-        modeLabel={`Room ${id}`}
+        modeLabel={`Table ${id}`}
         handOrderKey={`sequence:hand-order:${id}`}
         watchLink={watchLink(id)}
         onExit={() => navigate(`/table/${id}`)}

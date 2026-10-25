@@ -62,7 +62,7 @@ export function SignIn() {
       <form className={styles.card} onSubmit={submit} noValidate>
         <header className={styles.header}>
           <h1>Sign in to Sequence</h1>
-          <p>Five chips in a row makes a sequence. Sign in to open a room and play with friends.</p>
+          <p>Five chips in a row makes a sequence. Sign in to open a table and play with friends.</p>
         </header>
 
         <label className={styles.field}>

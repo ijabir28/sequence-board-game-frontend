@@ -41,12 +41,12 @@ export function WatchGamePage() {
       <GameScreen
         key={id}
         adapter={adapter}
-        modeLabel={`Room ${id}`}
+        modeLabel={`Table ${id}`}
         handOrderKey={`sequence:hand-order:${id}`}
         watchLink={watchLink(id)}
         spectatorExtra={
           signedIn ? undefined : (
-            <Button variant="primary" size="sm" onClick={() => navigate('/signup')} tip="Make an account to open your own rooms and play">
+            <Button variant="primary" size="sm" onClick={() => navigate('/signup')} tip="Make an account to open your own tables and play">
               Sign up to play
             </Button>
           )

@@ -74,7 +74,7 @@ function useItems(): Item[] {
       key: 'signout',
       icon: 'exit',
       label: 'Sign out',
-      tip: 'Sign out on this device. Your rooms and games stay saved.',
+      tip: 'Sign out on this device. Your tables and games stay saved.',
       onSelect: () => void signOut().finally(() => navigate('/signin')),
     },
   ];
