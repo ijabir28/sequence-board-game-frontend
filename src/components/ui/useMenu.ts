@@ -3,19 +3,23 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 /**
  * A button that opens a small menu of role="menuitem" entries: opening focuses the first entry, the arrow keys,
  * Home and End move between them, Escape closes and returns focus to the button, and a press outside closes it.
+ * As a 'listbox' (a dropdown list to pick from, see Select) the entries are role="option" and opening focuses the
+ * chosen one.
  */
-export function useMenu() {
+export function useMenu(kind: 'menu' | 'listbox' = 'menu') {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const menuId = useId();
 
-  const entries = () => Array.from(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+  const entries = () => Array.from(menu.current?.querySelectorAll<HTMLElement>(kind === 'menu' ? '[role="menuitem"]' : '[role="option"]') ?? []);
 
   useEffect(() => {
     if (!open) return;
-    entries()[0]?.focus();
+    const list = entries();
+    // Opening doesn't scroll the page: the menu opens where the player is looking.
+    (list.find((entry) => entry.getAttribute('aria-selected') === 'true') ?? list[0])?.focus({ preventScroll: true });
     const onPointerDown = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as Node)) setOpen(false);
     };
@@ -47,7 +51,7 @@ export function useMenu() {
     rootRef: root,
     triggerProps: {
       ref: trigger,
-      'aria-haspopup': 'menu' as const,
+      'aria-haspopup': kind,
       'aria-expanded': open,
       'aria-controls': open ? menuId : undefined,
       onClick: () => setOpen((was) => !was),
@@ -58,6 +62,6 @@ export function useMenu() {
         }
       },
     },
-    menuProps: { ref: menu, id: menuId, role: 'menu', onKeyDown: onMenuKeyDown },
+    menuProps: { ref: menu, id: menuId, role: kind, onKeyDown: onMenuKeyDown },
   };
 }

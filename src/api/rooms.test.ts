@@ -283,6 +283,13 @@ describe('seat actions', () => {
     expect(calls).toEqual(['GET /room/t/rejoin', 'POST /room/t/rejoin', 'GET /room/t/removed', 'POST /room/t/readmit', 'DELETE /room/t/rejoin/dan']);
   });
 
+  it('says when asking to rejoin took an invitation back to the table', async () => {
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ removed: false, requested: false, declined: false, joined: true }), { status: 200 }));
+    expect(await requestRejoin('t')).toEqual({ removed: false, requested: false, declined: false, joined: true });
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ removed: true, requested: true, declined: false }), { status: 200 }));
+    expect(await requestRejoin('t')).toEqual({ removed: true, requested: true, declined: false, joined: false });
+  });
+
   it('counts a signed-out rejoin check as not removed', async () => {
     vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: 'NOT_SIGNED_IN' }), { status: 401 }));
     expect(await getRejoinStatus('t')).toEqual({ removed: false, requested: false, declined: false });

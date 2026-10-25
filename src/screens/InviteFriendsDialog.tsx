@@ -12,9 +12,11 @@ import { useFriends } from '../friends/FriendsContext';
 import styles from './Forms.module.css';
 import own from './FriendsPage.module.css';
 
-/** "4 min", "1 h 20 min": how long until `at`, rounded up. */
+/** "10 s", "4 min", "1 h 20 min": how long until `at`, rounded up (to the second under a minute). */
 export function waitLabel(at: string, now: number): string {
-  const minutes = Math.max(1, Math.ceil((Date.parse(at) - now) / 60000));
+  const seconds = Math.max(1, Math.ceil((Date.parse(at) - now) / 1000));
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.ceil(seconds / 60);
   const hours = Math.floor(minutes / 60);
   return hours === 0 ? `${minutes} min` : minutes % 60 === 0 ? `${hours} h` : `${hours} h ${minutes % 60} min`;
 }
@@ -46,9 +48,9 @@ export function InviteFriendsDialog({ open, onClose, room, host }: { open: boole
     // Who is online changes; read the list again each time the dialog opens.
     void refresh();
     loadStatus();
-    // Waits count down while the dialog is open.
+    // Waits count down while the dialog is open; the shortest are seconds long.
     setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [open, refresh, loadStatus]);
 
