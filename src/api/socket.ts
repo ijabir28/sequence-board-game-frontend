@@ -167,6 +167,18 @@ export function onTeamsShuffled(roomId: string, listener: (event: TeamsShuffled)
   };
 }
 
+/** The host sent you away from that table (`removed_from_table` goes only to your sockets). */
+export function onRemovedFromTable(roomId: string, listener: () => void): () => void {
+  const s = getSocket();
+  const handler = (data?: { room_id?: unknown }) => {
+    if (data?.room_id === roomId) listener();
+  };
+  s.on('removed_from_table', handler);
+  return () => {
+    s.off('removed_from_table', handler);
+  };
+}
+
 /**
  * `signed_in_elsewhere {handle}`: that account just signed in on another device, which signed out its other sessions
  * (one device at a time). Every client hears it; the listener checks its own session before acting on it.
