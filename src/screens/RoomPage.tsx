@@ -639,7 +639,7 @@ function RoomView({
                         onPick={(team, seat) => onHost({ kind: 'seat', player, team, seat })}
                       />
                     )}
-                    {player.handle !== you && (
+                    {player.handle !== you ? (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -650,6 +650,11 @@ function RoomView({
                         tip={`Remove ${player.name} from the table. They can't sit down again unless you let them back in.`}
                         tipAlign="end"
                       >
+                        Remove
+                      </Button>
+                    ) : (
+                      // You can't remove yourself; an invisible Remove keeps your seat list in line with everyone else's.
+                      <Button size="sm" variant="ghost" className={own.placeholder} tabIndex={-1} aria-hidden="true">
                         Remove
                       </Button>
                     )}

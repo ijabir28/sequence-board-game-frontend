@@ -170,6 +170,8 @@
 }
 
 .you {
+  display: inline-block;
+  white-space: nowrap;
   margin-left: var(--space-1);
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
@@ -357,14 +359,24 @@
   color: var(--on-surface-muted);
 }
 
-/* The host's seat list on a player's row under Not seated yet. */
-.seatChooser select {
-  width: auto;
-  max-width: 11rem;
+/* The host's seat list on a player's row under Not seated yet: one width on every row, so the lists line up. */
+.seatChooser {
+  width: 10rem;
+}
+
+.seatChooser > button {
   min-height: 36px;
-  padding-top: 0;
-  padding-bottom: 0;
-  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .seatChooser {
+    width: 8rem;
+  }
+}
+
+/* Holds Remove's place on the host's own row, where there is nothing to remove. */
+.placeholder {
+  visibility: hidden;
 }
 
 /* Players at the table without a seat. */
