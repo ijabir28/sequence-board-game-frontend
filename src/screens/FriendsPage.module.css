@@ -168,6 +168,12 @@
     flex-wrap: wrap;
   }
 
+  /* The name and handle give way first (they wrap within their column); the buttons only drop below once they
+     would leave the name less than 8rem. */
+  .who {
+    flex: 1 1 8rem;
+  }
+
   .actions {
     margin-left: auto;
   }

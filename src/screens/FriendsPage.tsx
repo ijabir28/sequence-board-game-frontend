@@ -281,7 +281,7 @@ export function FriendsPage() {
             <Section title="Sent requests" count={outgoing.length}>
               <ul className={own.list}>
                 {outgoing.map((request) => (
-                  <PlayerRow key={request.handle} player={request} detail="Waiting for an answer">
+                  <PlayerRow key={request.handle} player={request} detail="Pending">
                     <Button
                       size="sm"
                       variant="ghost"
