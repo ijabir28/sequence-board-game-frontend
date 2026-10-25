@@ -152,6 +152,8 @@ describe('parseTableCode', () => {
     expect(parseTableCode('  Friday-Night-K3M9 ')).toBe('friday-night-k3m9');
     expect(parseTableCode('731791 746123232')).toBe('731791746123232');
     expect(parseTableCode('http://localhost:5173/table/lucky-otter-ab12/game')).toBe('lucky-otter-ab12');
+    // The table page's copy icon copies the full link; pasted under Join a table it becomes the code.
+    expect(parseTableCode('https://sequence.fifteens.app/table/friday-night-k3m9')).toBe('friday-night-k3m9');
   });
 
   it('forgives spaces, stray hyphens and punctuation', () => {
