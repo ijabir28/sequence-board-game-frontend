@@ -60,6 +60,7 @@
 }
 
 .codeField {
+  position: relative;
   flex: 1 1 12rem;
   min-width: 0;
 }
@@ -67,6 +68,35 @@
 .codeField input {
   font-family: var(--font-display);
   letter-spacing: 0.04em;
+  /* Room for the copy button that sits inside the box. */
+  padding-right: 48px;
+  text-overflow: ellipsis;
+}
+
+/* The copy button inside the code box: a 44px touch target flush with its right edge. */
+.copyIcon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: transparent;
+  color: var(--on-surface-muted);
+  cursor: pointer;
+}
+
+.copyIcon:hover {
+  color: var(--primary);
+}
+
+.copyIcon:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
 }
 
 .teams {

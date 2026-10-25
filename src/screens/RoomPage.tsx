@@ -492,14 +492,18 @@ function RenameTable({ name, saving, onSave }: { name: string; saving: boolean; 
   );
 }
 
+/**
+ * The table's code, with a copy button inside the box. It copies the table's link: pasted under Join a table, the
+ * field reads the code out of it (see parseTableCode); pasted anywhere else, it opens the table.
+ */
 function ShareCode({ id, gameStarted }: { id: string; gameStarted: boolean }) {
-  const [copied, setCopied] = useState<'code' | 'link' | 'watch' | null>(null);
+  const [copied, setCopied] = useState<'link' | 'watch' | null>(null);
   const [failed, setFailed] = useState(false);
   const link = `${window.location.origin}/table/${id}`;
 
-  const copy = async (what: 'code' | 'link' | 'watch') => {
+  const copy = async (what: 'link' | 'watch') => {
     try {
-      if (!(await copyText(what === 'code' ? id : what === 'watch' ? watchLink(id) : link))) throw new Error('copy refused');
+      if (!(await copyText(what === 'watch' ? watchLink(id) : link))) throw new Error('copy refused');
       setCopied(what);
       setFailed(false);
       setTimeout(() => setCopied(null), 2000);
@@ -510,22 +514,17 @@ function ShareCode({ id, gameStarted }: { id: string; gameStarted: boolean }) {
 
   return (
     <div className={own.share}>
-      <label className={own.codeField}>
-        <span className="visually-hidden">Table code</span>
-        <input className={styles.input} value={id} readOnly />
-      </label>
-      <Tooltip text="Copy the code. Friends enter it under Join a table." align="end">
-        <Button size="sm" onClick={() => copy('code')}>
-          <Icon name={copied === 'code' ? 'check' : 'copy'} size={16} />
-          {copied === 'code' ? 'Copied' : 'Copy code'}
-        </Button>
-      </Tooltip>
-      <Tooltip text="Copy a link that opens this table" align="end">
-        <Button size="sm" onClick={() => copy('link')}>
-          <Icon name={copied === 'link' ? 'check' : 'copy'} size={16} />
-          {copied === 'link' ? 'Copied' : 'Copy link'}
-        </Button>
-      </Tooltip>
+      <div className={own.codeField}>
+        <label>
+          <span className="visually-hidden">Table code</span>
+          <input className={styles.input} value={id} readOnly />
+        </label>
+        <Tooltip text="Copy this table's link. Paste it under Join a table, or send it to friends." align="end">
+          <button type="button" className={own.copyIcon} onClick={() => copy('link')} aria-label="Copy table link">
+            <Icon name={copied === 'link' ? 'check' : 'copy'} size={18} />
+          </button>
+        </Tooltip>
+      </div>
       {gameStarted && (
         <Tooltip text="Copy a link anyone can open to watch the game live, without signing in. They never see a hand." align="end">
           <Button size="sm" onClick={() => copy('watch')}>
@@ -535,7 +534,7 @@ function ShareCode({ id, gameStarted }: { id: string; gameStarted: boolean }) {
         </Tooltip>
       )}
       <span className="visually-hidden" aria-live="polite">
-        {copied ? `${copied === 'code' ? 'Code' : copied === 'watch' ? 'Watch link' : 'Link'} copied` : ''}
+        {copied ? `${copied === 'watch' ? 'Watch link' : 'Table link'} copied` : ''}
       </span>
       {failed && <p className={styles.help}>Your browser blocked copying. Read the code out, or type it to your friends.</p>}
     </div>
