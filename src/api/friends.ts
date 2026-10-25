@@ -177,3 +177,31 @@ export async function dismissInvitation(roomId: string): Promise<void> {
 export async function inviteToTable(roomId: string, handle: string): Promise<void> {
   await refusedOr(await send(`/room/${encodeURIComponent(roomId)}/invite`, 'POST', { handle }), "We couldn't send that invitation.");
 }
+
+/** Why a friend can't be invited to a table right now (GET /room/:id/invite-status). */
+export interface InviteStatus {
+  /** Players who turned down an invitation here: when they can be asked again (null: now, or never if `limitReached`). */
+  dismissed: { handle: string; dismissals: number; retryAt: string | null; limitReached: boolean }[];
+  /** Players the host removed from the table, whom only the host can invite back (empty for everyone else). */
+  removed: string[];
+}
+
+export function sanitizeInviteStatus(raw: Raw): InviteStatus {
+  return {
+    dismissed: list(raw.dismissed)
+      .filter((d) => typeof d.handle === 'string')
+      .map((d) => ({
+        handle: d.handle as string,
+        dismissals: count(d.dismissals),
+        retryAt: typeof d.retry_at === 'string' ? d.retry_at : null,
+        limitReached: d.limit_reached === true,
+      })),
+    removed: Array.isArray(raw.removed) ? raw.removed.filter((h): h is string => typeof h === 'string') : [],
+  };
+}
+
+/** GET /room/:id/invite-status: who has to wait before being invited again, and who the host removed. */
+export async function getInviteStatus(roomId: string): Promise<InviteStatus> {
+  const body = await refusedOr<Raw>(await request(`/room/${encodeURIComponent(roomId)}/invite-status`), "We couldn't load who you can invite.");
+  return sanitizeInviteStatus(body ?? {});
+}
