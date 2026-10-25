@@ -4,6 +4,7 @@ import { errorMessage } from '../api/http';
 import { startRoomGame } from '../api/roomGame';
 import {
   declineRejoin,
+  enterRoom,
   getRejoinStatus,
   isFull,
   isSeated,
@@ -101,6 +102,16 @@ export function RoomPage() {
       .catch(() => undefined);
   }, [id, you]);
   useEffect(loadRejoin, [loadRejoin]);
+  // Opening the table puts you at it (and in Your tables) before its game starts, once per visit.
+  const entered = useRef<string | null>(null);
+  const openRoom = state.status === 'ready' ? state.room : null;
+  useEffect(() => {
+    if (you === null || openRoom === null || openRoom.gameStarted || entered.current === `${id}:${you}`) return;
+    entered.current = `${id}:${you}`;
+    void enterRoom(id).then(({ removed }) => {
+      if (removed) loadRejoin();
+    });
+  }, [id, you, openRoom, loadRejoin]);
   // The host sent you away: you stay here, and can ask to come back.
   useEffect(
     () =>

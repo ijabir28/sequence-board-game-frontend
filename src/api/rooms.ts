@@ -234,6 +234,22 @@ export function uninvitePlayer(id: string, handle: string): Promise<Room> {
   return roomAction(id, `invitations/${encodeURIComponent(handle)}`, "We couldn't take back that invitation. Please try again.", undefined, 'DELETE');
 }
 
+/**
+ * POST /room/:id/enter: you opened the table's page. Before the game starts that puts you at the table (unseated, so
+ * the host can seat you) and in Your tables, and answers an invitation to it. Resolves to whether the host removed you;
+ * a failure counts as not removed (the page works without it).
+ */
+export async function enterRoom(id: string): Promise<{ removed: boolean }> {
+  try {
+    const response = await postJson(`/room/${encodeURIComponent(id)}/enter`, {});
+    if (!response.ok) return { removed: false };
+    const body = await readJson<{ removed?: unknown }>(response);
+    return { removed: body?.removed === true };
+  } catch {
+    return { removed: false };
+  }
+}
+
 /** POST /room/:id/readmit (host): let a removed player back to the table, friends or not. */
 export function readmitPlayer(id: string, handle: string): Promise<Room> {
   return roomAction(id, 'readmit', "We couldn't let that player back in. Please try again.", { handle });
@@ -375,7 +391,7 @@ export interface MyRoom {
   teamCount: number;
   playersPerTeam: number;
   seatsTaken: number;
-  /** null when the user created the table but never sat at it. */
+  /** null when the user has no seat at the table (they opened it, or came to it and stood up). */
   yourTeam: TeamIndex | null;
   status: RoomStatus;
   winnerTeam: TeamIndex | null;
@@ -434,7 +450,7 @@ interface RawMyRoomsPage {
   pages?: number;
 }
 
-/** One page of the tables the signed-in user created or sat at, newest first (GET /user/rooms). */
+/** One page of the tables the signed-in user created, sat at or came to, newest first (GET /user/rooms). */
 export async function listMyRooms(page = 1, perPage = 10): Promise<MyRoomsPage> {
   const raw = await readJson<RawMyRoomsPage>(await request(`/user/rooms?page=${page}&per_page=${perPage}`));
   const rooms = (raw?.rooms ?? []).map(sanitizeMyRoom);

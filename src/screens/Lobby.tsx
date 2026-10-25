@@ -49,7 +49,7 @@ export function Lobby() {
             </div>
             <div className={own.secondaryActions}>
               <div className={own.secondaryButtons}>
-                <Button variant="ghost" onClick={() => setDialog('tables')} tip="Tables you opened or sat at, to go back to any game">
+                <Button variant="ghost" onClick={() => setDialog('tables')} tip="Tables you opened or joined, to go back to any of them">
                   <Icon name="log" size={18} />
                   Your tables
                 </Button>
