@@ -179,6 +179,36 @@ export function onRemovedFromTable(roomId: string, listener: () => void): () => 
   };
 }
 
+/** `rejoin_requested {room_id, player}`: a player you removed from your table asks to come back (host only). */
+export function onRejoinRequested(roomId: string, listener: (name: string) => void): () => void {
+  const s = getSocket();
+  const handler = (data?: { room_id?: unknown; player?: { name?: unknown; handle?: unknown } }) => {
+    if (data?.room_id !== roomId) return;
+    listener(typeof data.player?.name === 'string' ? data.player.name : typeof data.player?.handle === 'string' ? data.player.handle : 'A player');
+  };
+  s.on('rejoin_requested', handler);
+  return () => {
+    s.off('rejoin_requested', handler);
+  };
+}
+
+/** The host answered your request to come back to that table: `readmitted_to_table` or `rejoin_declined`. */
+export function onRejoinAnswered(roomId: string, listener: (answer: 'readmitted' | 'declined') => void): () => void {
+  const s = getSocket();
+  const readmitted = (data?: { room_id?: unknown }) => {
+    if (data?.room_id === roomId) listener('readmitted');
+  };
+  const declined = (data?: { room_id?: unknown }) => {
+    if (data?.room_id === roomId) listener('declined');
+  };
+  s.on('readmitted_to_table', readmitted);
+  s.on('rejoin_declined', declined);
+  return () => {
+    s.off('readmitted_to_table', readmitted);
+    s.off('rejoin_declined', declined);
+  };
+}
+
 /**
  * `signed_in_elsewhere {handle}`: that account just signed in on another device, which signed out its other sessions
  * (one device at a time). Every client hears it; the listener checks its own session before acting on it.

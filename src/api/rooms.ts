@@ -234,6 +234,65 @@ export function uninvitePlayer(id: string, handle: string): Promise<Room> {
   return roomAction(id, `invitations/${encodeURIComponent(handle)}`, "We couldn't take back that invitation. Please try again.", undefined, 'DELETE');
 }
 
+/** POST /room/:id/readmit (host): let a removed player back to the table, friends or not. */
+export function readmitPlayer(id: string, handle: string): Promise<Room> {
+  return roomAction(id, 'readmit', "We couldn't let that player back in. Please try again.", { handle });
+}
+
+/** Where you stand with a table's host: removed from it or not, and your request to come back. */
+export interface RejoinStatus {
+  removed: boolean;
+  requested: boolean;
+  declined: boolean;
+}
+
+const NOT_REMOVED: RejoinStatus = { removed: false, requested: false, declined: false };
+
+function sanitizeRejoin(raw: Partial<Record<keyof RejoinStatus, unknown>> | null): RejoinStatus {
+  return raw ? { removed: raw.removed === true, requested: raw.requested === true, declined: raw.declined === true } : NOT_REMOVED;
+}
+
+/** GET /room/:id/rejoin. Signed out (or unreadable) counts as not removed. */
+export async function getRejoinStatus(id: string): Promise<RejoinStatus> {
+  const response = await request(`/room/${encodeURIComponent(id)}/rejoin`);
+  if (!response.ok) return NOT_REMOVED;
+  return sanitizeRejoin(await readJson(response));
+}
+
+/** POST /room/:id/rejoin: a removed player asks the host, once, to let them back. */
+export async function requestRejoin(id: string): Promise<RejoinStatus> {
+  const response = await postJson(`/room/${encodeURIComponent(id)}/rejoin`, {});
+  await refusal(response, "We couldn't send your request. Please try again.");
+  return sanitizeRejoin(await readJson(response));
+}
+
+/** A player the host removed, as the host's list shows them. */
+export interface RemovedPlayer extends Seat {
+  /** They asked to come back, and the host hasn't answered. */
+  asking: boolean;
+  /** The host said no to their request. */
+  declined: boolean;
+}
+
+/** GET /room/:id/removed (host): who the host removed, those asking to come back first. */
+export async function listRemoved(id: string): Promise<RemovedPlayer[]> {
+  const response = await request(`/room/${encodeURIComponent(id)}/removed`);
+  await refusal(response, "We couldn't load who was removed.");
+  const raw = await readJson<{ removed?: (RawPlayer & { rejoin_requested_at?: unknown; rejoin_declined?: unknown })[] }>(response);
+  const players = (raw?.removed ?? []).map((p) => ({
+    ...sanitizePlayer(p),
+    declined: p.rejoin_declined === true,
+    asking: typeof p.rejoin_requested_at === 'string' && p.rejoin_declined !== true,
+  }));
+  return [...players.filter((p) => p.asking), ...players.filter((p) => !p.asking)];
+}
+
+/** DELETE /room/:id/rejoin/:handle (host): say no to a removed player's request to come back. */
+export async function declineRejoin(id: string, handle: string): Promise<void> {
+  const response = await request(`/room/${encodeURIComponent(id)}/rejoin/${encodeURIComponent(handle)}`, { method: 'DELETE' });
+  await refusal(response, "We couldn't answer that request. Please try again.");
+}
+
 /** The code inside a table link ("…/table/lucky-otter-ab12/game"), or null when the text isn't a link. */
 function codeInLink(text: string): string | null {
   const link = /\/table\/([^/?#\s]+)/.exec(text);
