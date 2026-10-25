@@ -1,26 +1,33 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import { startRoomGame } from '../api/roomGame';
 import {
+  declineRejoin,
+  getRejoinStatus,
   isFull,
   isSeated,
   joinRoom,
   kickPlayer,
   leaveSeat,
+  listRemoved,
+  readmitPlayer,
+  requestRejoin,
   sanitizeRoom,
   seatPlayer,
   shuffleSeats,
   uninvitePlayer,
   unseatPlayer,
   updateRoom,
+  type RejoinStatus,
+  type RemovedPlayer,
   type Room,
   type RoomSettings,
   type RoomTeam,
   type Seat,
   watchLink,
 } from '../api/rooms';
-import { onRemovedFromTable, onTeamsShuffled } from '../api/socket';
+import { onRejoinAnswered, onRejoinRequested, onRemovedFromTable, onTeamsShuffled } from '../api/socket';
 import { Dialog } from '../components/ui/Dialog';
 import { useAuth } from '../auth/AuthContext';
 import { copyText } from '../copyText';
@@ -49,7 +56,9 @@ export type HostAction =
   | { kind: 'seat'; player: Seat; team: RoomTeam; seat: number }
   | { kind: 'unseat'; player: Seat }
   | { kind: 'kick'; player: Seat }
-  | { kind: 'uninvite'; player: Seat };
+  | { kind: 'uninvite'; player: Seat }
+  | { kind: 'readmit'; player: Seat }
+  | { kind: 'decline'; player: Seat };
 
 /** The table's messages share one toast, so the latest replaces the one before. */
 const NOTICE_TOAST = 'room-notice';
@@ -82,14 +91,69 @@ export function RoomPage() {
       }),
     [id, you, reload],
   );
-  // The host sent you away: back to the dashboard, saying why.
+  // Whether the host removed you, and your request to come back. Friends or not, you can ask once.
+  const [rejoin, setRejoin] = useState<RejoinStatus>({ removed: false, requested: false, declined: false });
+  const [asking, setAsking] = useState(false);
+  const loadRejoin = useCallback(() => {
+    if (you === null) return;
+    getRejoinStatus(id)
+      .then(setRejoin)
+      .catch(() => undefined);
+  }, [id, you]);
+  useEffect(loadRejoin, [loadRejoin]);
+  // The host sent you away: you stay here, and can ask to come back.
   useEffect(
     () =>
       onRemovedFromTable(id, () => {
-        toast.error('The host removed you from this table. You can sit down there again if they invite you back.', { id: NOTICE_TOAST, durationMs: null });
-        navigate('/lobby');
+        toast.error('The host removed you from this table. You can ask them to let you back in.', { id: NOTICE_TOAST, durationMs: null });
+        loadRejoin();
+        void reload();
       }),
-    [id, navigate],
+    [id, loadRejoin, reload],
+  );
+  useEffect(
+    () =>
+      onRejoinAnswered(id, (answer) => {
+        if (answer === 'readmitted') toast.success('The host let you back in. Pick a team to sit down.', { id: NOTICE_TOAST });
+        else toast.error('The host said no to your request to rejoin this table.', { id: NOTICE_TOAST });
+        loadRejoin();
+        void reload();
+      }),
+    [id, loadRejoin, reload],
+  );
+  const askRejoin = async () => {
+    setAsking(true);
+    clearNotice();
+    try {
+      setRejoin(await requestRejoin(id));
+      showSuccess('Your request was sent. You can sit down once the host lets you back in.');
+    } catch (e) {
+      showError(errorMessage(e));
+      loadRejoin();
+    } finally {
+      setAsking(false);
+    }
+  };
+
+  // The host's list of players they removed, with anyone asking to come back.
+  const [removedPlayers, setRemovedPlayers] = useState<RemovedPlayer[]>([]);
+  const readyRoom = state.status === 'ready' ? state.room : null;
+  const hosting = readyRoom !== null && you !== null && readyRoom.administrator === you && !readyRoom.gameStarted;
+  const loadRemoved = useCallback(() => {
+    if (!hosting) return setRemovedPlayers([]);
+    listRemoved(id)
+      .then(setRemovedPlayers)
+      .catch(() => undefined);
+  }, [id, hosting]);
+  // Every change at the table (a kick, a readmit) comes with a fresh room.
+  useEffect(loadRemoved, [loadRemoved, readyRoom]);
+  useEffect(
+    () =>
+      onRejoinRequested(id, (name) => {
+        toast.success(`${name} asks to rejoin this table. Let them back in from Removed players.`, { id: NOTICE_TOAST, durationMs: null });
+        loadRemoved();
+      }),
+    [id, loadRemoved],
   );
   const [hostBusy, setHostBusy] = useState<string | null>(null);
 
@@ -102,8 +166,11 @@ export function RoomPage() {
       if (action.kind === 'seat') await seatPlayer(id, action.player.handle, action.team, action.seat);
       else if (action.kind === 'unseat') await unseatPlayer(id, action.player.handle);
       else if (action.kind === 'kick') await kickPlayer(id, action.player.handle);
+      else if (action.kind === 'readmit') await readmitPlayer(id, action.player.handle);
+      else if (action.kind === 'decline') await declineRejoin(id, action.player.handle);
       else await uninvitePlayer(id, action.player.handle);
       await reload();
+      loadRemoved();
       const who = action.player.handle === you ? 'You' : action.player.name;
       showSuccess(
         action.kind === 'seat'
@@ -112,7 +179,11 @@ export function RoomPage() {
             ? `${who} stood up, and can be seated again.`
             : action.kind === 'kick'
               ? `${who} was removed from this table.`
-              : `${who}'s invitation was taken back.`,
+              : action.kind === 'readmit'
+                ? `${who} is back at the table. Seat them, or they can pick a team.`
+                : action.kind === 'decline'
+                  ? `You said no to ${who}'s request to rejoin.`
+                  : `${who}'s invitation was taken back.`,
       );
     } catch (e) {
       showError(errorMessage(e));
@@ -203,7 +274,8 @@ export function RoomPage() {
           action: { label: 'Sign in again', onClick: signInAgain },
         });
       } else if (result === 'removed') {
-        showError('The host removed you from this table, so you can sit down here again only if they invite you back.');
+        showError('The host removed you from this table. Ask them to let you back in.');
+        loadRejoin();
       } else if (result === 'not-found') {
         showError("We couldn't find a table with this code. Go back to the lobby and open a new one.");
       } else {
@@ -266,6 +338,10 @@ export function RoomPage() {
             onSeats={changeSeats}
             hostBusy={hostBusy}
             onHost={runHostAction}
+            rejoin={rejoin}
+            asking={asking}
+            onAskRejoin={askRejoin}
+            removedPlayers={removedPlayers}
             onOpenGame={() => navigate(`/table/${id}/game`)}
           />
         )}
@@ -292,6 +368,12 @@ interface RoomViewProps {
   /** `kind:handle` of the host action in flight, if any. */
   hostBusy: string | null;
   onHost: (action: HostAction) => void;
+  /** Whether the host removed you, and your request to come back. */
+  rejoin: RejoinStatus;
+  asking: boolean;
+  onAskRejoin: () => void;
+  /** The host's list of players they removed. */
+  removedPlayers: RemovedPlayer[];
 }
 
 function RoomView({
@@ -309,6 +391,10 @@ function RoomView({
   onSeats,
   hostBusy,
   onHost,
+  rejoin,
+  asking,
+  onAskRejoin,
+  removedPlayers,
 }: RoomViewProps) {
   const teamCount = room.teams.length;
   const perTeam = Math.max(0, ...room.teams.map((t) => t.seats.length));
@@ -381,6 +467,26 @@ function RoomView({
         </div>
       </section>
       <InviteFriendsDialog open={inviting && canInvite} onClose={() => setInviting(false)} room={room} host={host} />
+
+      {rejoin.removed && !room.gameStarted && (
+        <section className={[styles.card, own.around].join(' ')} aria-labelledby="removed-notice" role="status">
+          <h2 id="removed-notice">You were removed from this table</h2>
+          <p className={styles.help}>
+            {rejoin.declined
+              ? `${hostName ?? 'The host'} said no to your request to rejoin. They can still let you back in.`
+              : rejoin.requested
+                ? `You asked to rejoin. You can sit down once ${hostName ?? 'the host'} lets you back in.`
+                : `${hostName ?? 'The host'} removed you, so you can't sit down here. You can ask them to let you back in, once.`}
+          </p>
+          {!rejoin.requested && !rejoin.declined && (
+            <div>
+              <Button variant="primary" busy={asking} disabled={asking} onClick={onAskRejoin} tip={`Ask ${hostName ?? 'the host'} to let you back to this table`}>
+                Ask to rejoin
+              </Button>
+            </div>
+          )}
+        </section>
+      )}
 
       {host && !room.gameStarted && taken >= 2 && (
         <div className={own.teamTools}>
@@ -476,14 +582,16 @@ function RoomView({
               </ol>
               <Button
                 variant={teamFull || seated ? 'secondary' : 'primary'}
-                disabled={teamFull || seated || room.gameStarted || joining !== null}
+                disabled={teamFull || seated || room.gameStarted || rejoin.removed || joining !== null}
                 busy={joining === team.handle}
                 onClick={() => onJoin(team)}
                 aria-label={teamFull ? `Team ${name} is full` : seated ? `Join Team ${name} (you already have a seat)` : `Join Team ${name}`}
                 tip={
                   room.gameStarted
                     ? 'The game has started, so seats are fixed'
-                    : teamFull
+                    : rejoin.removed
+                      ? 'The host removed you from this table'
+                      : teamFull
                       ? `Every seat on Team ${name} is taken`
                       : seated
                         ? 'You already have a seat. Stand up first to change teams.'
@@ -548,6 +656,48 @@ function RoomView({
           {editable && <p className={styles.help}>Seat any of them from an open seat's list.</p>}
         </section>
       )}
+      {editable && removedPlayers.length > 0 && (
+        <section className={[styles.card, own.around].join(' ')} aria-labelledby="removed-players">
+          <h2 id="removed-players">Removed players</h2>
+          <ul className={own.aroundList}>
+            {removedPlayers.map((player) => (
+              <li key={player.handle} className={own.seat}>
+                <span>
+                  {player.name}
+                  {player.asking && <span className={own.tag}>Asks to rejoin</span>}
+                  {player.declined && <span className={own.tag}>You said no</span>}
+                </span>
+                <span className={own.hostTools}>
+                  {player.asking && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      busy={hostBusy === `decline:${player.handle}`}
+                      disabled={hostBusy !== null}
+                      onClick={() => onHost({ kind: 'decline', player })}
+                      tip={`Say no. ${player.name} can't ask again, but you can still let them back in.`}
+                      tipAlign="end"
+                    >
+                      Decline
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant={player.asking ? 'primary' : 'ghost'}
+                    busy={hostBusy === `readmit:${player.handle}`}
+                    disabled={hostBusy !== null}
+                    onClick={() => onHost({ kind: 'readmit', player })}
+                    tip={`Let ${player.name} back to the table. They don't need to be your friend.`}
+                    tipAlign="end"
+                  >
+                    Let back in
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <Dialog
         open={removing !== null}
         title={`Remove ${removing?.name ?? 'player'}?`}
@@ -571,7 +721,7 @@ function RoomView({
         }
       >
         <p className={styles.help}>
-          {removing?.name} loses their seat and can't sit down at this table again, unless you invite them back.
+          {removing?.name} loses their seat and can't sit down at this table again unless you let them back in. They can ask you to, once.
         </p>
       </Dialog>
       {seated && (
