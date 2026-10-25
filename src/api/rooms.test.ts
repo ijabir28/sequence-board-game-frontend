@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { declineRejoin, getRejoinStatus, listRemoved, readmitPlayer, requestRejoin, createRoom, formatTableCode, isSeated, kickPlayer, leaveSeat, seatPlayer, shuffleSeats, uninvitePlayer, unseatPlayer, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
+import { enterRoom, declineRejoin, getRejoinStatus, listRemoved, readmitPlayer, requestRejoin, createRoom, formatTableCode, isSeated, kickPlayer, leaveSeat, seatPlayer, shuffleSeats, uninvitePlayer, unseatPlayer, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
 
 describe('sanitizeRoom', () => {
   const raw = {
@@ -286,5 +286,21 @@ describe('seat actions', () => {
   it('counts a signed-out rejoin check as not removed', async () => {
     vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: 'NOT_SIGNED_IN' }), { status: 401 }));
     expect(await getRejoinStatus('t')).toEqual({ removed: false, requested: false, declined: false });
+  });
+
+  it('enters a table, and copes when it can\'t', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      calls.push(`${init.method} ${url}`);
+      return new Response(JSON.stringify({ member: false, removed: true }), { status: 200 });
+    });
+    expect(await enterRoom('t')).toEqual({ removed: true });
+    expect(calls).toEqual(['POST /room/t/enter']);
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: 'NOT_SIGNED_IN' }), { status: 401 }));
+    expect(await enterRoom('t')).toEqual({ removed: false });
+    vi.stubGlobal('fetch', async () => {
+      throw new TypeError('offline');
+    });
+    expect(await enterRoom('t')).toEqual({ removed: false });
   });
 });
