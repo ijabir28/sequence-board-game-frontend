@@ -432,25 +432,26 @@ function RoomView({
   // Anyone at the table (or its host) can ask friends to its open seats, until the game starts.
   const canInvite = !room.gameStarted && !full && (seated || host);
   const [inviting, setInviting] = useState(false);
-  // The host can seat anyone at the table in an open seat: whoever is standing or invited, a player seated elsewhere
-  // (who moves), or themself.
-  const seatedPlayers = room.teams.flatMap((t) => t.seats.filter((s): s is Seat => s !== null));
-  const candidates: { label: string; players: Seat[] }[] = editable
-    ? [
-        { label: 'Standing', players: room.standing },
-        { label: 'Invited', players: room.invited },
-        { label: 'Seated (moves them)', players: seatedPlayers },
-        {
-          label: 'You',
-          players:
-            you !== null && !seated && !room.standing.some((p) => p.handle === you) ? [{ handle: you, name: room.administratorName ?? 'You' }] : [],
-        },
-      ].filter((group) => group.players.length > 0)
-    : [];
-  const [removing, setRemoving] = useState<Seat | null>(null);
   // Not seated yet: whoever came to the table (by invitation, code or link) and has no seat. Invitations nobody has
   // answered are listed apart, since those players haven't come.
   const notSeated = room.standing.filter((player) => !isSeated(room, player.handle));
+  // The host can seat anyone who came to the table in an open seat, move a seated player, or sit down themself.
+  const seatedPlayers = room.teams.flatMap((t) => t.seats.filter((s): s is Seat => s !== null));
+  const candidates: { label: string; players: Seat[] }[] = editable
+    ? [
+        { label: 'Not seated yet', players: notSeated },
+        { label: 'Seated (moves them)', players: seatedPlayers },
+        {
+          label: 'You',
+          players: you !== null && !seated && !notSeated.some((p) => p.handle === you) ? [{ handle: you, name: room.administratorName ?? 'You' }] : [],
+        },
+      ].filter((group) => group.players.length > 0)
+    : [];
+  // Every open seat, for seating a player from their row under Not seated yet.
+  const openSeats = room.teams.flatMap((team) =>
+    team.seats.flatMap((s, i) => (s === null ? [{ team, seat: i, label: `Team ${TEAM_STYLES[team.index]?.name ?? team.handle}, seat ${i + 1}` }] : [])),
+  );
+  const [removing, setRemoving] = useState<Seat | null>(null);
   const pendingInvites = room.invited.filter((player) => !isSeated(room, player.handle) && !notSeated.some((p) => p.handle === player.handle));
 
   return (
@@ -629,24 +630,36 @@ function RoomView({
                   {player.name}
                   {player.handle === you && <span className={own.you}>You</span>}
                 </span>
-                {editable && player.handle !== you && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={hostBusy !== null}
-                    onClick={() => setRemoving(player)}
-                    aria-label={`Remove ${player.name} from the table`}
-                    tip={`Remove ${player.name} from the table`}
-                    tipAlign="end"
-                  >
-                    <Icon name="close" size={16} />
-                  </Button>
+                {editable && (
+                  <span className={own.hostTools}>
+                    {openSeats.length > 0 && (
+                      <SeatChooser
+                        player={player}
+                        seats={openSeats}
+                        disabled={hostBusy !== null}
+                        onPick={(team, seat) => onHost({ kind: 'seat', player, team, seat })}
+                      />
+                    )}
+                    {player.handle !== you && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={hostBusy !== null}
+                        onClick={() => setRemoving(player)}
+                        aria-label={`Remove ${player.name} from the table`}
+                        tip={`Remove ${player.name} from the table`}
+                        tipAlign="end"
+                      >
+                        <Icon name="close" size={16} />
+                      </Button>
+                    )}
+                  </span>
                 )}
               </li>
             ))}
           </ul>
           <p className={styles.help}>
-            {editable ? 'They came to the table by invitation, code or link. Seat any of them from an open seat.' : 'They came to the table and are waiting for a seat.'}
+            {editable ? 'They came to the table by invitation, code or link. Pick a seat for each, or seat them from an open seat.' : 'They came to the table and are waiting for a seat.'}
           </p>
         </section>
       )}
@@ -852,6 +865,41 @@ function SeatPicker({ teamName, groups, disabled, onPick }: { teamName: string; 
               </option>
             ))}
           </optgroup>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** The host's list on a player's row under Not seated yet: picking an open seat seats them there. */
+function SeatChooser({
+  player,
+  seats,
+  disabled,
+  onPick,
+}: {
+  player: Seat;
+  seats: { team: RoomTeam; seat: number; label: string }[];
+  disabled: boolean;
+  onPick: (team: RoomTeam, seat: number) => void;
+}) {
+  return (
+    <label className={own.seatChooser}>
+      <select
+        className={styles.input}
+        aria-label={`Choose a seat for ${player.name}`}
+        value=""
+        disabled={disabled}
+        onChange={(event) => {
+          const picked = seats[Number(event.target.value)];
+          if (picked) onPick(picked.team, picked.seat);
+        }}
+      >
+        <option value="">Seat…</option>
+        {seats.map((seat, i) => (
+          <option key={`${seat.team.handle}-${seat.seat}`} value={i}>
+            {seat.label}
+          </option>
         ))}
       </select>
     </label>
