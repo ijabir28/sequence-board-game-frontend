@@ -231,7 +231,10 @@ export function RoomPage() {
         {state.status === 'not-found' && (
           <div className={[styles.card, own.state].join(' ')}>
             <h1>Table not found</h1>
-            <p>There is no table with code {id}. Check that the code is typed correctly.</p>
+            <p>
+              There is no table with code {id}. Check that the code is typed correctly. Tables whose game never started are cleared
+              after a day with nobody sitting down.
+            </p>
             <Link to="/lobby" className={own.linkButton} {...tipProps('Go back to the dashboard to try another code')}>
               Back to the lobby
             </Link>
