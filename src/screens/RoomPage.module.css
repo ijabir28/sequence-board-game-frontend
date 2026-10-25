@@ -331,3 +331,53 @@
     display: none;
   }
 }
+
+/* The host's buttons on another player's seat. */
+.hostTools {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+}
+
+/* The host's list on an open seat fills the dashed seat. */
+.seatPicker {
+  flex: 1;
+  min-width: 0;
+  margin: 0 calc(-1 * var(--space-3));
+}
+
+.seatPicker select {
+  min-height: 42px;
+  border: 0;
+  background: transparent;
+  color: var(--on-surface-muted);
+  cursor: pointer;
+}
+
+/* Players at the table without a seat. */
+.around {
+  gap: var(--space-2);
+}
+
+.around h2 {
+  font-size: var(--text-lg);
+}
+
+.aroundList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-highest);
+  border: 1px solid var(--outline-strong);
+  color: var(--on-surface-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}

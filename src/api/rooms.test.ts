@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRoom, formatTableCode, isSeated, leaveSeat, shuffleSeats, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
+import { createRoom, formatTableCode, isSeated, kickPlayer, leaveSeat, seatPlayer, shuffleSeats, uninvitePlayer, unseatPlayer, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
 
 describe('sanitizeRoom', () => {
   const raw = {
@@ -221,6 +221,29 @@ describe('seat actions', () => {
     expect((await leaveSeat('t')).teams[0].seats).toEqual([null]);
     await shuffleSeats('t');
     expect(calls).toEqual(['POST /room/t/leave', 'POST /room/t/shuffle']);
+  });
+
+  it("sends the host's seating to the server, and reads who is standing or invited", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      calls.push(`${init.method} ${url} ${init.body ?? ''}`.trim());
+      return new Response(
+        JSON.stringify({ teams: [{ handle: 'TEAM_1', players: [null] }], standing: [{ handle: 'ann', name: 'Ann' }], invited: [{ handle: 'ben', name: 'Ben', invited_by: 'host' }] }),
+        { status: 200 },
+      );
+    });
+    const room = await seatPlayer('t', 'ann', { handle: 'TEAM_2', index: 1, seats: [null] }, 0);
+    expect(room.standing).toEqual([{ handle: 'ann', name: 'Ann' }]);
+    expect(room.invited).toEqual([{ handle: 'ben', name: 'Ben' }]);
+    await unseatPlayer('t', 'ann');
+    await kickPlayer('t', 'ann');
+    await uninvitePlayer('t', 'b en');
+    expect(calls).toEqual([
+      'POST /room/t/seat {"handle":"ann","team_handle":"TEAM_2","seat":0}',
+      'POST /room/t/unseat {"handle":"ann"}',
+      'POST /room/t/kick {"handle":"ann"}',
+      'DELETE /room/t/invitations/b%20en',
+    ]);
   });
 
   it("passes the server's reason through", async () => {

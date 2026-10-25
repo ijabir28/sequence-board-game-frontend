@@ -106,15 +106,23 @@ export interface Room {
   administrator: string | null;
   administratorName: string | null;
   teams: RoomTeam[];
+  /** At the table without a seat: they stood up, or the host stood them up. */
+  standing: Seat[];
+  /** Invited by a friend at the table, and not yet sat down. */
+  invited: Seat[];
   gameStarted: boolean;
   settings: RoomSettings;
 }
+
+type RawPlayer = { handle?: string; name?: string; [key: string]: unknown };
 
 interface RawRoom {
   name?: string;
   administrator?: string;
   administrator_name?: string;
-  teams?: { handle: string; players: ({ handle?: string; name?: string; [key: string]: unknown } | null)[] }[];
+  teams?: { handle: string; players: (RawPlayer | null)[] }[];
+  standing?: RawPlayer[];
+  invited?: RawPlayer[];
   game_started?: boolean;
   settings?: RawRoomSettings;
 }
@@ -131,10 +139,17 @@ export function sanitizeRoom(id: string, raw: RawRoom): Room {
     teams: (raw.teams ?? []).map((team, i) => ({
       handle: team.handle,
       index: i as TeamIndex,
-      seats: (team.players ?? []).map((p) => (p ? { handle: String(p.handle ?? ''), name: String(p.name ?? 'Unknown player') } : null)),
+      seats: (team.players ?? []).map((p) => (p ? sanitizePlayer(p) : null)),
     })),
+    // Older backends send neither list.
+    standing: (raw.standing ?? []).map(sanitizePlayer),
+    invited: (raw.invited ?? []).map(sanitizePlayer),
     gameStarted: raw.game_started === true,
   };
+}
+
+function sanitizePlayer(p: RawPlayer): Seat {
+  return { handle: String(p.handle ?? ''), name: String(p.name ?? 'Unknown player') };
 }
 
 /** Turns a 4xx JSON {error, message} into an ApiError with that message. */
@@ -179,9 +194,10 @@ export async function updateRoom(id: string, changes: { name?: string; settings?
   return sanitizeRoom(id, raw);
 }
 
-/** POST to a room action that answers with the room (leave, shuffle); refusals carry the server's message. */
-async function roomAction(id: string, action: 'leave' | 'shuffle', fallback: string): Promise<Room> {
-  const response = await postJson(`/room/${encodeURIComponent(id)}/${action}`, {});
+/** A room action that answers with the room (leave, shuffle, the host's seating); refusals carry the server's message. */
+async function roomAction(id: string, action: string, fallback: string, body: unknown = {}, method: 'POST' | 'DELETE' = 'POST'): Promise<Room> {
+  const path = `/room/${encodeURIComponent(id)}/${action}`;
+  const response = method === 'POST' ? await postJson(path, body) : await request(path, { method });
   await refusal(response, fallback);
   const raw = await readJson<RawRoom>(response);
   if (!raw) throw new ApiError('unexpected', "We couldn't load the table. Please refresh the page.");
@@ -196,6 +212,26 @@ export function leaveSeat(id: string): Promise<Room> {
 /** POST /room/:id/shuffle: the host deals the seated players out to the teams at random. */
 export function shuffleSeats(id: string): Promise<Room> {
   return roomAction(id, 'shuffle', "We couldn't shuffle the teams. Please try again.");
+}
+
+/** POST /room/:id/seat (host): put a player at the table in that seat (0-based within the team). */
+export function seatPlayer(id: string, handle: string, team: RoomTeam, seat: number): Promise<Room> {
+  return roomAction(id, 'seat', "We couldn't seat that player. Please try again.", { handle, team_handle: team.handle, seat });
+}
+
+/** POST /room/:id/unseat (host): stand a player up; they stay at the table. */
+export function unseatPlayer(id: string, handle: string): Promise<Room> {
+  return roomAction(id, 'unseat', "We couldn't stand that player up. Please try again.", { handle });
+}
+
+/** POST /room/:id/kick (host): send a player away from the table, until the host invites them back. */
+export function kickPlayer(id: string, handle: string): Promise<Room> {
+  return roomAction(id, 'kick', "We couldn't remove that player. Please try again.", { handle });
+}
+
+/** DELETE /room/:id/invitations/:handle (host): take back a player's invitation. */
+export function uninvitePlayer(id: string, handle: string): Promise<Room> {
+  return roomAction(id, `invitations/${encodeURIComponent(handle)}`, "We couldn't take back that invitation. Please try again.", undefined, 'DELETE');
 }
 
 /** The code inside a table link ("…/table/lucky-otter-ab12/game"), or null when the text isn't a link. */
@@ -247,7 +283,7 @@ export async function getRoom(id: string): Promise<Room | null> {
   return raw ? sanitizeRoom(id, raw) : null;
 }
 
-export type JoinResult = 'success' | 'seat-taken' | 'already-seated' | 'signed-out' | 'game-started' | 'not-found';
+export type JoinResult = 'success' | 'seat-taken' | 'already-seated' | 'signed-out' | 'game-started' | 'removed' | 'not-found';
 
 /** POST /room/:id/join is always HTTP 200; the outcome is in `message`. */
 export async function joinRoom(id: string, teamHandle: string): Promise<JoinResult> {
@@ -257,6 +293,7 @@ export async function joinRoom(id: string, teamHandle: string): Promise<JoinResu
   if (body?.message === 'ALREADY_SEATED') return 'already-seated';
   if (body?.message === 'NOT_SIGNED_IN') return 'signed-out';
   if (body?.message === 'GAME_ALREADY_STARTED') return 'game-started';
+  if (body?.message === 'REMOVED_BY_HOST') return 'removed';
   return 'not-found';
 }
 
