@@ -137,6 +137,16 @@
   font-weight: 600;
 }
 
+.mutedTag {
+  display: inline-flex;
+  align-items: center;
+  color: var(--on-surface-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: right;
+}
+
 .linkButton {
   display: inline-flex;
   align-items: center;

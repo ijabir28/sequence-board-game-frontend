@@ -1,32 +1,62 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { friendStatus, inviteToTable } from '../api/friends';
+import { friendStatus, getInviteStatus, inviteToTable, type InviteStatus } from '../api/friends';
 import { errorMessage } from '../api/http';
 import { isSeated, type Room } from '../api/rooms';
 import { Avatar } from '../components/Avatar';
 import { Button } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
 import { Icon } from '../components/ui/Icon';
+import { tipProps } from '../components/ui/TooltipLayer';
 import { useFriends } from '../friends/FriendsContext';
 import styles from './Forms.module.css';
 import own from './FriendsPage.module.css';
 
+/** "4 min", "1 h 20 min": how long until `at`, rounded up. */
+export function waitLabel(at: string, now: number): string {
+  const minutes = Math.max(1, Math.ceil((Date.parse(at) - now) / 60000));
+  const hours = Math.floor(minutes / 60);
+  return hours === 0 ? `${minutes} min` : minutes % 60 === 0 ? `${hours} h` : `${hours} h ${minutes % 60} min`;
+}
+
 /**
  * Asks friends to this table: each invited friend gets a message with a link to it, and sees it under Table
- * invitations on their friends page until they sit down or dismiss it. Online friends first.
+ * invitations on their friends page until they sit down or dismiss it. Online friends first. A friend who dismissed
+ * an invitation here can be asked again only after a wait that grows each time, and not at all after five re-invites;
+ * one the host removed can be invited back by the host.
  */
-export function InviteFriendsDialog({ open, onClose, room }: { open: boolean; onClose: () => void; room: Room }) {
+export function InviteFriendsDialog({ open, onClose, room, host }: { open: boolean; onClose: () => void; room: Room; host: boolean }) {
   const { overview, refresh } = useFriends();
+  // Sent from here, until the room (which lists who is invited) catches up.
   const [invited, setInvited] = useState<Set<string>>(new Set());
+  const [status, setStatus] = useState<InviteStatus>({ dismissed: [], removed: [] });
+  const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const loadStatus = useCallback(() => {
+    getInviteStatus(room.id)
+      .then(setStatus)
+      .catch(() => setStatus({ dismissed: [], removed: [] }));
+  }, [room.id]);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
     // Who is online changes; read the list again each time the dialog opens.
     void refresh();
-  }, [open, refresh]);
+    loadStatus();
+    // Waits count down while the dialog is open.
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, [open, refresh, loadStatus]);
+
+  // The room says who is invited now: someone who dismissed theirs, or was removed, can be asked again.
+  useEffect(() => {
+    setInvited(new Set());
+    if (open) loadStatus();
+  }, [room.invited, room.standing, open, loadStatus]);
 
   const friends = [...(overview?.friends ?? [])].sort((a, b) => Number(b.online) - Number(a.online));
 
@@ -38,6 +68,7 @@ export function InviteFriendsDialog({ open, onClose, room }: { open: boolean; on
       setInvited((prev) => new Set(prev).add(handle));
     } catch (e) {
       setError(errorMessage(e));
+      loadStatus();
     } finally {
       setBusy(null);
     }
@@ -74,8 +105,11 @@ export function InviteFriendsDialog({ open, onClose, room }: { open: boolean; on
       {friends.length > 0 && (
         <ul className={[own.list, own.inviteList].join(' ')} aria-label="Your friends">
           {friends.map((friend) => {
-            const seated = isSeated(room, friend.handle);
-            const done = invited.has(friend.handle);
+            const atTable = isSeated(room, friend.handle) || room.standing.some((p) => p.handle === friend.handle);
+            const done = invited.has(friend.handle) || room.invited.some((p) => p.handle === friend.handle);
+            const removed = status.removed.includes(friend.handle);
+            const dismissed = status.dismissed.find((d) => d.handle === friend.handle);
+            const waitUntil = dismissed?.retryAt && Date.parse(dismissed.retryAt) > now ? dismissed.retryAt : null;
             return (
               <li key={friend.handle} className={own.row}>
                 <span className={own.avatar}>
@@ -89,13 +123,32 @@ export function InviteFriendsDialog({ open, onClose, room }: { open: boolean; on
                   </span>
                 </span>
                 <span className={own.actions}>
-                  {seated ? (
+                  {atTable ? (
                     <span className={own.tag}>At this table</span>
                   ) : done ? (
                     <span className={own.tag}>
                       <Icon name="check" size={16} />
                       Invited
                     </span>
+                  ) : dismissed?.limitReached ? (
+                    <span className={own.mutedTag} {...tipProps(`${friend.name} turned down every invitation to this table, so it can't be sent again`)}>
+                      Turned down
+                    </span>
+                  ) : waitUntil ? (
+                    <span className={own.mutedTag} {...tipProps(`${friend.name} turned down an invitation to this table. Each time, the wait before asking again grows.`)}>
+                      Ask again in {waitLabel(waitUntil, now)}
+                    </span>
+                  ) : removed && host ? (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      busy={busy === friend.handle}
+                      disabled={busy !== null}
+                      onClick={() => void invite(friend.handle)}
+                      tip={`You removed ${friend.name} from this table. Inviting them back lets them sit down again.`}
+                    >
+                      Invite back
+                    </Button>
                   ) : (
                     <Button
                       size="sm"

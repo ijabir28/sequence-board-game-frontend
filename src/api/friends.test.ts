@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { inviteToTable, sanitizeOverview, sanitizeSearch, searchPlayers, sendFriendRequest } from './friends';
+import { inviteToTable, sanitizeInviteStatus, sanitizeOverview, sanitizeSearch, searchPlayers, sendFriendRequest } from './friends';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -63,5 +63,27 @@ describe('requests', () => {
     await expect(sendFriendRequest('sakib')).rejects.toThrow("You've already asked Sakib.");
     respond(403, { error: 'NOT_FRIENDS', message: 'Add Sakib as a friend first.' });
     await expect(inviteToTable('otter-k3m9', 'sakib')).rejects.toThrow('Add Sakib as a friend first.');
+  });
+});
+
+describe('sanitizeInviteStatus', () => {
+  it('reads who must wait and who was removed', () => {
+    expect(
+      sanitizeInviteStatus({
+        dismissed: [
+          { handle: 'cat', dismissals: 2, retry_at: '2026-10-25T10:15:00.000Z', limit_reached: false },
+          { handle: 'dan', dismissals: 6, retry_at: null, limit_reached: true },
+          { dismissals: 1 },
+        ],
+        removed: ['ben', 3],
+      }),
+    ).toEqual({
+      dismissed: [
+        { handle: 'cat', dismissals: 2, retryAt: '2026-10-25T10:15:00.000Z', limitReached: false },
+        { handle: 'dan', dismissals: 6, retryAt: null, limitReached: true },
+      ],
+      removed: ['ben'],
+    });
+    expect(sanitizeInviteStatus({})).toEqual({ dismissed: [], removed: [] });
   });
 });

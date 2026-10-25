@@ -380,7 +380,7 @@ function RoomView({
           <ShareCode id={room.id} gameStarted={room.gameStarted} onInvite={canInvite ? () => setInviting(true) : undefined} />
         </div>
       </section>
-      <InviteFriendsDialog open={inviting && canInvite} onClose={() => setInviting(false)} room={room} />
+      <InviteFriendsDialog open={inviting && canInvite} onClose={() => setInviting(false)} room={room} host={host} />
 
       {host && !room.gameStarted && taken >= 2 && (
         <div className={own.teamTools}>
