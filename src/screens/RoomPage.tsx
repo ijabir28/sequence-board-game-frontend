@@ -448,6 +448,10 @@ function RoomView({
       ].filter((group) => group.players.length > 0)
     : [];
   const [removing, setRemoving] = useState<Seat | null>(null);
+  // Not seated yet: whoever came to the table (by invitation, code or link) and has no seat. Invitations nobody has
+  // answered are listed apart, since those players haven't come.
+  const notSeated = room.standing.filter((player) => !isSeated(room, player.handle));
+  const pendingInvites = room.invited.filter((player) => !isSeated(room, player.handle) && !notSeated.some((p) => p.handle === player.handle));
 
   return (
     <div className={own.layout}>
@@ -615,16 +619,15 @@ function RoomView({
           );
         })}
       </ul>
-      {!room.gameStarted && (room.standing.length > 0 || room.invited.length > 0) && (
+      {!room.gameStarted && notSeated.length > 0 && (
         <section className={[styles.card, own.around].join(' ')} aria-labelledby="around-table">
           <h2 id="around-table">Not seated yet</h2>
           <ul className={own.aroundList}>
-            {room.standing.map((player) => (
+            {notSeated.map((player) => (
               <li key={`standing-${player.handle}`} className={own.seat}>
                 <span>
                   {player.name}
                   {player.handle === you && <span className={own.you}>You</span>}
-                  <span className={own.tag}>Standing</span>
                 </span>
                 {editable && player.handle !== you && (
                   <Button
@@ -641,12 +644,21 @@ function RoomView({
                 )}
               </li>
             ))}
-            {room.invited.map((player) => (
+          </ul>
+          <p className={styles.help}>
+            {editable ? 'They came to the table by invitation, code or link. Seat any of them from an open seat.' : 'They came to the table and are waiting for a seat.'}
+          </p>
+        </section>
+      )}
+      {!room.gameStarted && pendingInvites.length > 0 && (
+        <section className={[styles.card, own.around].join(' ')} aria-labelledby="invites-sent">
+          <h2 id="invites-sent">Invited, not here yet</h2>
+          <ul className={own.aroundList}>
+            {pendingInvites.map((player) => (
               <li key={`invited-${player.handle}`} className={own.seat}>
                 <span>
                   {player.name}
                   {player.handle === you && <span className={own.you}>You</span>}
-                  <span className={own.tag}>Invited</span>
                 </span>
                 {editable && (
                   <Button
@@ -664,7 +676,7 @@ function RoomView({
               </li>
             ))}
           </ul>
-          {editable && <p className={styles.help}>Seat any of them from an open seat's list.</p>}
+          <p className={styles.help}>They show up under Not seated yet once they open the table.</p>
         </section>
       )}
       {editable && removedPlayers.length > 0 && (
