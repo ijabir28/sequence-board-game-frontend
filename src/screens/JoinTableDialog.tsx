@@ -7,7 +7,7 @@ import { Dialog } from '../components/ui/Dialog';
 import { useToast } from '../components/toast/Toaster';
 import styles from './Forms.module.css';
 
-/** "Join a room": enter the code or link a friend shared, and go to that room. */
+/** "Join a table": enter the code or link a friend shared, and go to that table. */
 export function JoinTableDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const formId = useId();
@@ -59,7 +59,7 @@ export function JoinTableDialog({ open, onClose }: { open: boolean; onClose: () 
     event.preventDefault();
     const id = parseTableCode(code);
     if (!id) {
-      setError('Room codes are lower-case words and numbers joined by hyphens, like friday-night-k3m9. You can also paste a room link.');
+      setError('Table codes are lower-case words and numbers joined by hyphens, like friday-night-k3m9. You can also paste a table link.');
       return;
     }
     if (id !== code) setCode(id);
@@ -67,7 +67,7 @@ export function JoinTableDialog({ open, onClose }: { open: boolean; onClose: () 
     setError(null);
     try {
       const room = await getRoom(id);
-      if (!room) setError(`There is no room with code ${id}. Check the code, or open a new room.`);
+      if (!room) setError(`There is no table with code ${id}. Check the code, or start a new game.`);
       else navigate(`/table/${id}`);
     } catch (e) {
       setError(errorMessage(e));
@@ -79,22 +79,22 @@ export function JoinTableDialog({ open, onClose }: { open: boolean; onClose: () 
   return (
     <Dialog
       open={open}
-      title="Join a room"
+      title="Join a table"
       onClose={onClose}
       actions={
         <>
           <Button onClick={onClose} tip="Close without joining">
             Cancel
           </Button>
-          <Button type="submit" form={formId} variant="primary" busy={joining} tip="Look up the room and take you to it, to pick a seat">
-            Find room
+          <Button type="submit" form={formId} variant="primary" busy={joining} tip="Look up the table and take you to it, to pick a seat">
+            Find table
           </Button>
         </>
       }
     >
       <form id={formId} className={styles.dialogForm} onSubmit={join} noValidate>
         <label className={styles.field}>
-          <span className={styles.label}>Room code or link</span>
+          <span className={styles.label}>Table code or link</span>
           <input
             ref={input}
             className={`${styles.input} ${styles.code}`}
