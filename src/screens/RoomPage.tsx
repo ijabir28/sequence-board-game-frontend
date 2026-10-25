@@ -31,6 +31,7 @@ import {
 import { onRejoinAnswered, onRejoinRequested, onRemovedFromTable, onTeamsShuffled } from '../api/socket';
 import { Dialog } from '../components/ui/Dialog';
 import { useAuth } from '../auth/AuthContext';
+import { useFriends } from '../friends/FriendsContext';
 import { copyText } from '../copyText';
 import { AppHeader } from '../components/AppHeader';
 import { PoweredBy } from '../components/PoweredBy';
@@ -133,12 +134,21 @@ export function RoomPage() {
       }),
     [id, loadRejoin, reload],
   );
+  // The host invited you back since removing you (which lets you in): asking takes that invitation, no answer needed.
+  const { overview } = useFriends();
+  const invitedBack = rejoin.removed && (overview?.invitations ?? []).some((invitation) => invitation.roomId === id);
   const askRejoin = async () => {
     setAsking(true);
     clearNotice();
     try {
-      setRejoin(await requestRejoin(id));
-      showSuccess('Your request was sent. You can sit down once the host lets you back in.');
+      const { joined, ...status } = await requestRejoin(id);
+      setRejoin(status);
+      if (joined) {
+        await reload();
+        showSuccess('You took the invitation and are back at the table. Pick a team to sit down.');
+      } else {
+        showSuccess('Your request was sent. You can sit down once the host lets you back in.');
+      }
     } catch (e) {
       showError(errorMessage(e));
       loadRejoin();
@@ -351,6 +361,7 @@ export function RoomPage() {
             hostBusy={hostBusy}
             onHost={runHostAction}
             rejoin={rejoin}
+            invitedBack={invitedBack}
             asking={asking}
             onAskRejoin={askRejoin}
             removedPlayers={removedPlayers}
@@ -382,6 +393,8 @@ interface RoomViewProps {
   onHost: (action: HostAction) => void;
   /** Whether the host removed you, and your request to come back. */
   rejoin: RejoinStatus;
+  /** The host invited you back since removing you, so asking lets you straight in. */
+  invitedBack: boolean;
   asking: boolean;
   onAskRejoin: () => void;
   /** The host's list of players they removed. */
@@ -404,6 +417,7 @@ function RoomView({
   hostBusy,
   onHost,
   rejoin,
+  invitedBack,
   asking,
   onAskRejoin,
   removedPlayers,
@@ -486,15 +500,23 @@ function RoomView({
         <section className={[styles.card, own.around].join(' ')} aria-labelledby="removed-notice" role="status">
           <h2 id="removed-notice">You were removed from this table</h2>
           <p className={styles.help}>
-            {rejoin.declined
+            {invitedBack
+              ? `${hostName ?? 'The host'} invited you back. Ask to rejoin and you're straight back at the table.`
+              : rejoin.declined
               ? `${hostName ?? 'The host'} said no to your request to rejoin. They can still let you back in.`
               : rejoin.requested
                 ? `You asked to rejoin. You can sit down once ${hostName ?? 'the host'} lets you back in.`
                 : `${hostName ?? 'The host'} removed you, so you can't sit down here. You can ask them to let you back in, once.`}
           </p>
-          {!rejoin.requested && !rejoin.declined && (
+          {(invitedBack || (!rejoin.requested && !rejoin.declined)) && (
             <div>
-              <Button variant="primary" busy={asking} disabled={asking} onClick={onAskRejoin} tip={`Ask ${hostName ?? 'the host'} to let you back to this table`}>
+              <Button
+                variant="primary"
+                busy={asking}
+                disabled={asking}
+                onClick={onAskRejoin}
+                tip={invitedBack ? `Take ${hostName ?? 'the host'}'s invitation and come back to this table` : `Ask ${hostName ?? 'the host'} to let you back to this table`}
+              >
                 Ask to rejoin
               </Button>
             </div>

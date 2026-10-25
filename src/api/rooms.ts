@@ -275,11 +275,15 @@ export async function getRejoinStatus(id: string): Promise<RejoinStatus> {
   return sanitizeRejoin(await readJson(response));
 }
 
-/** POST /room/:id/rejoin: a removed player asks the host, once, to let them back. */
-export async function requestRejoin(id: string): Promise<RejoinStatus> {
+/**
+ * POST /room/:id/rejoin: a removed player asks the host, once, to let them back. If the host has invited them back
+ * since, asking takes that invitation instead: `joined`, and they are at the table again, no longer removed.
+ */
+export async function requestRejoin(id: string): Promise<RejoinStatus & { joined: boolean }> {
   const response = await postJson(`/room/${encodeURIComponent(id)}/rejoin`, {});
   await refusal(response, "We couldn't send your request. Please try again.");
-  return sanitizeRejoin(await readJson(response));
+  const raw = await readJson<Partial<Record<keyof RejoinStatus | 'joined', unknown>>>(response);
+  return { ...sanitizeRejoin(raw), joined: raw?.joined === true };
 }
 
 /** A player the host removed, as the host's list shows them. */
