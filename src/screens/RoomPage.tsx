@@ -285,15 +285,7 @@ function RoomView({
             {hostName && <>Opened by {hostName}. </>}
             {open === 0 ? 'Every seat is taken.' : `${open} open seat${open === 1 ? '' : 's'}.`}
           </p>
-          <ShareCode id={room.id} gameStarted={room.gameStarted} />
-          {canInvite && (
-            <div className={own.invite}>
-              <Button size="sm" variant="primary" onClick={() => setInviting(true)} tip="Send friends a link to one of this table's open seats">
-                <Icon name="users" size={16} />
-                Invite friends
-              </Button>
-            </div>
-          )}
+          <ShareCode id={room.id} gameStarted={room.gameStarted} onInvite={canInvite ? () => setInviting(true) : undefined} />
         </div>
       </section>
       <InviteFriendsDialog open={inviting && canInvite} onClose={() => setInviting(false)} room={room} />
@@ -496,7 +488,7 @@ function RenameTable({ name, saving, onSave }: { name: string; saving: boolean; 
  * The table's code, with a copy button inside the box. It copies the table's link: pasted under Join a table, the
  * field reads the code out of it (see parseTableCode); pasted anywhere else, it opens the table.
  */
-function ShareCode({ id, gameStarted }: { id: string; gameStarted: boolean }) {
+function ShareCode({ id, gameStarted, onInvite }: { id: string; gameStarted: boolean; onInvite?: () => void }) {
   const [copied, setCopied] = useState<'link' | 'watch' | null>(null);
   const [failed, setFailed] = useState(false);
   const link = `${window.location.origin}/table/${id}`;
@@ -525,6 +517,14 @@ function ShareCode({ id, gameStarted }: { id: string; gameStarted: boolean }) {
           </button>
         </Tooltip>
       </div>
+      {onInvite && (
+        <Button size="sm" variant="primary" className={own.inviteButton} onClick={onInvite} aria-label="Invite friends" tip="Send friends a link to one of this table's open seats" tipAlign="end">
+          <Icon name="users" size={16} />
+          <span>
+            Invite<span className={own.inviteWide}> friends</span>
+          </span>
+        </Button>
+      )}
       {gameStarted && (
         <Tooltip text="Copy a link anyone can open to watch the game live, without signing in. They never see a hand." align="end">
           <Button size="sm" onClick={() => copy('watch')}>

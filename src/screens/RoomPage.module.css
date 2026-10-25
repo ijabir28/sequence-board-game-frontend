@@ -61,7 +61,7 @@
 
 .codeField {
   position: relative;
-  flex: 1 1 12rem;
+  flex: 1 1 9rem;
   min-width: 0;
 }
 
@@ -318,7 +318,16 @@
   overflow-wrap: anywhere;
 }
 
-.invite {
-  display: flex;
-  margin-top: var(--space-3);
+/* Invite friends sits on the code box's row, phones included: the box gives up width, not the button. */
+.inviteButton {
+  flex: none;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+/* On phones the button says just Invite, so the code keeps room to be read in full. */
+@media (max-width: 600px) {
+  .inviteWide {
+    display: none;
+  }
 }
