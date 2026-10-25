@@ -347,16 +347,14 @@
 /* The host's list on an open seat fills the dashed seat. */
 .seatPicker {
   flex: 1;
-  min-width: 0;
   margin: 0 calc(-1 * var(--space-3));
 }
 
-.seatPicker select {
+.seatPicker > button {
   min-height: 42px;
   border: 0;
   background: transparent;
   color: var(--on-surface-muted);
-  cursor: pointer;
 }
 
 /* The host's seat list on a player's row under Not seated yet. */
