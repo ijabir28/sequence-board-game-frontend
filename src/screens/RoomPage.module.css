@@ -354,6 +354,16 @@
   cursor: pointer;
 }
 
+/* The host's seat list on a player's row under Not seated yet. */
+.seatChooser select {
+  width: auto;
+  max-width: 11rem;
+  min-height: 36px;
+  padding-top: 0;
+  padding-bottom: 0;
+  cursor: pointer;
+}
+
 /* Players at the table without a seat. */
 .around {
   gap: var(--space-2);
