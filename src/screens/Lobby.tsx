@@ -40,7 +40,7 @@ export function Lobby() {
               </Button>
               <Button onClick={() => setDialog('new')} tip="Open a new table, pick its teams and settings, then share its code">
                 <Icon name="plus" size={18} />
-                New Game
+                New table
               </Button>
               <Button onClick={() => setDialog('join')} tip="Enter the code or link a friend shared to take a seat at their table">
                 <Icon name="users" size={18} />

@@ -11,7 +11,7 @@ import { HAND_SIZE_BY_PLAYER_COUNT, playersPerTeamOptions, sequencesToWin, type 
 import { tipProps } from '../components/ui/TooltipLayer';
 import styles from './Forms.module.css';
 
-/** "Start a new game": the host names a table, picks teams and settings, and opens it. */
+/** "Open a new table": the host names a table, picks teams and settings, and opens it. */
 export function NewGameDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const formId = useId();
@@ -42,7 +42,7 @@ export function NewGameDialog({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <Dialog
       open={open}
-      title="Start a new game"
+      title="Open a new table"
       onClose={onClose}
       size="wide"
       actions={

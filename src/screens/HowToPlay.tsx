@@ -260,7 +260,7 @@ const STEPS: Step[] = [
     body: (
       <ul className={own.list}>
         <li>
-          <strong>New Game</strong> opens a table; share its code or link, and friends take a seat with{' '}
+          <strong>New table</strong> opens a table; share its code or link, and friends take a seat with{' '}
           <strong>Join a table</strong>. The host starts the game.
         </li>
         <li>
