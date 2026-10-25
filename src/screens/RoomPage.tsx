@@ -550,22 +550,23 @@ function RoomView({
                               busy={hostBusy === `unseat:${seat.handle}`}
                               disabled={hostBusy !== null}
                               onClick={() => onHost({ kind: 'unseat', player: seat })}
-                              aria-label={`Stand ${seat.name} up`}
-                              tip={`Stand ${seat.name} up. They stay at the table, and you can seat them again.`}
+                              aria-label={`Unseat ${seat.name}`}
+                              tip={`Take ${seat.name} out of this seat. They stay at the table, and you can seat them again.`}
                               tipAlign="end"
                             >
-                              <Icon name="minus" size={16} />
+                              Unseat
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
                               disabled={hostBusy !== null}
                               onClick={() => setRemoving(seat)}
+                              className={own.removeButton}
                               aria-label={`Remove ${seat.name} from the table`}
-                              tip={`Remove ${seat.name} from the table`}
+                              tip={`Remove ${seat.name} from the table. They lose their seat and can't sit down again unless you let them back in.`}
                               tipAlign="end"
                             >
-                              <Icon name="close" size={16} />
+                              Remove
                             </Button>
                           </span>
                         )}
@@ -646,11 +647,12 @@ function RoomView({
                         variant="ghost"
                         disabled={hostBusy !== null}
                         onClick={() => setRemoving(player)}
+                        className={own.removeButton}
                         aria-label={`Remove ${player.name} from the table`}
-                        tip={`Remove ${player.name} from the table`}
+                        tip={`Remove ${player.name} from the table. They can't sit down again unless you let them back in.`}
                         tipAlign="end"
                       >
-                        <Icon name="close" size={16} />
+                        Remove
                       </Button>
                     )}
                   </span>
@@ -680,10 +682,10 @@ function RoomView({
                     busy={hostBusy === `uninvite:${player.handle}`}
                     disabled={hostBusy !== null}
                     onClick={() => onHost({ kind: 'uninvite', player })}
-                    tip={`Take back ${player.name}'s invitation`}
+                    tip={`Take back ${player.name}'s invitation to this table`}
                     tipAlign="end"
                   >
-                    Uninvite
+                    Cancel invite
                   </Button>
                 )}
               </li>
@@ -736,7 +738,7 @@ function RoomView({
       )}
       <Dialog
         open={removing !== null}
-        title={`Remove ${removing?.name ?? 'player'}?`}
+        title={`Remove ${removing?.name ?? 'player'} from the table?`}
         onClose={() => setRemoving(null)}
         actions={
           <>
@@ -751,7 +753,7 @@ function RoomView({
               }}
               tip="Take their seat away and keep them from sitting down again"
             >
-              Remove
+              Remove from table
             </Button>
           </>
         }

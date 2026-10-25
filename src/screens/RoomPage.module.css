@@ -339,6 +339,11 @@
   gap: var(--space-1);
 }
 
+/* Removing a player is the host's serious action, so it reads in the error colour. */
+.removeButton {
+  color: var(--error);
+}
+
 /* The host's list on an open seat fills the dashed seat. */
 .seatPicker {
   flex: 1;
