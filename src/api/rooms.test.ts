@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRoom, formatTableCode, isSeated, kickPlayer, leaveSeat, seatPlayer, shuffleSeats, uninvitePlayer, unseatPlayer, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
+import { declineRejoin, getRejoinStatus, listRemoved, readmitPlayer, requestRejoin, createRoom, formatTableCode, isSeated, kickPlayer, leaveSeat, seatPlayer, shuffleSeats, uninvitePlayer, unseatPlayer, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
 
 describe('sanitizeRoom', () => {
   const raw = {
@@ -249,5 +249,42 @@ describe('seat actions', () => {
   it("passes the server's reason through", async () => {
     vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: 'NOT_SEATED', message: "You don't have a seat at this table." }), { status: 409 }));
     await expect(leaveSeat('t')).rejects.toMatchObject({ message: "You don't have a seat at this table." });
+  });
+
+  it('asks to rejoin, and lets the host answer', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit = {}) => {
+      calls.push(`${init.method ?? 'GET'} ${url}`);
+      if (url.endsWith('/removed')) {
+        return new Response(
+          JSON.stringify({
+            removed: [
+              { handle: 'ann', name: 'Ann', rejoin_requested_at: null, rejoin_declined: false },
+              { handle: 'dan', name: 'Dan', rejoin_requested_at: '2026-10-25T10:00:00Z', rejoin_declined: false },
+              { handle: 'eve', name: 'Eve', rejoin_requested_at: '2026-10-25T09:00:00Z', rejoin_declined: true },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith('/rejoin/dan')) return new Response(null, { status: 204 });
+      return new Response(JSON.stringify({ removed: true, requested: true, declined: false, teams: [] }), { status: 200 });
+    });
+    expect(await getRejoinStatus('t')).toEqual({ removed: true, requested: true, declined: false });
+    await requestRejoin('t');
+    // Whoever is asking comes first.
+    expect(await listRemoved('t')).toEqual([
+      { handle: 'dan', name: 'Dan', asking: true, declined: false },
+      { handle: 'ann', name: 'Ann', asking: false, declined: false },
+      { handle: 'eve', name: 'Eve', asking: false, declined: true },
+    ]);
+    await readmitPlayer('t', 'dan');
+    await declineRejoin('t', 'dan');
+    expect(calls).toEqual(['GET /room/t/rejoin', 'POST /room/t/rejoin', 'GET /room/t/removed', 'POST /room/t/readmit', 'DELETE /room/t/rejoin/dan']);
+  });
+
+  it('counts a signed-out rejoin check as not removed', async () => {
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: 'NOT_SIGNED_IN' }), { status: 401 }));
+    expect(await getRejoinStatus('t')).toEqual({ removed: false, requested: false, declined: false });
   });
 });
