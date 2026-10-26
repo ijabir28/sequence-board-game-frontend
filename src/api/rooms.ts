@@ -214,6 +214,59 @@ export async function updateRoom(id: string, changes: RoomChanges): Promise<Room
   return sanitizeRoom(id, raw);
 }
 
+/**
+ * What a `room_updated` broadcast means for the page showing table `id`: the room as it is now (the broadcast carries
+ * the same room GET /room/:id answers), that it was deleted, that it is about another table, or `unknown` (an older
+ * backend that sent no room), where the page fetches its own.
+ */
+export function roomUpdate(id: string, data: unknown): Room | 'deleted' | 'other' | 'unknown' {
+  if (typeof data !== 'object' || data === null) return 'unknown';
+  const raw = data as RawRoom & { id?: unknown; deleted?: unknown };
+  if (raw.id === undefined || raw.id === null) return 'unknown';
+  if (String(raw.id) !== id) return 'other';
+  if (raw.deleted === true) return 'deleted';
+  return Array.isArray(raw.teams) ? sanitizeRoom(id, raw) : 'unknown';
+}
+
+/**
+ * The room as the server will seat it at a new size, so the host sees a resize at once. Mirrors resize_seats on the
+ * backend: a player whose seat still exists keeps it; the others move to the first open seat on their own team, then
+ * to the first open seat anywhere (seat 1 of every team, then seat 2, ...), and those left over stand.
+ */
+export function resizeRoom(room: Room, size: { teamCount: number; playersPerTeam: number }): Room {
+  const { teamCount, playersPerTeam } = size;
+  if (room.teams.length === teamCount && room.teams.every((team) => team.seats.length === playersPerTeam)) return room;
+  const teams: RoomTeam[] = Array.from({ length: teamCount }, (_, i) => ({
+    handle: room.teams[i]?.handle ?? `TEAM_${i + 1}`,
+    index: i as TeamIndex,
+    seats: Array<Seat | null>(playersPerTeam).fill(null),
+  }));
+  const displaced: { team: number; player: Seat }[] = [];
+  room.teams.forEach((team, t) =>
+    team.seats.forEach((player, seat) => {
+      if (player === null) return;
+      if (t < teamCount && seat < playersPerTeam) teams[t].seats[seat] = player;
+      else displaced.push({ team: t, player });
+    }),
+  );
+  const standing = [...room.standing];
+  for (const { team, player } of displaced) {
+    let place: { team: number; seat: number } | null = null;
+    if (team < teamCount) {
+      const seat = teams[team].seats.indexOf(null);
+      if (seat >= 0) place = { team, seat };
+    }
+    for (let seat = 0; place === null && seat < playersPerTeam; seat++) {
+      for (let other = 0; place === null && other < teamCount; other++) {
+        if (teams[other].seats[seat] === null) place = { team: other, seat };
+      }
+    }
+    if (place === null) standing.push(player);
+    else teams[place.team].seats[place.seat] = player;
+  }
+  return { ...room, teams, standing };
+}
+
 /** A room action that answers with the room (leave, shuffle, the host's seating); refusals carry the server's message. */
 async function roomAction(id: string, action: string, fallback: string, body: unknown = {}, method: 'POST' | 'DELETE' = 'POST'): Promise<Room> {
   const path = `/room/${encodeURIComponent(id)}/${action}`;

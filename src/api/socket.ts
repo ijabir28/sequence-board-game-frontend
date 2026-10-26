@@ -123,12 +123,12 @@ function emitNow(s: SocketIOClient.Socket, event: string, data: unknown) {
 }
 
 /**
- * `room_updated` is broadcast to every connected client. We pass no payload on: listeners
- * re-fetch their own room.
+ * `room_updated` is broadcast to every connected client, with the room that changed (see roomUpdate): listeners keep
+ * their own table's and ignore the others.
  */
-export function onRoomUpdated(listener: () => void): () => void {
+export function onRoomUpdated(listener: (data: unknown) => void): () => void {
   const s = getSocket();
-  const handler = () => listener();
+  const handler = (data?: unknown) => listener(data);
   s.on('room_updated', handler);
   return () => {
     s.off('room_updated', handler);

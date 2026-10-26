@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { errorMessage } from '../api/http';
-import { getRoom, type Room } from '../api/rooms';
+import { getRoom, roomUpdate, type Room } from '../api/rooms';
 import { onConnectionChange, onRoomUpdated, type ConnectionState } from '../api/socket';
 
 export type RoomState =
@@ -9,7 +9,16 @@ export type RoomState =
   | { status: 'error'; message: string }
   | { status: 'ready'; room: Room };
 
-/** Loads a room and keeps it fresh: every `room_updated` broadcast triggers a re-fetch. */
+// Rooms are small: comparing them saves re-rendering the page when the same room arrives twice (the host's own answer,
+// then the broadcast of it).
+function sameRoom(a: Room, b: Room): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * Loads a room and keeps it fresh from `room_updated` broadcasts, which carry the room: other tables' are ignored, and
+ * only a broadcast without the room (an older backend, or the table deleted) makes it fetch.
+ */
 export function useRoom(id: string) {
   const [state, setState] = useState<RoomState>({ status: 'loading' });
   const [connection, setConnection] = useState<ConnectionState>('connecting');
@@ -30,13 +39,23 @@ export function useRoom(id: string) {
     }
   }, [id]);
 
+  // Shows a room the server just sent (an action's answer, or a broadcast). A fetch already under way read the room
+  // before it, so its answer is dropped.
+  const applyRoom = useCallback((room: Room) => {
+    latest.current += 1;
+    setState((prev) => (prev.status === 'ready' && sameRoom(prev.room, room) ? prev : { status: 'ready', room }));
+  }, []);
+
   useEffect(() => {
     setState({ status: 'loading' });
     void reload();
-    // The broadcast doesn't say which room changed, so debounce bursts and re-fetch ours.
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const offUpdate = onRoomUpdated(() => {
+    const offUpdate = onRoomUpdated((data) => {
+      const update = roomUpdate(id, data);
+      if (update === 'other') return;
       clearTimeout(timer);
+      if (typeof update === 'object') return applyRoom(update);
+      // Debounce bursts of these and fetch ours.
       timer = setTimeout(() => void reload(), 150);
     });
     const offConnection = onConnectionChange((next) => {
@@ -48,7 +67,7 @@ export function useRoom(id: string) {
       offUpdate();
       offConnection();
     };
-  }, [reload]);
+  }, [id, reload, applyRoom]);
 
-  return { state, connection, reload };
+  return { state, connection, reload, applyRoom };
 }
