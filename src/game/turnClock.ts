@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { GameClocks } from './types';
 
 /** "0:07", "12:30", "1:02:03". Negative times (clock jitter) read as 0:00. */
 export function formatElapsed(ms: number): string {
@@ -36,4 +37,22 @@ export function useNow(active: boolean, intervalMs = 1000): number {
     };
   }, [active, intervalMs]);
   return now;
+}
+
+/**
+ * Blitz: the time `team` has left at `now` (ms). Only the current team's clock runs, down to the turn's deadline, and it
+ * is frozen at `turnTimeLeft` while the turn is paused. It never reads more than the team had when the turn began: a
+ * quick match's first turn has a few extra seconds to open the game, which aren't the clock's.
+ */
+export function clockLeft(
+  view: { clocks?: GameClocks | null; turnDeadline: number | null; turnPaused: boolean; turnTimeLeft: number | null },
+  team: number,
+  currentTeam: number | null,
+  now: number,
+): number {
+  const left = view.clocks?.left[team] ?? 0;
+  if (team !== currentTeam) return left;
+  if (view.turnPaused) return Math.min(left, view.turnTimeLeft ?? left);
+  if (view.turnDeadline === null) return left;
+  return Math.max(0, Math.min(left, view.turnDeadline - now));
 }

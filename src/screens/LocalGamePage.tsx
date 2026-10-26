@@ -28,6 +28,7 @@ export function LocalGamePage() {
               exchangesPerTurn: config.settings.exchangesPerTurn,
             },
             turnSeconds: config.settings.turnSeconds,
+            clockSeconds: config.settings.clockSeconds,
             settings: {
               highlights: config.settings.highlights,
               history: config.settings.history,

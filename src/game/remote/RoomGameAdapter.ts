@@ -314,6 +314,10 @@ export function toView(server: RoomGameView, clockSkew = 0): GameView {
     turnDeadline: server.winner === null && server.turn_deadline ? Date.parse(server.turn_deadline) + clockSkew : null,
     turnPaused: server.winner === null && server.turn_paused === true,
     turnTimeLeft: server.winner === null && server.turn_paused === true ? (server.turn_time_left_ms ?? null) : null,
+    clocks:
+      server.winner === null && server.clocks && Array.isArray(server.clocks.left_ms)
+        ? { seconds: server.clocks.seconds, left: server.clocks.left_ms }
+        : null,
     away: server.away ?? [],
     rounds: toRounds(server.rounds, server.host ?? null, server.viewer),
     notice: server.forfeited

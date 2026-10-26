@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { TeamIndex } from '../../engine/setup';
 import { TEAM_STYLES, teamName } from '../../game/teams';
-import { formatElapsed, useNow } from '../../game/turnClock';
-import type { PlayerView } from '../../game/types';
+import { clockLeft, formatElapsed, useNow } from '../../game/turnClock';
+import type { GameClocks, PlayerView } from '../../game/types';
 import { Chip } from '../Chip';
 import { Icon } from '../ui/Icon';
 import { tipProps } from '../ui/TooltipLayer';
@@ -26,6 +26,8 @@ interface TurnPanelProps {
   turnTimeLeft?: number | null;
   /** Ids of the players who aren't at the table. */
   away?: string[];
+  /** Blitz: every team's chess-style clock, shown to everyone. Null with a per-turn timer. */
+  clocks?: GameClocks | null;
   /** Table games are played in rounds: the round being played, shown with the turn. */
   round?: number | null;
   /**
@@ -57,6 +59,7 @@ export function TurnPanel({
   turnPaused = false,
   turnTimeLeft = null,
   away = [],
+  clocks = null,
   round = null,
   collapsible,
 }: TurnPanelProps) {
@@ -69,14 +72,17 @@ export function TurnPanel({
   // The current player left the table: everyone sees that the game waits for them, and nobody's clock runs.
   const paused = winner === null && current !== null && turnPaused;
   const running = winner === null && current !== null && turnStartedAt !== null && ownTurn && !paused;
-  const now = useNow(running, 500);
+  // Blitz clocks are a chess clock on the table: everyone sees every team's, and the current team's runs down.
+  const blitz = winner === null && clocks !== null;
+  const now = useNow(running || (blitz && current !== null && !paused), 500);
+  const clockView = { clocks, turnDeadline, turnPaused: paused, turnTimeLeft };
   const alerting = useTurnAlert(yours, current?.id ?? null, hotSeat);
 
   const team = winner ?? current?.team ?? viewer?.team ?? null;
   const style = team !== null ? TEAM_STYLES[team] : null;
   const elapsed = running ? now - turnStartedAt! : 0;
   const counting = running && turnDeadline !== null;
-  const left = counting ? Math.max(0, turnDeadline! - now) : 0;
+  const left = !counting ? 0 : blitz ? clockLeft(clockView, current!.team, current!.team, now) : Math.max(0, turnDeadline! - now);
   const urgency = !counting ? (elapsed >= SLOW_TURN_MS ? 'warn' : null) : left <= URGENT_MS ? 'urgent' : left <= WARN_MS ? 'warn' : null;
 
   const className = [styles.panel, yours && styles.yours, paused && styles.paused, alerting && styles.alert, yours && urgency === 'urgent' && styles.hurry]
@@ -87,7 +93,7 @@ export function TurnPanel({
     <span
       className={[styles.timer, urgency === 'warn' && styles.slow, urgency === 'urgent' && styles.urgent].filter(Boolean).join(' ')}
       role="timer"
-      aria-label={counting ? 'Time left this turn' : 'Time on this turn'}
+      aria-label={counting ? (blitz ? 'Time left on your clock' : 'Time left this turn') : 'Time on this turn'}
     >
       <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
         <circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -210,7 +216,13 @@ export function TurnPanel({
       {pausedNotice}
       {yours && counting && left <= URGENT_MS && (
         <p className={styles.warning} role="alert">
-          {left > 0 ? 'Hurry: when time runs out, a random card is played for you.' : 'Time is up: a random card is being played for you.'}
+          {blitz
+            ? left > 0
+              ? 'Hurry: once your clock runs out, a random card is played for you on each of your turns.'
+              : 'Your clock is out: a random card is played for you on each of your turns.'
+            : left > 0
+              ? 'Hurry: when time runs out, a random card is played for you.'
+              : 'Time is up: a random card is being played for you.'}
         </p>
       )}
       {players.length > 1 && winner === null && (
@@ -235,6 +247,36 @@ export function TurnPanel({
             );
           })}
         </ol>
+      )}
+      {blitz && (
+        <ul className={styles.clocks} aria-label="Blitz clocks">
+          {clocks.left.map((_, index) => {
+            const clockTeam = index as TeamIndex;
+            const ms = clockLeft(clockView, clockTeam, current?.team ?? null, now);
+            const ticking = current?.team === clockTeam && !paused;
+            return (
+              <li
+                key={clockTeam}
+                className={[styles.clock, ticking && styles.ticking, ticking && ms > 0 && ms <= URGENT_MS && styles.clockUrgent, ms <= 0 && styles.flagged]
+                  .filter(Boolean)
+                  .join(' ')}
+                {...tipProps(
+                  ms <= 0
+                    ? `${teamName(clockTeam)} is out of time: a random card is played for them on each of their turns`
+                    : `${teamName(clockTeam)}'s clock for the round${ticking ? ', running' : ''}`,
+                )}
+              >
+                <span className={styles.playerChip} aria-hidden="true">
+                  <Chip team={clockTeam} />
+                </span>
+                <span className={styles.playerName}>{teamName(clockTeam)}</span>
+                <span className={styles.clockTime} role="timer" aria-label={`${teamName(clockTeam)}'s clock`}>
+                  {ms <= 0 ? 'Out' : formatElapsed(ms + 999)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       )}
       {collapsible?.children}
     </section>

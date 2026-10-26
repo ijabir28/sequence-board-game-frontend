@@ -142,6 +142,15 @@ export interface PlaySettings {
 
 export const DEFAULT_PLAY_SETTINGS: PlaySettings = { mode: 'standard', highlights: true, history: true, deadCards: 'indicator' };
 
+/**
+ * Blitz, a chess-style clock: each team has `seconds` for the whole round. `left` is each team's time (ms) as the current
+ * turn began; the current team's runs down to the view's turnDeadline (see clockLeft()).
+ */
+export interface GameClocks {
+  seconds: number;
+  left: number[];
+}
+
 export interface GameView {
   status: GameStatus;
   /** Set when status is 'error': what happened and what to do next. */
@@ -179,6 +188,8 @@ export interface GameView {
   turnPaused: boolean;
   /** While paused: how long the current player will have when they're back (ms). */
   turnTimeLeft: number | null;
+  /** Blitz: every team's chess-style clock; null (or missing) with a per-turn timer or none. */
+  clocks?: GameClocks | null;
   /** Ids of the players who aren't at the table right now. */
   away: string[];
   /** The table's name, when the game belongs to one. */

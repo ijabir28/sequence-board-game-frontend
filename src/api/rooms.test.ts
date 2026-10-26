@@ -42,6 +42,7 @@ describe('sanitizeRoom', () => {
       highlights: true,
       autoDrawDead: true,
       turnSeconds: 90,
+      clockSeconds: null,
       deadCards: 'indicator',
       exchangesPerTurn: 1,
     });
@@ -50,6 +51,9 @@ describe('sanitizeRoom', () => {
     expect(old.settings).toMatchObject({ history: false, highlights: false, autoDrawDead: false, turnSeconds: 90 });
     const current = sanitizeRoom('x', { ...raw, settings: { dead_cards: 'manual', exchanges_per_turn: null } }).settings;
     expect(current).toMatchObject({ deadCards: 'manual', exchangesPerTurn: null });
+    // Blitz: a chess-style clock for the whole round.
+    expect(sanitizeRoom('x', { ...raw, settings: { clock_seconds: 300 } }).settings.clockSeconds).toBe(300);
+    expect(sanitizeRoom('x', { ...raw, settings: { clock_seconds: null } }).settings.clockSeconds).toBe(null);
     expect(sanitizeRoom('x', { ...raw, settings: { exchanges_per_turn: 4 } }).settings.exchangesPerTurn).toBe(4);
     expect(sanitizeRoom('x', { ...raw, settings: { turn_seconds: 45 } }).settings.turnSeconds).toBe(45);
     // An older backend's retired game mode is dropped.

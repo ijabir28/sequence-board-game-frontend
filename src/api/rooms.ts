@@ -24,6 +24,11 @@ export interface RoomSettings {
   autoDrawDead: boolean;
   /** Seconds each player has for a turn. */
   turnSeconds: number;
+  /**
+   * Blitz, a chess-style clock in place of the turn timer: seconds each team has for the whole round, spent only on its
+   * own turns. Null is off.
+   */
+  clockSeconds: number | null;
   /** 'manual': players spot dead cards and ask to exchange them. 'indicator': dead cards are marked in the hand. */
   deadCards: DeadCardMode;
   /** Dead card exchanges allowed per turn; null is unlimited. */
@@ -44,6 +49,8 @@ export function isValidExchangesPerTurn(count: number): boolean {
 export const TURN_TIMER_PRESETS = [30, 60, 90, 120, 180] as const;
 export const TURN_SECONDS_MIN = 15;
 export const TURN_SECONDS_MAX = 600;
+/** The blitz clock hosts are offered: 5 minutes per team (the backend's BLITZ_CLOCK_SECONDS). */
+export const BLITZ_CLOCK_SECONDS = 300;
 
 /**
  * Highlights and history are off unless the host turns them on; 90 seconds a turn; players find dead cards
@@ -54,6 +61,7 @@ export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   highlights: false,
   autoDrawDead: false,
   turnSeconds: 90,
+  clockSeconds: null,
   deadCards: 'manual',
   exchangesPerTurn: null,
 };
@@ -75,6 +83,7 @@ export interface RawRoomSettings {
   highlights?: boolean;
   auto_draw_dead?: boolean;
   turn_seconds?: number;
+  clock_seconds?: number | null;
   dead_cards?: string;
   exchanges_per_turn?: number | null;
 }
@@ -89,6 +98,7 @@ export function sanitizeSettings(raw: RawRoomSettings | undefined): RoomSettings
     highlights: raw?.highlights ?? DEFAULT_ROOM_SETTINGS.highlights,
     autoDrawDead: raw?.auto_draw_dead ?? DEFAULT_ROOM_SETTINGS.autoDrawDead,
     turnSeconds: typeof raw?.turn_seconds === 'number' ? raw.turn_seconds : DEFAULT_ROOM_SETTINGS.turnSeconds,
+    clockSeconds: typeof raw?.clock_seconds === 'number' ? raw.clock_seconds : null,
     deadCards: raw?.dead_cards === 'manual' ? 'manual' : 'indicator',
     exchangesPerTurn:
       raw?.exchanges_per_turn === null ? null : typeof raw?.exchanges_per_turn === 'number' ? raw.exchanges_per_turn : 1,
@@ -101,6 +111,7 @@ function rawSettings(settings: Partial<RoomSettings>): RawRoomSettings {
     highlights: settings.highlights,
     auto_draw_dead: settings.autoDrawDead,
     turn_seconds: settings.turnSeconds,
+    clock_seconds: settings.clockSeconds,
     dead_cards: settings.deadCards,
     exchanges_per_turn: settings.exchangesPerTurn,
   };

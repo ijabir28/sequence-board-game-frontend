@@ -4,12 +4,17 @@ import { ApiError, UNREADABLE_RESPONSE, readJson, request } from './http';
 // you at a table of that shape. A waiting page must keep asking for its status, or the server drops it from the queue.
 
 export type MatchTeams = 2 | 3;
-export type MatchTimer = 'fast' | 'medium' | 'slow';
+export type MatchTimer = 'fast' | 'medium' | 'slow' | 'blitz';
 
-export const MATCH_TIMERS: { id: MatchTimer; label: string; seconds: number }[] = [
-  { id: 'fast', label: 'Fast', seconds: 15 },
-  { id: 'medium', label: 'Medium', seconds: 45 },
-  { id: 'slow', label: 'Slow', seconds: 90 },
+/**
+ * The timers a quick match offers: `seconds` per turn, or for blitz (`clock`) a chess-style clock of `seconds` for each
+ * player's whole game. `short` is the length as the picker shows it, `tip` what it means.
+ */
+export const MATCH_TIMERS: { id: MatchTimer; label: string; seconds: number; clock: boolean; short: string; tip: string }[] = [
+  { id: 'fast', label: 'Fast', seconds: 15, clock: false, short: '15s', tip: '15 seconds a turn' },
+  { id: 'medium', label: 'Medium', seconds: 45, clock: false, short: '45s', tip: '45 seconds a turn' },
+  { id: 'slow', label: 'Slow', seconds: 90, clock: false, short: '90s', tip: '90 seconds a turn' },
+  { id: 'blitz', label: 'Blitz', seconds: 300, clock: true, short: '5m', tip: '5 minutes for your whole game, like a chess clock' },
 ];
 
 export type QueueStatus =

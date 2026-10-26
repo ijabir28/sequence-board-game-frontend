@@ -326,7 +326,7 @@ Whoever opens a table (the host) picks its options, shown by `src/components/Roo
 | Mode | Standard | Training: on your turn a Hint button suggests a move and says why, and card tips explain what the selected card does. Standard games never show hints or tips |
 | Highlight legal cells | off | Off: picking a card doesn't light up its cells, and wrong cells are explained by the rules |
 | Move history | off | Off: no move log, and the board doesn't ring the last move; the server sends only the latest move |
-| Turn timer | 90 s | 30 s, 1 min, 1 min 30 s, 2 min, 3 min, or a custom number of seconds (15–600) |
+| Turn timer | 90 s | 30 s, 1 min, 1 min 30 s, 2 min, 3 min, a custom number of seconds (15–600), or **Blitz 5 min**: a chess-style clock giving each team 5 minutes for the whole round, spent only on its own turns. Every team's clock shows in the Turn panel for everyone; a team out of time has a random card played for it at once on each of its turns. Quick Match offers the same as its Blitz timer, next to Fast (15 s), Medium (45 s) and Slow (90 s) |
 | Dead cards | Players spot them | Players spot them: nothing marks dead cards; pick a card you think is dead and press **Exchange as dead**, and the rules check it ("That card still has an open cell…" if not). Mark them: dead cards are marked in the hand, as before |
 | Dead card exchanges per turn | Unlimited | 1, Unlimited, or a custom number (1–10) |
 | Auto-draw dead cards | off | Only when dead cards are marked. On: dead cards are swapped automatically when their owner's turn starts (up to the exchange limit) |

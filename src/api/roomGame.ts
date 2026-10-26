@@ -101,6 +101,11 @@ export interface RoomGameView {
   turn_paused?: boolean;
   /** While paused: the time the current player will have left (ms). */
   turn_time_left_ms?: number | null;
+  /**
+   * Blitz: each team's time left in the round (ms) as the current turn began; the current team's runs down to
+   * turn_deadline. Null with a per-turn timer (and missing from older backends).
+   */
+  clocks?: { seconds: number; left_ms: number[] } | null;
   /** Seated players whose game page isn't open. */
   away?: string[];
   /** Seated viewers only: sent on the game socket to say they're at the table. */

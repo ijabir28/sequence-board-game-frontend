@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import {
+  BLITZ_CLOCK_SECONDS,
   EXCHANGES_PER_TURN_MAX,
   EXCHANGES_PER_TURN_MIN,
   isValidExchangesPerTurn,
@@ -13,7 +14,8 @@ import {
 import { tipProps } from './ui/TooltipLayer';
 import styles from './RoomOptions.module.css';
 
-type Flag = Exclude<keyof RoomSettings, 'mode' | 'turnSeconds' | 'deadCards' | 'exchangesPerTurn'>;
+type Flag = Exclude<keyof RoomSettings, 'mode' | 'turnSeconds' | 'clockSeconds' | 'deadCards' | 'exchangesPerTurn'>;
+type Timing = Pick<RoomSettings, 'turnSeconds' | 'clockSeconds'>;
 
 const DEAD_CARD_MODES: { mode: DeadCardMode; label: string; description: string }[] = [
   {
@@ -76,7 +78,7 @@ export function RoomOptions({ value, onChange, disabled }: RoomOptionsProps) {
   const id = useId();
   return (
     <div className={styles.group}>
-      <TurnTimer id={id} value={value.turnSeconds} onChange={onChange && ((turnSeconds) => onChange({ ...value, turnSeconds }))} disabled={disabled} />
+      <TurnTimer id={id} value={value} onChange={onChange && ((timing) => onChange({ ...value, ...timing }))} disabled={disabled} />
       <DeadCards id={id} value={value} onChange={onChange} disabled={disabled} />
       <ul className={styles.options}>
       {OPTIONS.filter(({ key }) => key !== 'autoDrawDead' || value.deadCards === 'indicator').map(({ key, label, on, off }) => (
@@ -233,8 +235,21 @@ function DeadCards({ id, value, onChange, disabled }: { id: string; value: RoomS
   );
 }
 
-/** The turn timer: preset lengths, or Custom with a number of seconds. */
-function TurnTimer({ id, value, onChange, disabled }: { id: string; value: number; onChange?: (seconds: number) => void; disabled?: boolean }) {
+/** What the timer does, for its help text: "Each player has 1 min per turn…", or Blitz's clock. */
+export function describeTiming({ turnSeconds, clockSeconds }: Timing): string {
+  if (clockSeconds !== null) {
+    return `Blitz: each team has ${describeTurnSeconds(clockSeconds)} for the whole round, counting down only on its own turns, like a chess clock. Once it runs out, a random card is played for that team at once on each of its turns.`;
+  }
+  return `Each player has ${describeTurnSeconds(turnSeconds)} per turn. When it runs out, a random card from their hand is played for them.`;
+}
+
+/**
+ * The turn timer: preset lengths, Custom with a number of seconds, or Blitz, a chess-style clock for the whole round in
+ * place of a timer per turn.
+ */
+function TurnTimer({ id, value: timing, onChange, disabled }: { id: string; value: Timing; onChange?: (timing: Timing) => void; disabled?: boolean }) {
+  const value = timing.turnSeconds;
+  const blitz = timing.clockSeconds !== null;
   const isPreset = (TURN_TIMER_PRESETS as readonly number[]).includes(value);
   const [custom, setCustom] = useState(!isPreset);
   const [draft, setDraft] = useState(String(value));
@@ -249,18 +264,18 @@ function TurnTimer({ id, value, onChange, disabled }: { id: string; value: numbe
     return (
       <p className={styles.row}>
         <span className={styles.text}>
-          <span className={styles.label}>Turn timer</span>
-          <span className={styles.description}>
-            Each player has {describeTurnSeconds(value)} per turn; then a random card is played for them.
-          </span>
+          <span className={styles.label}>{blitz ? 'Blitz clock' : 'Turn timer'}</span>
+          <span className={styles.description}>{describeTiming(timing)}</span>
         </span>
-        <span className={[styles.state, styles.stateOn].join(' ')}>{describeTurnSeconds(value)}</span>
+        <span className={[styles.state, styles.stateOn].join(' ')}>
+          {blitz ? `${describeTurnSeconds(timing.clockSeconds!)} each` : describeTurnSeconds(value)}
+        </span>
       </p>
     );
   }
 
   const seconds = Number(draft);
-  const invalid = custom && !isValidTurnSeconds(seconds);
+  const invalid = !blitz && custom && !isValidTurnSeconds(seconds);
   return (
     <fieldset className={styles.timer} disabled={disabled}>
       <legend className={styles.label}>Turn timer</legend>
@@ -270,21 +285,41 @@ function TurnTimer({ id, value, onChange, disabled }: { id: string; value: numbe
             <input
               type="radio"
               name={`${id}-timer`}
-              checked={!custom && value === preset}
+              checked={!blitz && !custom && value === preset}
               onChange={() => {
                 setCustom(false);
-                onChange(preset);
+                onChange({ turnSeconds: preset, clockSeconds: null });
               }}
             />
             <span>{describeTurnSeconds(preset)}</span>
           </label>
         ))}
         <label className={styles.pill} {...tipProps(`Set your own length, from ${describeTurnSeconds(TURN_SECONDS_MIN)} to ${describeTurnSeconds(TURN_SECONDS_MAX)}`, 'top')}>
-          <input type="radio" name={`${id}-timer`} checked={custom} onChange={() => setCustom(true)} />
+          <input
+            type="radio"
+            name={`${id}-timer`}
+            checked={!blitz && custom}
+            onChange={() => {
+              setCustom(true);
+              if (blitz) onChange({ turnSeconds: value, clockSeconds: null });
+            }}
+          />
           <span>Custom</span>
         </label>
+        <label
+          className={styles.pill}
+          {...tipProps(`Blitz: ${describeTurnSeconds(BLITZ_CLOCK_SECONDS)} for each team's whole round, like a chess clock`, 'top')}
+        >
+          <input
+            type="radio"
+            name={`${id}-timer`}
+            checked={blitz}
+            onChange={() => onChange({ turnSeconds: value, clockSeconds: BLITZ_CLOCK_SECONDS })}
+          />
+          <span>Blitz {describeTurnSeconds(BLITZ_CLOCK_SECONDS)}</span>
+        </label>
       </div>
-      {custom && (
+      {!blitz && custom && (
         <label className={styles.custom}>
           <input
             className={styles.seconds}
@@ -299,7 +334,7 @@ function TurnTimer({ id, value, onChange, disabled }: { id: string; value: numbe
             onChange={(e) => {
               setDraft(e.target.value);
               const next = Number(e.target.value);
-              if (isValidTurnSeconds(next)) onChange(next);
+              if (isValidTurnSeconds(next)) onChange({ turnSeconds: next, clockSeconds: null });
             }}
           />
           <span>seconds per turn</span>
@@ -308,7 +343,7 @@ function TurnTimer({ id, value, onChange, disabled }: { id: string; value: numbe
       <span id={`${id}-timer-help`} className={[styles.description, invalid && styles.invalid].filter(Boolean).join(' ')}>
         {invalid
           ? `Enter a whole number of seconds from ${TURN_SECONDS_MIN} to ${TURN_SECONDS_MAX}.`
-          : `Each player has ${describeTurnSeconds(value)} per turn. When it runs out, a random card from their hand is played for them.`}
+          : describeTiming(timing)}
       </span>
     </fieldset>
   );

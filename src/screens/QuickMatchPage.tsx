@@ -190,18 +190,23 @@ export function QuickMatchPage() {
 
           {(state.status === 'choose' || state.status === 'queued') && (
             <fieldset className={styles.fieldset} disabled={queued}>
-              <legend>Turn timer</legend>
+              <legend>Timer</legend>
               <div className={styles.segmented}>
                 {MATCH_TIMERS.map((t) => (
-                  <label key={t.id} className={styles.segment} {...tipProps(`${t.seconds} seconds a turn`, 'top')}>
+                  <label key={t.id} className={styles.segment} {...tipProps(t.tip, 'top')}>
                     <input type="radio" name="timer" checked={timer === t.id} onChange={() => setTimer(t.id)} />
                     <span>
-                      {t.label} <small className={own.seconds}>{t.seconds}s</small>
+                      {t.label} <small className={own.seconds}>{t.short}</small>
                     </span>
                   </label>
                 ))}
               </div>
-              <p className={styles.help}>Every other setting is the standard one. A quick match is a single round.</p>
+              <p className={styles.help}>
+                {timerLabel.clock
+                  ? 'Blitz: you have 5 minutes for the whole game, counting down only on your turns. Once it runs out, a random card is played for you on each turn. '
+                  : ''}
+                Every other setting is the standard one. A quick match is a single round.
+              </p>
             </fieldset>
           )}
 

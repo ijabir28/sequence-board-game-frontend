@@ -17,12 +17,17 @@ import {
 import { suggestMove } from '../../engine/hints';
 import { isLocked } from '../../engine/sequences';
 import { sequencesToWin, type TeamIndex } from '../../engine/setup';
-import { DEFAULT_PLAY_SETTINGS, type ActionResult, type GameAdapter, type GameView, type PlaySettings } from '../types';
+import { DEFAULT_PLAY_SETTINGS, type ActionResult, type GameAdapter, type GameClocks, type GameView, type PlaySettings } from '../types';
 
 export interface LocalGameOptions extends NewGameOptions {
   settings?: Partial<PlaySettings>;
   /** Seconds per turn; when they run out a random card is played for the player. Omit for no timer. */
   turnSeconds?: number;
+  /**
+   * Blitz: seconds each team has for the whole game, spent only on its own turns, in place of `turnSeconds`. Once a
+   * team's clock is out, a random card is played for it at once on each of its turns.
+   */
+  clockSeconds?: number | null;
 }
 
 /** Hot-seat game: the full rules engine running on this device. */
@@ -36,6 +41,7 @@ export class LocalGameAdapter implements GameAdapter {
   private settings: PlaySettings;
   private turnStartedAt = Date.now();
   private turnSeconds: number | null;
+  private clocks: GameClocks | null;
   private timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(options: LocalGameOptions) {
@@ -43,8 +49,10 @@ export class LocalGameAdapter implements GameAdapter {
     this.settings = { ...DEFAULT_PLAY_SETTINGS, ...options.settings };
     this.turnSeconds = options.turnSeconds ?? null;
     this.state = createGame(options);
+    const clockSeconds = options.clockSeconds ?? null;
+    this.clocks = clockSeconds === null ? null : { seconds: clockSeconds, left: Array(this.state.teamCount).fill(clockSeconds * 1000) };
     this.hotSeat = this.state.players.length > 1;
-    this.view = toView(this.state, this.settings, this.turnStartedAt, this.deadline());
+    this.view = toView(this.state, this.settings, this.turnStartedAt, this.deadline(), undefined, this.clocks);
   }
 
   getState(): GameView {
@@ -85,7 +93,9 @@ export class LocalGameAdapter implements GameAdapter {
   }
 
   private deadline(): number | null {
-    return this.turnSeconds === null || this.state.winner !== null ? null : this.turnStartedAt + this.turnSeconds * 1000;
+    if (this.state.winner !== null) return null;
+    if (this.clocks) return this.turnStartedAt + this.clocks.left[this.state.players[this.state.current].team];
+    return this.turnSeconds === null ? null : this.turnStartedAt + this.turnSeconds * 1000;
   }
 
   /** Plays a random card for the current player when their time runs out. */
@@ -101,9 +111,17 @@ export class LocalGameAdapter implements GameAdapter {
   private update(state: GameState) {
     const before = this.state;
     this.state = state;
-    // An exchange keeps the turn, so it keeps the clock running.
-    if (this.state.turn !== before.turn || this.state.current !== before.current) this.turnStartedAt = Date.now();
-    this.view = toView(this.state, this.settings, this.turnStartedAt, this.deadline());
+    // An exchange keeps the turn, so it keeps the clock running. Under blitz the turn that ended is charged to its team.
+    if (this.state.turn !== before.turn || this.state.current !== before.current) {
+      const now = Date.now();
+      if (this.clocks) {
+        const team = before.players[before.current].team;
+        const used = now - this.turnStartedAt;
+        this.clocks = { ...this.clocks, left: this.clocks.left.map((left, i) => (i === team ? Math.max(0, left - used) : left)) };
+      }
+      this.turnStartedAt = now;
+    }
+    this.view = toView(this.state, this.settings, this.turnStartedAt, this.deadline(), undefined, this.clocks);
     this.schedule();
     this.listeners.forEach((listener) => listener());
   }
@@ -131,6 +149,7 @@ export function toView(
   turnStartedAt: number,
   turnDeadline: number | null,
   viewerIndex: number = state.current,
+  clocks: GameClocks | null = null,
 ): GameView {
   const player = state.players[state.current];
   const viewing = viewerIndex === state.current;
@@ -168,6 +187,7 @@ export function toView(
     // Everyone shares this device, so nobody can be away.
     turnPaused: false,
     turnTimeLeft: null,
+    clocks: state.winner === null ? clocks : null,
     away: [],
   };
 }

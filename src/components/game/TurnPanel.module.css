@@ -299,3 +299,52 @@
 .fold:hover {
   background: var(--surface-high);
 }
+
+/* Blitz: every team's chess-style clock, side by side. */
+.clocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clock {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--surface-high);
+  color: var(--on-surface-muted);
+  font-size: var(--text-xs);
+}
+
+.clockTime {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticking {
+  border-color: var(--turn-team);
+  background: var(--surface-high);
+  color: var(--on-surface);
+}
+
+.clockUrgent .clockTime {
+  color: var(--error);
+}
+
+.flagged {
+  opacity: 0.6;
+}
+
+.flagged .clockTime {
+  color: var(--error);
+}

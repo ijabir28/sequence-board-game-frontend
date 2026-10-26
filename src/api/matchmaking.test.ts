@@ -32,6 +32,11 @@ describe('sanitizeQueueStatus', () => {
     });
   });
 
+  it('knows the blitz timer, and reads an unknown one as medium', () => {
+    expect(sanitizeQueueStatus({ status: 'queued', teams: 2, timer: 'blitz' })).toMatchObject({ timer: 'blitz' });
+    expect(sanitizeQueueStatus({ status: 'queued', teams: 2, timer: 'glacial' })).toMatchObject({ timer: 'medium' });
+  });
+
   it('reads the other statuses, and anything unknown as idle', () => {
     expect(sanitizeQueueStatus({ status: 'matched', room_id: 'quick-match-ab12' })).toEqual({ status: 'matched', roomId: 'quick-match-ab12' });
     expect(sanitizeQueueStatus({ status: 'playing', room_id: 'quick-match-ab12' })).toEqual({ status: 'playing', roomId: 'quick-match-ab12' });
