@@ -17,7 +17,7 @@ describe('sanitizeQueueStatus', () => {
       {
         status: 'queued',
         teams: 3,
-        timer: 'blitz',
+        timer: 'fast',
         joined_at: '2026-10-20T10:00:00.000Z',
         server_time: '2026-10-20T10:00:30.000Z',
       },
@@ -27,7 +27,7 @@ describe('sanitizeQueueStatus', () => {
     expect(status).toEqual({
       status: 'queued',
       teams: 3,
-      timer: 'blitz',
+      timer: 'fast',
       joinedAt: Date.parse('2026-10-20T10:00:05.000Z'),
     });
   });
@@ -53,7 +53,7 @@ describe('the queue requests', () => {
 
   it("shows the server's message when it refuses", async () => {
     respond(400, { error: 'INVALID_MATCH_SETTINGS', message: 'Choose 2 or 3 teams for a quick match.' });
-    await expect(joinQueue(2, 'blitz')).rejects.toThrow('Choose 2 or 3 teams for a quick match.');
+    await expect(joinQueue(2, 'fast')).rejects.toThrow('Choose 2 or 3 teams for a quick match.');
   });
 
   it('reads the status', async () => {

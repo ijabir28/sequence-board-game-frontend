@@ -4,10 +4,10 @@ import { ApiError, UNREADABLE_RESPONSE, readJson, request } from './http';
 // you at a table of that shape. A waiting page must keep asking for its status, or the server drops it from the queue.
 
 export type MatchTeams = 2 | 3;
-export type MatchTimer = 'blitz' | 'medium' | 'slow';
+export type MatchTimer = 'fast' | 'medium' | 'slow';
 
 export const MATCH_TIMERS: { id: MatchTimer; label: string; seconds: number }[] = [
-  { id: 'blitz', label: 'Blitz', seconds: 15 },
+  { id: 'fast', label: 'Fast', seconds: 15 },
   { id: 'medium', label: 'Medium', seconds: 45 },
   { id: 'slow', label: 'Slow', seconds: 90 },
 ];
