@@ -13,14 +13,24 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   tip?: string;
   tipSide?: TipSide;
   tipAlign?: TipAlign;
+  /**
+   * While disabled or busy, stay focusable (aria-disabled, clicks ignored) instead of `disabled`, which drops keyboard
+   * focus to the page. For buttons that change state under someone, such as when a live update fills a team.
+   */
+  keepFocus?: boolean;
 }
 
-export function Button({ variant = 'secondary', size = 'md', busy = false, tip, tipSide, tipAlign, className, children, disabled, ...rest }: ButtonProps) {
+export function Button({ variant = 'secondary', size = 'md', busy = false, tip, tipSide, tipAlign, keepFocus = false, className, children, disabled, ...rest }: ButtonProps) {
+  const blocked = Boolean(disabled || busy);
+  const soft = keepFocus && blocked;
   const button = (
     <button
       type="button"
       {...rest}
-      disabled={disabled || busy}
+      disabled={blocked && !keepFocus}
+      aria-disabled={soft || undefined}
+      // preventDefault also stops a submit button submitting its form, from a click or Enter in a field.
+      onClick={soft ? (event) => event.preventDefault() : rest.onClick}
       aria-busy={busy || undefined}
       className={[styles.button, styles[variant], styles[size], className].filter(Boolean).join(' ')}
     >

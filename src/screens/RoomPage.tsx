@@ -44,6 +44,8 @@ import { Icon } from '../components/ui/Icon';
 import { Select } from '../components/ui/Select';
 import { Tooltip } from '../components/ui/Tooltip';
 import { tipProps } from '../components/ui/TooltipLayer';
+import { useFocusRescue } from '../components/ui/useFocusRescue';
+import { useScrollAnchor } from '../components/ui/useScrollAnchor';
 import { isSupportedTable, sequencesToWin } from '../engine/setup';
 import { describeShuffle } from '../game/teamNotice';
 import { TEAM_STYLES } from '../game/teams';
@@ -423,6 +425,11 @@ function RoomView({
   onAskRejoin,
   removedPlayers,
 }: RoomViewProps) {
+  // Live updates (the host changing the table, players sitting down) re-render this view under whoever is using it:
+  // keep their focus and their place on the page.
+  const layoutRef = useRef<HTMLDivElement>(null);
+  useFocusRescue(layoutRef);
+  useScrollAnchor(layoutRef, room);
   const teamCount = room.teams.length;
   const perTeam = Math.max(0, ...room.teams.map((t) => t.seats.length));
   const supported = isSupportedTable(teamCount, perTeam);
@@ -468,7 +475,7 @@ function RoomView({
   const pendingInvites = room.invited.filter((player) => !isSeated(room, player.handle) && !notSeated.some((p) => p.handle === player.handle));
 
   return (
-    <div className={own.layout}>
+    <div className={own.layout} ref={layoutRef}>
       <section className={[styles.card, own.summary].join(' ')}>
         <div className={own.titleRow}>
           <h1>
@@ -495,7 +502,8 @@ function RoomView({
           <ShareCode id={room.id} gameStarted={room.gameStarted} onInvite={canInvite ? () => setInviting(true) : undefined} />
         </div>
       </section>
-      <InviteFriendsDialog open={inviting && canInvite} onClose={() => setInviting(false)} room={room} host={host} />
+      {/* Stays open when the table fills under you (the server says so if you invite anyway); closes once you can't invite. */}
+      <InviteFriendsDialog open={inviting && !room.gameStarted && (seated || host)} onClose={() => setInviting(false)} room={room} host={host} />
 
       {rejoin.removed && !room.gameStarted && (
         <section className={[styles.card, own.around].join(' ')} aria-labelledby="removed-notice" role="status">
@@ -512,6 +520,7 @@ function RoomView({
           {(invitedBack || (!rejoin.requested && !rejoin.declined)) && (
             <div>
               <Button
+                keepFocus
                 variant="primary"
                 busy={asking}
                 disabled={asking}
@@ -528,7 +537,7 @@ function RoomView({
       {host && !room.gameStarted && taken >= 2 && (
         <div className={own.teamTools}>
           <Tooltip text="Deal everyone who is seated out to the teams at random" align="start">
-            <Button size="sm" variant="ghost" busy={seatAction === 'shuffle'} disabled={seatAction !== null} onClick={() => onSeats('shuffle')}>
+            <Button keepFocus size="sm" variant="ghost" busy={seatAction === 'shuffle'} disabled={seatAction !== null} onClick={() => onSeats('shuffle')}>
               <Icon name="shuffle" size={16} />
               Shuffle teams
             </Button>
@@ -566,6 +575,7 @@ function RoomView({
                         {editable && seat.handle !== you && (
                           <span className={own.hostTools}>
                             <Button
+                              keepFocus
                               size="sm"
                               variant="ghost"
                               busy={hostBusy === `unseat:${seat.handle}`}
@@ -578,6 +588,7 @@ function RoomView({
                               Unseat
                             </Button>
                             <Button
+                              keepFocus
                               size="sm"
                               variant="ghost"
                               disabled={hostBusy !== null}
@@ -594,6 +605,7 @@ function RoomView({
                         {seat.handle === you && !room.gameStarted && (
                           <Tooltip text="Free your seat, so you can take another or the host can reshuffle the teams" align="end">
                             <Button
+                              keepFocus
                               size="sm"
                               variant="ghost"
                               busy={seatAction === 'leave'}
@@ -619,6 +631,7 @@ function RoomView({
                 ))}
               </ol>
               <Button
+                keepFocus
                 variant={teamFull || seated ? 'secondary' : 'primary'}
                 disabled={teamFull || seated || room.gameStarted || rejoin.removed || joining !== null}
                 busy={joining === team.handle}
@@ -664,6 +677,7 @@ function RoomView({
                     )}
                     {player.handle !== you ? (
                       <Button
+                        keepFocus
                         size="sm"
                         variant="ghost"
                         disabled={hostBusy !== null}
@@ -703,6 +717,7 @@ function RoomView({
                 </span>
                 {editable && (
                   <Button
+                    keepFocus
                     size="sm"
                     variant="ghost"
                     busy={hostBusy === `uninvite:${player.handle}`}
@@ -734,6 +749,7 @@ function RoomView({
                 <span className={own.hostTools}>
                   {player.asking && (
                     <Button
+                      keepFocus
                       size="sm"
                       variant="ghost"
                       busy={hostBusy === `decline:${player.handle}`}
@@ -746,6 +762,7 @@ function RoomView({
                     </Button>
                   )}
                   <Button
+                    keepFocus
                     size="sm"
                     variant={player.asking ? 'primary' : 'ghost'}
                     busy={hostBusy === `readmit:${player.handle}`}
@@ -818,6 +835,7 @@ function RoomView({
             </p>
             {host ? (
               <Button
+                keepFocus
                 variant="primary"
                 disabled={!canStart || starting}
                 busy={starting}
@@ -948,7 +966,7 @@ function RenameTable({ name, saving, onSave }: { name: string; saving: boolean; 
         <span className={styles.label}>Table name</span>
         <input className={styles.input} value={draft} maxLength={40} autoComplete="off" onChange={(e) => setDraft(e.target.value)} />
       </label>
-      <Button type="submit" size="sm" disabled={!changed} busy={saving && changed} tip={changed ? 'Save the new table name' : 'Type a new name first'}>
+      <Button keepFocus type="submit" size="sm" disabled={!changed} busy={saving && changed} tip={changed ? 'Save the new table name' : 'Type a new name first'}>
         Rename
       </Button>
     </form>
