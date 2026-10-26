@@ -141,6 +141,16 @@ describe('updateRoom', () => {
     expect(room.settings.highlights).toBe(false);
   });
 
+  it('sends a new table size as the backend names it', async () => {
+    let body: Record<string, unknown> = {};
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      body = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ name: 'Friday', teams: [] }), { status: 200 });
+    });
+    await updateRoom('friday-k3m9', { size: { teamCount: 3, playersPerTeam: 2 } });
+    expect(body).toEqual({ number_of_team: 3, number_of_player_in_each_team: 2 });
+  });
+
   it("shows the server's reason when only the host may change settings", async () => {
     vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: 'NOT_HOST', message: 'Only the host can.' }), { status: 403 }));
     await expect(updateRoom('x', { settings: { history: false } })).rejects.toMatchObject({ message: 'Only the host can.' });

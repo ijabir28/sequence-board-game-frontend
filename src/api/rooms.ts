@@ -181,12 +181,24 @@ export async function createRoom(teamCount: number, playersPerTeam: number, opti
   return String(body.id);
 }
 
+export interface RoomChanges {
+  name?: string;
+  /** Resizing keeps players whose seat still exists; the server moves the others to open seats, or unseats them. */
+  size?: { teamCount: number; playersPerTeam: number };
+  settings?: Partial<RoomSettings>;
+}
+
 /** PATCH /room/:id/settings (host only, before the game starts). Returns the updated room. */
-export async function updateRoom(id: string, changes: { name?: string; settings?: Partial<RoomSettings> }): Promise<Room> {
+export async function updateRoom(id: string, changes: RoomChanges): Promise<Room> {
   const response = await request(`/room/${encodeURIComponent(id)}/settings`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: changes.name, ...rawSettings(changes.settings ?? {}) }),
+    body: JSON.stringify({
+      name: changes.name,
+      number_of_team: changes.size?.teamCount,
+      number_of_player_in_each_team: changes.size?.playersPerTeam,
+      ...rawSettings(changes.settings ?? {}),
+    }),
   });
   await refusal(response, "We couldn't change the table's settings. Please try again.");
   const raw = await readJson<RawRoom>(response);

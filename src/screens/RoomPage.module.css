@@ -245,6 +245,11 @@
   font-size: var(--text-lg);
 }
 
+.tableSize {
+  display: grid;
+  gap: var(--space-3);
+}
+
 .rename {
   display: flex;
   flex-wrap: wrap;

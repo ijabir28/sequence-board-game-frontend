@@ -23,7 +23,7 @@ import {
   type RejoinStatus,
   type RemovedPlayer,
   type Room,
-  type RoomSettings,
+  type RoomChanges,
   type RoomTeam,
   type Seat,
   watchLink,
@@ -50,6 +50,7 @@ import { TEAM_STYLES } from '../game/teams';
 import { useMediaQuery } from '../game/useMediaQuery';
 import styles from './Forms.module.css';
 import own from './RoomPage.module.css';
+import { TableSize } from './TableSize';
 import { InviteFriendsDialog } from './InviteFriendsDialog';
 import { TableChat } from '../chat/TableChat';
 import { useRoom } from './useRoom';
@@ -246,7 +247,7 @@ export function RoomPage() {
     wasStarted.current = room.gameStarted;
   }, [room, profile, id, navigate]);
 
-  const save = async (changes: { name?: string; settings?: RoomSettings }) => {
+  const save = async (changes: RoomChanges) => {
     setSaving(true);
     clearNotice();
     try {
@@ -385,7 +386,7 @@ interface RoomViewProps {
   onStart: () => void;
   onOpenGame: () => void;
   saving: boolean;
-  onSave: (changes: { name?: string; settings?: RoomSettings }) => Promise<boolean>;
+  onSave: (changes: RoomChanges) => Promise<boolean>;
   seatAction: 'leave' | 'shuffle' | null;
   onSeats: (action: 'leave' | 'shuffle') => void;
   /** `kind:handle` of the host action in flight, if any. */
@@ -854,6 +855,12 @@ function RoomView({
         {/* Folded with `hidden`, not unmounted, so a half-typed new name survives folding. */}
         <div id={optionsId} className={own.foldBody} hidden={!showOptions}>
           {editable && <RenameTable name={room.name} saving={saving} onSave={(name) => onSave({ name })} />}
+          {editable && supported && (
+            <div className={own.tableSize}>
+              <TableSize value={{ teamCount, playersPerTeam: perTeam }} onChange={(size) => void onSave({ size })} disabled={saving} />
+              {taken > 0 && <p className={styles.help}>Seated players keep their seats. On a smaller table, anyone whose seat goes moves to an open one, or waits under Not seated yet.</p>}
+            </div>
+          )}
           <RoomOptions value={room.settings} onChange={editable ? (settings) => void onSave({ settings }) : undefined} disabled={saving} />
           <p className={styles.help}>
             {room.gameStarted
