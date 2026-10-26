@@ -38,7 +38,7 @@ export function Lobby() {
                 <Icon name="bolt" size={18} />
                 Quick Match
               </Button>
-              <Button onClick={() => setDialog('new')} tip="Open a new table, pick its teams and settings, then share its code">
+              <Button onClick={() => setDialog('new')} tip="Open a new table and share its code. Pick its teams and settings at the table">
                 <Icon name="plus" size={18} />
                 New table
               </Button>

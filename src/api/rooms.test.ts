@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { enterRoom, declineRejoin, getRejoinStatus, listRemoved, readmitPlayer, requestRejoin, createRoom, formatTableCode, isSeated, kickPlayer, leaveSeat, seatPlayer, shuffleSeats, uninvitePlayer, unseatPlayer, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
+import { enterRoom, declineRejoin, getRejoinStatus, listRemoved, readmitPlayer, requestRejoin, createRoom, formatTableCode, isSeated, kickPlayer, leaveSeat, seatPlayer, shuffleSeats, uninvitePlayer, unseatPlayer, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom, changedSettings, DEFAULT_ROOM_SETTINGS } from './rooms';
 
 describe('sanitizeRoom', () => {
   const raw = {
@@ -125,6 +125,13 @@ describe('createRoom', () => {
   });
 });
 
+describe('changedSettings', () => {
+  it('keeps only the settings that differ', () => {
+    expect(changedSettings(DEFAULT_ROOM_SETTINGS, { ...DEFAULT_ROOM_SETTINGS, highlights: true, exchangesPerTurn: 2 })).toEqual({ highlights: true, exchangesPerTurn: 2 });
+    expect(changedSettings(DEFAULT_ROOM_SETTINGS, DEFAULT_ROOM_SETTINGS)).toEqual({});
+  });
+});
+
 describe('updateRoom', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -139,6 +146,16 @@ describe('updateRoom', () => {
     const room = await updateRoom('friday-k3m9', { settings: { highlights: false } });
     expect(call).toEqual({ url: '/room/friday-k3m9/settings', method: 'PATCH' });
     expect(room.settings.highlights).toBe(false);
+  });
+
+  it('sends a new table size as the backend names it', async () => {
+    let body: Record<string, unknown> = {};
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      body = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ name: 'Friday', teams: [] }), { status: 200 });
+    });
+    await updateRoom('friday-k3m9', { size: { teamCount: 3, playersPerTeam: 2 } });
+    expect(body).toEqual({ number_of_team: 3, number_of_player_in_each_team: 2 });
   });
 
   it("shows the server's reason when only the host may change settings", async () => {

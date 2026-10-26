@@ -20,9 +20,11 @@ import {
   uninvitePlayer,
   unseatPlayer,
   updateRoom,
+  changedSettings,
   type RejoinStatus,
   type RemovedPlayer,
   type Room,
+  type RoomChanges,
   type RoomSettings,
   type RoomTeam,
   type Seat,
@@ -44,12 +46,15 @@ import { Icon } from '../components/ui/Icon';
 import { Select } from '../components/ui/Select';
 import { Tooltip } from '../components/ui/Tooltip';
 import { tipProps } from '../components/ui/TooltipLayer';
+import { useFocusRescue } from '../components/ui/useFocusRescue';
+import { useScrollAnchor } from '../components/ui/useScrollAnchor';
 import { isSupportedTable, sequencesToWin } from '../engine/setup';
 import { describeShuffle } from '../game/teamNotice';
 import { TEAM_STYLES } from '../game/teams';
 import { useMediaQuery } from '../game/useMediaQuery';
 import styles from './Forms.module.css';
 import own from './RoomPage.module.css';
+import { TableSize, type TableSizeValue } from './TableSize';
 import { InviteFriendsDialog } from './InviteFriendsDialog';
 import { TableChat } from '../chat/TableChat';
 import { useRoom } from './useRoom';
@@ -246,7 +251,7 @@ export function RoomPage() {
     wasStarted.current = room.gameStarted;
   }, [room, profile, id, navigate]);
 
-  const save = async (changes: { name?: string; settings?: RoomSettings }) => {
+  const save = async (changes: RoomChanges) => {
     setSaving(true);
     clearNotice();
     try {
@@ -385,7 +390,7 @@ interface RoomViewProps {
   onStart: () => void;
   onOpenGame: () => void;
   saving: boolean;
-  onSave: (changes: { name?: string; settings?: RoomSettings }) => Promise<boolean>;
+  onSave: (changes: RoomChanges) => Promise<boolean>;
   seatAction: 'leave' | 'shuffle' | null;
   onSeats: (action: 'leave' | 'shuffle') => void;
   /** `kind:handle` of the host action in flight, if any. */
@@ -422,6 +427,11 @@ function RoomView({
   onAskRejoin,
   removedPlayers,
 }: RoomViewProps) {
+  // Live updates (the host changing the table, players sitting down) re-render this view under whoever is using it:
+  // keep their focus and their place on the page.
+  const layoutRef = useRef<HTMLDivElement>(null);
+  useFocusRescue(layoutRef);
+  useScrollAnchor(layoutRef, room);
   const teamCount = room.teams.length;
   const perTeam = Math.max(0, ...room.teams.map((t) => t.seats.length));
   const supported = isSupportedTable(teamCount, perTeam);
@@ -464,10 +474,31 @@ function RoomView({
     team.seats.flatMap((s, i) => (s === null ? [{ team, seat: i, label: `Team ${TEAM_STYLES[team.index]?.name ?? team.handle}, seat ${i + 1}` }] : [])),
   );
   const [removing, setRemoving] = useState<Seat | null>(null);
+  // The host's changes show at once and stay shown while they save, so the options stay usable (nothing is disabled
+  // mid-save) and a refresh that lands between two quick changes can't flick one back. Only what changed is sent.
+  const [pendingSettings, setPendingSettings] = useState<Partial<RoomSettings>>({});
+  const [pendingSize, setPendingSize] = useState<TableSizeValue | null>(null);
+  const shownSettings: RoomSettings = { ...room.settings, ...pendingSettings };
+  const saveSettings = (next: RoomSettings) => {
+    const changes = changedSettings(shownSettings, next);
+    if (Object.keys(changes).length === 0) return;
+    setPendingSettings((pending) => ({ ...pending, ...changes }));
+    void onSave({ settings: changes }).finally(() =>
+      setPendingSettings((pending) => {
+        const rest = { ...pending };
+        for (const key of Object.keys(changes) as (keyof RoomSettings)[]) if (rest[key] === changes[key]) delete rest[key];
+        return rest;
+      }),
+    );
+  };
+  const saveSize = (size: TableSizeValue) => {
+    setPendingSize(size);
+    void onSave({ size }).finally(() => setPendingSize((pending) => (pending === size ? null : pending)));
+  };
   const pendingInvites = room.invited.filter((player) => !isSeated(room, player.handle) && !notSeated.some((p) => p.handle === player.handle));
 
   return (
-    <div className={own.layout}>
+    <div className={own.layout} ref={layoutRef}>
       <section className={[styles.card, own.summary].join(' ')}>
         <div className={own.titleRow}>
           <h1>
@@ -494,7 +525,8 @@ function RoomView({
           <ShareCode id={room.id} gameStarted={room.gameStarted} onInvite={canInvite ? () => setInviting(true) : undefined} />
         </div>
       </section>
-      <InviteFriendsDialog open={inviting && canInvite} onClose={() => setInviting(false)} room={room} host={host} />
+      {/* Stays open when the table fills under you (the server says so if you invite anyway); closes once you can't invite. */}
+      <InviteFriendsDialog open={inviting && !room.gameStarted && (seated || host)} onClose={() => setInviting(false)} room={room} host={host} />
 
       {rejoin.removed && !room.gameStarted && (
         <section className={[styles.card, own.around].join(' ')} aria-labelledby="removed-notice" role="status">
@@ -511,6 +543,7 @@ function RoomView({
           {(invitedBack || (!rejoin.requested && !rejoin.declined)) && (
             <div>
               <Button
+                keepFocus
                 variant="primary"
                 busy={asking}
                 disabled={asking}
@@ -527,7 +560,7 @@ function RoomView({
       {host && !room.gameStarted && taken >= 2 && (
         <div className={own.teamTools}>
           <Tooltip text="Deal everyone who is seated out to the teams at random" align="start">
-            <Button size="sm" variant="ghost" busy={seatAction === 'shuffle'} disabled={seatAction !== null} onClick={() => onSeats('shuffle')}>
+            <Button keepFocus size="sm" variant="ghost" busy={seatAction === 'shuffle'} disabled={seatAction !== null} onClick={() => onSeats('shuffle')}>
               <Icon name="shuffle" size={16} />
               Shuffle teams
             </Button>
@@ -565,6 +598,7 @@ function RoomView({
                         {editable && seat.handle !== you && (
                           <span className={own.hostTools}>
                             <Button
+                              keepFocus
                               size="sm"
                               variant="ghost"
                               busy={hostBusy === `unseat:${seat.handle}`}
@@ -577,6 +611,7 @@ function RoomView({
                               Unseat
                             </Button>
                             <Button
+                              keepFocus
                               size="sm"
                               variant="ghost"
                               disabled={hostBusy !== null}
@@ -593,6 +628,7 @@ function RoomView({
                         {seat.handle === you && !room.gameStarted && (
                           <Tooltip text="Free your seat, so you can take another or the host can reshuffle the teams" align="end">
                             <Button
+                              keepFocus
                               size="sm"
                               variant="ghost"
                               busy={seatAction === 'leave'}
@@ -618,6 +654,7 @@ function RoomView({
                 ))}
               </ol>
               <Button
+                keepFocus
                 variant={teamFull || seated ? 'secondary' : 'primary'}
                 disabled={teamFull || seated || room.gameStarted || rejoin.removed || joining !== null}
                 busy={joining === team.handle}
@@ -663,6 +700,7 @@ function RoomView({
                     )}
                     {player.handle !== you ? (
                       <Button
+                        keepFocus
                         size="sm"
                         variant="ghost"
                         disabled={hostBusy !== null}
@@ -702,6 +740,7 @@ function RoomView({
                 </span>
                 {editable && (
                   <Button
+                    keepFocus
                     size="sm"
                     variant="ghost"
                     busy={hostBusy === `uninvite:${player.handle}`}
@@ -733,6 +772,7 @@ function RoomView({
                 <span className={own.hostTools}>
                   {player.asking && (
                     <Button
+                      keepFocus
                       size="sm"
                       variant="ghost"
                       busy={hostBusy === `decline:${player.handle}`}
@@ -745,6 +785,7 @@ function RoomView({
                     </Button>
                   )}
                   <Button
+                    keepFocus
                     size="sm"
                     variant={player.asking ? 'primary' : 'ghost'}
                     busy={hostBusy === `readmit:${player.handle}`}
@@ -817,6 +858,7 @@ function RoomView({
             </p>
             {host ? (
               <Button
+                keepFocus
                 variant="primary"
                 disabled={!canStart || starting}
                 busy={starting}
@@ -854,7 +896,13 @@ function RoomView({
         {/* Folded with `hidden`, not unmounted, so a half-typed new name survives folding. */}
         <div id={optionsId} className={own.foldBody} hidden={!showOptions}>
           {editable && <RenameTable name={room.name} saving={saving} onSave={(name) => onSave({ name })} />}
-          <RoomOptions value={room.settings} onChange={editable ? (settings) => void onSave({ settings }) : undefined} disabled={saving} />
+          {editable && supported && (
+            <div className={own.tableSize}>
+              <TableSize value={pendingSize ?? { teamCount, playersPerTeam: perTeam }} onChange={saveSize} />
+              {taken > 0 && <p className={styles.help}>Seated players keep their seats. On a smaller table, anyone whose seat goes moves to an open one, or waits under Not seated yet.</p>}
+            </div>
+          )}
+          <RoomOptions value={editable ? shownSettings : room.settings} onChange={editable ? saveSettings : undefined} />
           <p className={styles.help}>
             {room.gameStarted
               ? 'The game has started, so these are fixed.'
@@ -927,7 +975,13 @@ function FoldToggle({ open, controls, onToggle, children }: { open: boolean; con
 
 function RenameTable({ name, saving, onSave }: { name: string; saving: boolean; onSave: (name: string) => Promise<boolean> }) {
   const [draft, setDraft] = useState(name);
-  useEffect(() => setDraft(name), [name]);
+  // Follow a new name saved elsewhere, unless you have started typing your own.
+  const shown = useRef(name);
+  useEffect(() => {
+    const before = shown.current;
+    shown.current = name;
+    setDraft((current) => (current === before ? name : current));
+  }, [name]);
   const changed = draft.trim() !== '' && draft.trim() !== name;
 
   const submit = (event: FormEvent) => {
@@ -941,7 +995,7 @@ function RenameTable({ name, saving, onSave }: { name: string; saving: boolean; 
         <span className={styles.label}>Table name</span>
         <input className={styles.input} value={draft} maxLength={40} autoComplete="off" onChange={(e) => setDraft(e.target.value)} />
       </label>
-      <Button type="submit" size="sm" disabled={!changed} busy={saving && changed} tip={changed ? 'Save the new table name' : 'Type a new name first'}>
+      <Button keepFocus type="submit" size="sm" disabled={!changed} busy={saving && changed} tip={changed ? 'Save the new table name' : 'Type a new name first'}>
         Rename
       </Button>
     </form>
