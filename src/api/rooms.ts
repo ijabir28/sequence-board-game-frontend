@@ -58,6 +58,14 @@ export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   exchangesPerTurn: null,
 };
 
+/**
+ * The settings `next` changes from `current`. Saving only these lets quick changes overlap: the server keeps every
+ * setting a request leaves out, so a later save never puts back an older value of another setting.
+ */
+export function changedSettings(current: RoomSettings, next: RoomSettings): Partial<RoomSettings> {
+  return Object.fromEntries((Object.keys(next) as (keyof RoomSettings)[]).filter((key) => next[key] !== current[key]).map((key) => [key, next[key]]));
+}
+
 export function isValidTurnSeconds(seconds: number): boolean {
   return Number.isInteger(seconds) && seconds >= TURN_SECONDS_MIN && seconds <= TURN_SECONDS_MAX;
 }

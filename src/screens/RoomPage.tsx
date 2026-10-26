@@ -20,10 +20,12 @@ import {
   uninvitePlayer,
   unseatPlayer,
   updateRoom,
+  changedSettings,
   type RejoinStatus,
   type RemovedPlayer,
   type Room,
   type RoomChanges,
+  type RoomSettings,
   type RoomTeam,
   type Seat,
   watchLink,
@@ -52,7 +54,7 @@ import { TEAM_STYLES } from '../game/teams';
 import { useMediaQuery } from '../game/useMediaQuery';
 import styles from './Forms.module.css';
 import own from './RoomPage.module.css';
-import { TableSize } from './TableSize';
+import { TableSize, type TableSizeValue } from './TableSize';
 import { InviteFriendsDialog } from './InviteFriendsDialog';
 import { TableChat } from '../chat/TableChat';
 import { useRoom } from './useRoom';
@@ -472,6 +474,27 @@ function RoomView({
     team.seats.flatMap((s, i) => (s === null ? [{ team, seat: i, label: `Team ${TEAM_STYLES[team.index]?.name ?? team.handle}, seat ${i + 1}` }] : [])),
   );
   const [removing, setRemoving] = useState<Seat | null>(null);
+  // The host's changes show at once and stay shown while they save, so the options stay usable (nothing is disabled
+  // mid-save) and a refresh that lands between two quick changes can't flick one back. Only what changed is sent.
+  const [pendingSettings, setPendingSettings] = useState<Partial<RoomSettings>>({});
+  const [pendingSize, setPendingSize] = useState<TableSizeValue | null>(null);
+  const shownSettings: RoomSettings = { ...room.settings, ...pendingSettings };
+  const saveSettings = (next: RoomSettings) => {
+    const changes = changedSettings(shownSettings, next);
+    if (Object.keys(changes).length === 0) return;
+    setPendingSettings((pending) => ({ ...pending, ...changes }));
+    void onSave({ settings: changes }).finally(() =>
+      setPendingSettings((pending) => {
+        const rest = { ...pending };
+        for (const key of Object.keys(changes) as (keyof RoomSettings)[]) if (rest[key] === changes[key]) delete rest[key];
+        return rest;
+      }),
+    );
+  };
+  const saveSize = (size: TableSizeValue) => {
+    setPendingSize(size);
+    void onSave({ size }).finally(() => setPendingSize((pending) => (pending === size ? null : pending)));
+  };
   const pendingInvites = room.invited.filter((player) => !isSeated(room, player.handle) && !notSeated.some((p) => p.handle === player.handle));
 
   return (
@@ -875,11 +898,11 @@ function RoomView({
           {editable && <RenameTable name={room.name} saving={saving} onSave={(name) => onSave({ name })} />}
           {editable && supported && (
             <div className={own.tableSize}>
-              <TableSize value={{ teamCount, playersPerTeam: perTeam }} onChange={(size) => void onSave({ size })} disabled={saving} />
+              <TableSize value={pendingSize ?? { teamCount, playersPerTeam: perTeam }} onChange={saveSize} />
               {taken > 0 && <p className={styles.help}>Seated players keep their seats. On a smaller table, anyone whose seat goes moves to an open one, or waits under Not seated yet.</p>}
             </div>
           )}
-          <RoomOptions value={room.settings} onChange={editable ? (settings) => void onSave({ settings }) : undefined} disabled={saving} />
+          <RoomOptions value={editable ? shownSettings : room.settings} onChange={editable ? saveSettings : undefined} />
           <p className={styles.help}>
             {room.gameStarted
               ? 'The game has started, so these are fixed.'
@@ -952,7 +975,13 @@ function FoldToggle({ open, controls, onToggle, children }: { open: boolean; con
 
 function RenameTable({ name, saving, onSave }: { name: string; saving: boolean; onSave: (name: string) => Promise<boolean> }) {
   const [draft, setDraft] = useState(name);
-  useEffect(() => setDraft(name), [name]);
+  // Follow a new name saved elsewhere, unless you have started typing your own.
+  const shown = useRef(name);
+  useEffect(() => {
+    const before = shown.current;
+    shown.current = name;
+    setDraft((current) => (current === before ? name : current));
+  }, [name]);
   const changed = draft.trim() !== '' && draft.trim() !== name;
 
   const submit = (event: FormEvent) => {

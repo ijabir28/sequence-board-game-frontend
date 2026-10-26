@@ -24,6 +24,11 @@ const DEAD_CARD_MODES: { mode: DeadCardMode; label: string; description: string 
   { mode: 'indicator', label: 'Mark them', description: 'Dead cards are marked in the hand, so nobody misses one.' },
 ];
 
+/** A number field's text after its saved value becomes `value`: unchanged if it already reads as that number ("045"). */
+export function followDraft(draft: string, value: number): string {
+  return draft.trim() !== '' && Number(draft) === value ? draft : String(value);
+}
+
 /** "1 dead card", "3 dead cards", "Any number of dead cards". */
 export function describeExchanges(count: number | null): string {
   if (count === null) return 'Any number of dead cards';
@@ -113,8 +118,9 @@ function DeadCards({ id, value, onChange, disabled }: { id: string; value: RoomS
   const [custom, setCustom] = useState(limit !== null && limit !== 1);
   const [draft, setDraft] = useState(String(limit ?? 2));
   useEffect(() => {
-    // Follow changes made elsewhere (for example another device saving the host's settings).
-    if (limit !== null) setDraft(String(limit));
+    // Follow changes made elsewhere (for example another device saving the host's settings), keeping what you typed
+    // when it already says the same number.
+    if (limit !== null) setDraft((current) => followDraft(current, limit));
     if (limit !== null && limit !== 1) setCustom(true);
   }, [limit]);
 
@@ -233,8 +239,9 @@ function TurnTimer({ id, value, onChange, disabled }: { id: string; value: numbe
   const [custom, setCustom] = useState(!isPreset);
   const [draft, setDraft] = useState(String(value));
   useEffect(() => {
-    // Follow changes made elsewhere (for example another device saving the host's settings).
-    setDraft(String(value));
+    // Follow changes made elsewhere (for example another device saving the host's settings), keeping what you typed
+    // when it already says the same number.
+    setDraft((current) => followDraft(current, value));
     if (!isPreset) setCustom(true);
   }, [value, isPreset]);
 

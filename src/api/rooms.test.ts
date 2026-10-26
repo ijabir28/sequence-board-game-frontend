@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { enterRoom, declineRejoin, getRejoinStatus, listRemoved, readmitPlayer, requestRejoin, createRoom, formatTableCode, isSeated, kickPlayer, leaveSeat, seatPlayer, shuffleSeats, uninvitePlayer, unseatPlayer, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom } from './rooms';
+import { enterRoom, declineRejoin, getRejoinStatus, listRemoved, readmitPlayer, requestRejoin, createRoom, formatTableCode, isSeated, kickPlayer, leaveSeat, seatPlayer, shuffleSeats, uninvitePlayer, unseatPlayer, isValidTurnSeconds, listMyRooms, parseTableCode, sanitizeMyRoom, sanitizeRoom, updateRoom, changedSettings, DEFAULT_ROOM_SETTINGS } from './rooms';
 
 describe('sanitizeRoom', () => {
   const raw = {
@@ -122,6 +122,13 @@ describe('createRoom', () => {
     // Unlimited exchanges go to the backend as null.
     await createRoom(2, 1, { settings: { deadCards: 'manual', exchangesPerTurn: null } });
     expect(sent).toMatchObject({ dead_cards: 'manual', exchanges_per_turn: null });
+  });
+});
+
+describe('changedSettings', () => {
+  it('keeps only the settings that differ', () => {
+    expect(changedSettings(DEFAULT_ROOM_SETTINGS, { ...DEFAULT_ROOM_SETTINGS, highlights: true, exchangesPerTurn: 2 })).toEqual({ highlights: true, exchangesPerTurn: 2 });
+    expect(changedSettings(DEFAULT_ROOM_SETTINGS, DEFAULT_ROOM_SETTINGS)).toEqual({});
   });
 });
 
