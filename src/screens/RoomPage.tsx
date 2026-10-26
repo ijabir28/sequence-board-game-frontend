@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { errorMessage } from '../api/http';
 import { startRoomGame } from '../api/roomGame';
@@ -58,6 +58,7 @@ import { TableSize, type TableSizeValue } from './TableSize';
 import { InviteFriendsDialog } from './InviteFriendsDialog';
 import { TableChat } from '../chat/TableChat';
 import { useRoom } from './useRoom';
+import { previewRoom, useRoomDraft } from './useRoomDraft';
 
 /** What the host can do to a player at their table before the game starts. */
 export type HostAction =
@@ -77,7 +78,7 @@ export function RoomPage() {
   const { id = '' } = useParams();
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
-  const { state, connection, reload } = useRoom(id);
+  const { state, connection, reload, applyRoom } = useRoom(id);
   const [joining, setJoining] = useState<string | null>(null);
   const toast = useToast();
   const showSuccess = (text: string, durationMs?: number) => toast.success(text, { id: NOTICE_TOAST, durationMs });
@@ -190,13 +191,13 @@ export function RoomPage() {
     clearNotice();
     const team = action.kind === 'seat' ? (TEAM_STYLES[action.team.index]?.name ?? action.team.handle) : '';
     try {
-      if (action.kind === 'seat') await seatPlayer(id, action.player.handle, action.team, action.seat);
-      else if (action.kind === 'unseat') await unseatPlayer(id, action.player.handle);
-      else if (action.kind === 'kick') await kickPlayer(id, action.player.handle);
-      else if (action.kind === 'readmit') await readmitPlayer(id, action.player.handle);
+      // Each answers with the room as saved (but declining a request, which changes nobody's seat): no need to fetch it.
+      if (action.kind === 'seat') applyRoom(await seatPlayer(id, action.player.handle, action.team, action.seat));
+      else if (action.kind === 'unseat') applyRoom(await unseatPlayer(id, action.player.handle));
+      else if (action.kind === 'kick') applyRoom(await kickPlayer(id, action.player.handle));
+      else if (action.kind === 'readmit') applyRoom(await readmitPlayer(id, action.player.handle));
       else if (action.kind === 'decline') await declineRejoin(id, action.player.handle);
-      else await uninvitePlayer(id, action.player.handle);
-      await reload();
+      else applyRoom(await uninvitePlayer(id, action.player.handle));
       loadRemoved();
       const who = action.player.handle === you ? 'You' : action.player.name;
       showSuccess(
@@ -229,7 +230,7 @@ export function RoomPage() {
     clearNotice();
     try {
       const updated = await (action === 'leave' ? leaveSeat(id) : shuffleSeats(id));
-      await reload();
+      applyRoom(updated);
       // The teams_shuffled broadcast says the same to everyone; this covers a host whose socket is offline.
       if (action === 'leave') showSuccess('You stood up. Pick a team to sit down again.');
       else showSuccess(describeShuffle(updated, profile?.name ?? 'You', you), SHUFFLE_NOTICE_MS);
@@ -255,8 +256,8 @@ export function RoomPage() {
     setSaving(true);
     clearNotice();
     try {
-      await updateRoom(id, changes);
-      await reload();
+      // The answer is the room as saved: show it rather than fetching it again.
+      applyRoom(await updateRoom(id, changes));
       return true;
     } catch (e) {
       showError(errorMessage(e));
@@ -407,7 +408,7 @@ interface RoomViewProps {
 }
 
 function RoomView({
-  room,
+  room: savedRoom,
   you,
   connection,
   joining,
@@ -427,6 +428,9 @@ function RoomView({
   onAskRejoin,
   removedPlayers,
 }: RoomViewProps) {
+  // The host's option changes show at once, on the room as saved, and go out together once they pause (useRoomDraft).
+  const { pending, change } = useRoomDraft(onSave);
+  const room = useMemo(() => previewRoom(savedRoom, pending), [savedRoom, pending]);
   // Live updates (the host changing the table, players sitting down) re-render this view under whoever is using it:
   // keep their focus and their place on the page.
   const layoutRef = useRef<HTMLDivElement>(null);
@@ -474,27 +478,13 @@ function RoomView({
     team.seats.flatMap((s, i) => (s === null ? [{ team, seat: i, label: `Team ${TEAM_STYLES[team.index]?.name ?? team.handle}, seat ${i + 1}` }] : [])),
   );
   const [removing, setRemoving] = useState<Seat | null>(null);
-  // The host's changes show at once and stay shown while they save, so the options stay usable (nothing is disabled
-  // mid-save) and a refresh that lands between two quick changes can't flick one back. Only what changed is sent.
-  const [pendingSettings, setPendingSettings] = useState<Partial<RoomSettings>>({});
-  const [pendingSize, setPendingSize] = useState<TableSizeValue | null>(null);
-  const shownSettings: RoomSettings = { ...room.settings, ...pendingSettings };
+  // The options stay usable while changes save (nothing is disabled mid-save), and a broadcast that lands between two
+  // quick changes can't flick one back: `room` already carries them. Only what changed is sent.
   const saveSettings = (next: RoomSettings) => {
-    const changes = changedSettings(shownSettings, next);
-    if (Object.keys(changes).length === 0) return;
-    setPendingSettings((pending) => ({ ...pending, ...changes }));
-    void onSave({ settings: changes }).finally(() =>
-      setPendingSettings((pending) => {
-        const rest = { ...pending };
-        for (const key of Object.keys(changes) as (keyof RoomSettings)[]) if (rest[key] === changes[key]) delete rest[key];
-        return rest;
-      }),
-    );
+    const changes = changedSettings(room.settings, next);
+    if (Object.keys(changes).length > 0) change({ settings: changes });
   };
-  const saveSize = (size: TableSizeValue) => {
-    setPendingSize(size);
-    void onSave({ size }).finally(() => setPendingSize((pending) => (pending === size ? null : pending)));
-  };
+  const saveSize = (size: TableSizeValue) => change({ size });
   const pendingInvites = room.invited.filter((player) => !isSeated(room, player.handle) && !notSeated.some((p) => p.handle === player.handle));
 
   return (
@@ -898,11 +888,11 @@ function RoomView({
           {editable && <RenameTable name={room.name} saving={saving} onSave={(name) => onSave({ name })} />}
           {editable && supported && (
             <div className={own.tableSize}>
-              <TableSize value={pendingSize ?? { teamCount, playersPerTeam: perTeam }} onChange={saveSize} />
+              <TableSize value={{ teamCount, playersPerTeam: perTeam }} onChange={saveSize} />
               {taken > 0 && <p className={styles.help}>Seated players keep their seats. On a smaller table, anyone whose seat goes moves to an open one, or waits under Not seated yet.</p>}
             </div>
           )}
-          <RoomOptions value={editable ? shownSettings : room.settings} onChange={editable ? saveSettings : undefined} />
+          <RoomOptions value={room.settings} onChange={editable ? saveSettings : undefined} />
           <p className={styles.help}>
             {room.gameStarted
               ? 'The game has started, so these are fixed.'
