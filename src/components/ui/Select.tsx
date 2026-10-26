@@ -42,9 +42,25 @@ export function Select({
     setUp(window.innerHeight - box.bottom < LIST_ROOM_PX && box.top > window.innerHeight - box.bottom);
   }, [open, rootRef]);
 
+  // Picking hands focus back to the button (the list it was in is gone), without scrolling: it is where you are looking.
+  const pick = (option: SelectOption) => {
+    close();
+    (rootRef.current?.querySelector('button') as HTMLButtonElement | null)?.focus({ preventScroll: true });
+    if (option.value !== value) onChange(option.value);
+  };
+
   return (
     <div ref={rootRef} className={[styles.root, className].filter(Boolean).join(' ')}>
-      <button type="button" className={styles.trigger} disabled={disabled} aria-label={ariaLabel} {...triggerProps}>
+      {/* aria-disabled rather than disabled, which would drop focus to the page while the pick before saves. */}
+      <button
+        type="button"
+        className={styles.trigger}
+        aria-label={ariaLabel}
+        {...triggerProps}
+        aria-disabled={disabled || undefined}
+        onClick={disabled ? undefined : triggerProps.onClick}
+        onKeyDown={disabled ? undefined : triggerProps.onKeyDown}
+      >
         <span className={styles.value}>{chosen?.label}</span>
         <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} className={styles.caret} />
       </button>
@@ -57,16 +73,11 @@ export function Select({
               tabIndex={-1}
               aria-selected={option.value === value}
               className={[menuStyles.item, styles.option].join(' ')}
-              onClick={() => {
-                close();
-                if (option.value !== value) onChange(option.value);
-              }}
+              onClick={() => pick(option)}
               onKeyDown={(event) => {
                 if (event.key !== 'Enter' && event.key !== ' ') return;
                 event.preventDefault();
-                close();
-                (rootRef.current?.querySelector('button') as HTMLButtonElement | null)?.focus();
-                if (option.value !== value) onChange(option.value);
+                pick(option);
               }}
             >
               <span className={styles.value}>{option.label}</span>

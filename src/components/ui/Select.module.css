@@ -22,7 +22,7 @@
   transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
 }
 
-.trigger:hover:not(:disabled),
+.trigger:hover:not([aria-disabled='true']),
 .trigger[aria-expanded='true'] {
   border-color: var(--outline);
 }
@@ -32,7 +32,7 @@
   box-shadow: var(--focus-ring);
 }
 
-.trigger:disabled {
+.trigger[aria-disabled='true'] {
   opacity: 0.6;
 }
 
